@@ -275,7 +275,12 @@ Status: Completed.
 2. Updated `docker-entrypoint.sh` to unix LF format and added `sed -i 's/\r$//' /app/docker-entrypoint.sh` in `Dockerfile` to sanitize line endings during build.
 3. Updated `"lint": "eslint ."` in `package.json` and verified `bun run lint` and `bun run build` run cleanly with 0 errors.
 4. Provided comprehensive architectural answer on using AdGuard Home with `*.home.arpa` DNS rewrites, explaining local DNS setup, port 53 considerations, and HTTPS/TLS reverse proxy integration for PWA.
+[2026-07-27] Request 41:
+1. Diagnosed false error banner `[ERROR] Failed to start Docker containers after cache reset` in `run.bat`: caused by static `%ERRORLEVEL%` evaluation instead of delayed expansion `!ERRORLEVEL!` inside nested parenthesized blocks.
+2. Updated `run.bat` to use `!ERRORLEVEL!` for error checks inside parenthesized blocks.
+3. Verified both `media_gallery_app` (port 38479) and `media_gallery_redis` (port 6379) are active and healthy via `docker ps`.
 Status: Completed.
+
 
 
 

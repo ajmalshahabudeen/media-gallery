@@ -42,25 +42,25 @@ if %ERRORLEVEL% EQU 0 (
 echo [4/4] Building ^& launching containers...
 docker compose down --remove-orphans >nul 2>&1
 docker compose up -d --build
-if %ERRORLEVEL% NEQ 0 (
+if !ERRORLEVEL! NEQ 0 (
     echo [WARNING] Normal build failed. Clearing corrupted build cache and retrying...
     docker builder prune -f
     docker compose build --no-cache
     docker compose up -d
-    if %ERRORLEVEL% NEQ 0 (
+    if !ERRORLEVEL! NEQ 0 (
         echo [ERROR] Failed to start Docker containers after cache reset.
         echo.
         echo Container logs:
         docker compose logs --tail=20
         pause
-        exit /b %ERRORLEVEL%
+        exit /b !ERRORLEVEL!
     )
 )
 
 :: 5. Health verification
 ping -n 3 127.0.0.1 >nul 2>&1
 docker ps --format "{{.Names}}" | findstr /C:"media_gallery_app" >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
+if !ERRORLEVEL! NEQ 0 (
     echo [WARNING] App container may have exited unexpectedly.
     echo Container logs:
     docker compose logs --tail=20
