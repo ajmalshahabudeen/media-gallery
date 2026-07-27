@@ -29,6 +29,7 @@ import {
 
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { ModeToggle } from "@/components/mode-toggle";
+import { ThumbnailProgress } from "@/components/preview/ThumbnailProgress";
 
 export default function DashboardLayout({
   children,
@@ -165,9 +166,9 @@ export default function DashboardLayout({
         </Sidebar>
 
         {/* Main Content Area */}
-        <SidebarInset className="flex flex-1 flex-col overflow-hidden">
-          {/* Top Bar with Sidebar Trigger - Sticky on top */}
-          <header className="sticky top-0 z-30 border-b bg-card px-4 py-3 flex items-center justify-between shadow-xs">
+        <SidebarInset className="flex flex-1 flex-col h-screen overflow-hidden relative">
+          {/* Top Bar with Sidebar Trigger - Pinned fixed on top */}
+          <header className="fixed top-0 right-0 left-0 md:left-(--sidebar-width,16rem) z-30 border-b bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-200">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="hover:bg-muted" />
               <div className="flex items-center gap-2 md:hidden">
@@ -175,6 +176,10 @@ export default function DashboardLayout({
                 <span className="font-bold text-sm">Media Gallery</span>
               </div>
             </div>
+
+            {/* Thumbnail Generation Progress */}
+            <ThumbnailProgress />
+
             <div className="flex items-center gap-3">
               <PwaInstallPrompt />
               <ModeToggle />
@@ -184,7 +189,7 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+          <main className="flex-1 overflow-y-auto px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

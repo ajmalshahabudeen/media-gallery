@@ -233,7 +233,22 @@ Status: Completed.
 3. Updated `/api/media/thumbnail/route.ts` for video files without cached thumbnails to return an inline SVG video poster badge (`Content-Type: image/svg+xml`) instead of redirecting to `.mp4`.
 4. Updated `/api/media/hover/route.ts` to return HTTP `204 No Content` for uncached hover requests, keeping browser console logs 100% clean.
 5. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+[2026-07-27] Request 31:
+1. Replaced `sticky top-0` in `app/dashboard/layout.tsx` header with `fixed top-0 left-0 right-0 md:left-[var(--sidebar-width)] z-30 bg-card/95 backdrop-blur-md` and `pt-16` padding on `<main>`, guaranteeing the top bar stays pinned at top while scrolling.
+2. Created `components/preview/ThumbnailProgress.tsx` rendering a top header progress percentage badge (e.g. `Thumbnails: 72% (144/200)`) with an animated glowing progress bar polling `/api/media/progress`.
+3. Created `/api/media/enqueue-previews/route.ts` and auto-enqueue `useEffect` in `app/dashboard/page.tsx` so thumbnail generation starts automatically whenever files list loads.
+4. Enhanced PC hover sneak peek in `components/preview/MediaCard.tsx` with instant HTML5 `<video src="..." muted loop autoPlay playsInline>` preview layer overlayed seamlessly by the animated 8fps WebP clip once loaded.
+5. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+[2026-07-27] Request 32:
+1. Updated `components/preview/ThumbnailProgress.tsx` to display only the compact percentage text on mobile screens (`<sm`) and hide the progress bar line (`hidden sm:block`), giving a clean mobile UI.
+2. Verified fixed CSS variable syntax in `app/dashboard/layout.tsx`.
+[2026-07-27] Request 33:
+1. Updated main content container padding in `app/dashboard/layout.tsx` to `px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24`, ensuring page titles and top controls are completely clear of the fixed topbar.
+2. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
+
+
+
 
 
 

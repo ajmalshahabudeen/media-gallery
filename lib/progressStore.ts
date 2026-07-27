@@ -1,4 +1,11 @@
-import { getCache, setCache } from "@/lib/redis";
+import { getCache, getStringCache, setCache } from "@/lib/redis";
+
+export interface PreviewProgress {
+  isGenerating: boolean;
+  total: number;
+  completed: number;
+  percentage: number;
+}
 
 export interface IndexingProgress {
   isIndexing: boolean;
@@ -8,6 +15,7 @@ export interface IndexingProgress {
   latestFile: string;
   startTime: number | null;
   scannedTargetPaths: string[];
+  previewProgress?: PreviewProgress;
 }
 
 let inMemoryProgress: IndexingProgress = {
@@ -24,10 +32,27 @@ const PROGRESS_KEY = "media_indexing_progress";
 
 export async function getIndexingProgress(): Promise<IndexingProgress> {
   const cached = await getCache<IndexingProgress>(PROGRESS_KEY);
-  if (cached) {
-    return cached;
-  }
-  return inMemoryProgress;
+  const baseProgress = cached || inMemoryProgress;
+
+  const totalStr = await getStringCache("preview_total_count");
+  const compStr = await getStringCache("preview_completed_count");
+
+  const total = totalStr ? parseInt(totalStr, 10) : 0;
+  const rawCompleted = compStr ? parseInt(compStr, 10) : 0;
+  const completed = Math.min(rawCompleted, total);
+
+  const percentage = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 100;
+  const isGenerating = total > 0 && completed < total;
+
+  return {
+    ...baseProgress,
+    previewProgress: {
+      isGenerating,
+      total,
+      completed,
+      percentage,
+    },
+  };
 }
 
 export async function setIndexingProgress(progress: Partial<IndexingProgress>): Promise<void> {

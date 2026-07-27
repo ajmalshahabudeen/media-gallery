@@ -82,25 +82,38 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
             }`}
           />
 
-          {/* PC Desktop Hover Sneak Peek Animated WebP Overlay */}
+          {/* PC Desktop Hover Sneak Peek: Instant Video Stream + WebP Overlay */}
           {isPcScreen && isHovered && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={hoverUrl}
-              alt={`${file.name} hover preview`}
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                  setHoverImageLoaded(true);
-                } else {
-                  setHoverImageLoaded(false);
-                }
-              }}
-              onError={() => setHoverImageLoaded(false)}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-                hoverImageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-            />
+            <>
+              {/* Instant Video Stream Preview */}
+              <video
+                src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
+                muted
+                loop
+                autoPlay
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover z-0"
+              />
+
+              {/* High-speed WebP Hover Preview Overlay */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={hoverUrl}
+                alt={`${file.name} hover preview`}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                    setHoverImageLoaded(true);
+                  } else {
+                    setHoverImageLoaded(false);
+                  }
+                }}
+                onError={() => setHoverImageLoaded(false)}
+                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-300 ${
+                  hoverImageLoaded ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            </>
           )}
 
           {/* Centered Play Indicator Badge */}

@@ -59,6 +59,16 @@ export default function DashboardGalleryPage() {
     scanMedia();
   }, [fetchFolders, scanMedia]);
 
+  useEffect(() => {
+    if (files.length > 0) {
+      fetch("/api/media/enqueue-previews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files }),
+      }).catch(() => {});
+    }
+  }, [files]);
+
   const filteredFiles = files.filter((file) => {
     const matchesSearch =
       searchQuery === "" ||

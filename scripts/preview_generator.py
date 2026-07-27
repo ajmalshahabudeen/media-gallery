@@ -134,6 +134,36 @@ class RedisClient:
         except Exception:
             return False
 
+    def set(self, key, value, ex=3600):
+        """SET key string EX ex"""
+        sock = self._connect()
+        if not sock:
+            return False
+        try:
+            cmd = encode_resp_command("SET", key, str(value), "EX", ex)
+            sock.sendall(cmd)
+            resp = sock.recv(128)
+            sock.close()
+            return b"+OK" in resp
+        except Exception:
+            return False
+
+    def incr(self, key):
+        """INCR key"""
+        sock = self._connect()
+        if not sock:
+            return 0
+        try:
+            cmd = encode_resp_command("INCR", key)
+            sock.sendall(cmd)
+            resp = sock.recv(128)
+            sock.close()
+            if resp.startswith(b":"):
+                return int(resp.strip().split(b"\r\n")[0][1:])
+            return 0
+        except Exception:
+            return 0
+
     def rpop(self, key):
         """RPOP key"""
         sock = self._connect()
@@ -302,32 +332,35 @@ def generate_video_hover_preview(file_path):
 
 def process_file_task(raw_file_path, redis_client):
     """Process single task: generate & cache thumbnail and hover play preview."""
-    file_path = resolve_target_path(raw_file_path)
-    if not file_path or not os.path.exists(file_path):
-        return
+    try:
+        file_path = resolve_target_path(raw_file_path)
+        if not file_path or not os.path.exists(file_path):
+            return
 
-    ext = os.path.splitext(file_path)[1].lower()
-    path_hash = get_hash(raw_file_path)
-    
-    thumb_key = f"thumb:{path_hash}"
-    hover_key = f"hover:{path_hash}"
-    
-    # 1. Process Thumbnail if not already cached
-    if not redis_client.exists(thumb_key):
-        thumb_bytes = None
-        if ext in IMAGE_EXTENSIONS:
-            thumb_bytes = generate_image_thumbnail(file_path)
-        elif ext in VIDEO_EXTENSIONS:
-            thumb_bytes = generate_video_thumbnail(file_path)
-            
-        if thumb_bytes:
-            redis_client.set_bytes(thumb_key, thumb_bytes, ex=2592000)
+        ext = os.path.splitext(file_path)[1].lower()
+        path_hash = get_hash(raw_file_path)
+        
+        thumb_key = f"thumb:{path_hash}"
+        hover_key = f"hover:{path_hash}"
+        
+        # 1. Process Thumbnail if not already cached
+        if not redis_client.exists(thumb_key):
+            thumb_bytes = None
+            if ext in IMAGE_EXTENSIONS:
+                thumb_bytes = generate_image_thumbnail(file_path)
+            elif ext in VIDEO_EXTENSIONS:
+                thumb_bytes = generate_video_thumbnail(file_path)
+                
+            if thumb_bytes:
+                redis_client.set_bytes(thumb_key, thumb_bytes, ex=2592000)
 
-    # 2. Process Hover Sneak Peek if video and not already cached
-    if ext in VIDEO_EXTENSIONS and not redis_client.exists(hover_key):
-        hover_bytes = generate_video_hover_preview(file_path)
-        if hover_bytes:
-            redis_client.set_bytes(hover_key, hover_bytes, ex=2592000)
+        # 2. Process Hover Sneak Peek if video and not already cached
+        if ext in VIDEO_EXTENSIONS and not redis_client.exists(hover_key):
+            hover_bytes = generate_video_hover_preview(file_path)
+            if hover_bytes:
+                redis_client.set_bytes(hover_key, hover_bytes, ex=2592000)
+    finally:
+        redis_client.incr("preview_completed_count")
 
 def worker_loop(daemon=True):
     """Silent background worker loop popping from media_preview_tasks."""

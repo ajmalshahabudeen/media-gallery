@@ -78,4 +78,17 @@ export async function getBufferCache(key: string): Promise<Buffer | null> {
   }
 }
 
+export async function getStringCache(key: string): Promise<string | null> {
+  if (!redisClient) return null;
+  try {
+    if (redisClient.status === "wait") {
+      await redisClient.connect().catch(() => {});
+    }
+    if (redisClient.status !== "ready") return null;
+    return await redisClient.get(key);
+  } catch {
+    return null;
+  }
+}
+
 export { redisClient };

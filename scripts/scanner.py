@@ -191,6 +191,8 @@ def scan_directory_multiprocess(raw_target_path):
     # Determine CPU core worker count
     max_workers = min(os.cpu_count() or 4, 16)
 
+    media_tasks = []
+
     # Process subfolders in parallel using ProcessPoolExecutor
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [
@@ -204,10 +206,9 @@ def scan_directory_multiprocess(raw_target_path):
                 all_files.extend(files_batch)
                 all_folders_set.update(folders_batch)
 
-                # Push media file task into Redis queue for background preview generator
                 for f in files_batch:
                     if f["type"] in ("image", "video"):
-                        redis_client.lpush("media_preview_tasks", json.dumps({"path": f["path"], "type": f["type"]}))
+                        media_tasks.append(f)
 
                 if len(all_files) - last_emit_count >= 15 or len(all_files) == 1:
                     latest_name = files_batch[-1]["name"] if files_batch else ""
@@ -215,6 +216,12 @@ def scan_directory_multiprocess(raw_target_path):
                     last_emit_count = len(all_files)
             except Exception:
                 continue
+
+    if media_tasks:
+        redis_client.set("preview_total_count", len(media_tasks))
+        redis_client.set("preview_completed_count", 0)
+        for f in media_tasks:
+            redis_client.lpush("media_preview_tasks", json.dumps({"path": f["path"], "type": f["type"]}))
 
     # Final progress emission
     final_latest = all_files[-1]["name"] if all_files else ""
