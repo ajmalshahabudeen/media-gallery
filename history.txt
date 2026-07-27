@@ -110,6 +110,15 @@ Status: Completed.
 5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 14:
+1. Linked `MediaFolder` model to `User` (`userId` relation) in `prisma/schema.prisma` to enforce per-user media privacy isolation.
+2. Updated all media API routes (`/api/media/folders`, `/api/media/scan`, `/api/media/file`, `/api/media/progress`) to require Better-Auth session verification and filter folders/scanned files by `session.user.id`.
+3. Created `docker-entrypoint.sh` executing `bun x prisma db push --accept-data-loss` at container startup to automatically initialize SQLite database tables inside an isolated volume.
+4. Updated `Dockerfile` and `docker-compose.yml` to use `db_data:/app/prisma_db` named volume and `DATABASE_URL=file:/app/prisma_db/dev.db` for independent container execution.
+5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
 
 
 

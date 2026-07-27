@@ -24,12 +24,12 @@ services:
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - DATABASE_URL=file:./dev.db
+      - DATABASE_URL=file:/app/prisma_db/dev.db
       - REDIS_URL=redis://redis:6379
       - BETTER_AUTH_SECRET=CwYFhm1l4L4Vb30mm4SgTSf558hAd8ZV
       - BETTER_AUTH_URL=http://localhost:38479
     volumes:
-      - ./dev.db:/app/dev.db
+      - db_data:/app/prisma_db
       - ${HOST_MEDIA_PATH:-./}:/host_media:ro
       - C:\:/host_drives/c:ro
       - D:\:/host_drives/d:ro
@@ -42,3 +42,4 @@ services:
 
 volumes:
   redis_data:
+  db_data:
