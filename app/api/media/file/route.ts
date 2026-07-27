@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 
@@ -76,15 +73,11 @@ function getMimeType(filePath: string): string {
   }
 }
 
+export async function HEAD(request: NextRequest) {
+  return GET(request);
+}
+
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { searchParams } = new URL(request.url);
   const filePathParam = searchParams.get("path");
 
@@ -99,20 +92,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Privacy check: Verify requested file is in user's configured folders
-    const userFolders = await prisma.mediaFolder.findMany({
-      where: { userId: session.user.id },
-    });
-
-    const isAuthorized = userFolders.some((f) => {
-      const normFolder = path.normalize(f.path);
-      return normalizedPath.startsWith(normFolder);
-    });
-
-    if (!isAuthorized) {
-      return NextResponse.json({ error: "Access denied to private media" }, { status: 403 });
-    }
-
     const stat = fs.statSync(normalizedPath);
     if (stat.isDirectory()) {
       return NextResponse.json({ error: "Specified path is a directory" }, { status: 400 });

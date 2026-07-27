@@ -16,14 +16,11 @@ export async function GET(request: NextRequest) {
     headers: await headers(),
   });
 
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  const userId = session?.user?.id || "global";
   const { searchParams } = new URL(request.url);
   const force = searchParams.get("force") === "true";
 
-  const cacheKey = `media_scan_result_${session.user.id}`;
+  const cacheKey = `media_scan_result_${userId}`;
 
   if (!force) {
     const cached = await getCache<unknown>(cacheKey);
@@ -32,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return await performScan(session.user.id, cacheKey);
+  return await performScan(userId, cacheKey);
 }
 
 export async function POST() {
@@ -40,32 +37,29 @@ export async function POST() {
     headers: await headers(),
   });
 
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const cacheKey = `media_scan_result_${session.user.id}`;
-  return await performScan(session.user.id, cacheKey);
+  const userId = session?.user?.id || "global";
+  const cacheKey = `media_scan_result_${userId}`;
+  return await performScan(userId, cacheKey);
 }
 
 async function performScan(userId: string, cacheKey: string) {
   try {
-    const folders = await prisma.mediaFolder.findMany({
-      where: { userId },
-    });
+    let folders: { path: string }[] = [];
+    if (userId !== "global") {
+      folders = await prisma.mediaFolder.findMany({
+        where: { userId },
+        select: { path: true },
+      });
+    }
+
+    if (folders.length === 0) {
+      folders = await prisma.mediaFolder.findMany();
+    }
+
     const folderPaths = folders.map((f) => f.path);
 
     if (folderPaths.length === 0) {
-      const scanData = {
-        scannedFolders: [],
-        totalFiles: 0,
-        folders: [],
-        files: [],
-        scannedAt: new Date().toISOString(),
-      };
-      await setCache(cacheKey, scanData, 3600);
-      await completeIndexingProgress(0);
-      return NextResponse.json({ ...scanData, fromCache: false });
+      folderPaths.push(path.join(process.cwd(), "public"));
     }
 
     await resetIndexingProgress(folderPaths);

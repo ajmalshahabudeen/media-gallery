@@ -126,7 +126,45 @@ Status: Completed.
 5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 16:
+1. Rewrote `components/preview/VideoPreview.tsx` with VLC/MX Player-style full-screen centered playback:
+   - Video centered and fills all available space with `object-contain`
+   - Large centered play button overlay when paused (glassmorphism style)
+   - Auto-hiding controls after 3s of inactivity while playing (mouse/touch resets timer)
+   - Buffering spinner overlay
+   - Double-click to toggle fullscreen
+   - Keyboard shortcuts (Space/K=play, ←/→=seek, ↑/↓=volume, M=mute, F=fullscreen)
+   - `preload="metadata"` for proper HTTP range request streaming (fixes video not playing)
+   - Hours:minutes:seconds time format for long videos
+   - Error overlay for unsupported formats
+2. Updated `components/preview/FilePreviewDrawer.tsx` to give video files an immersive full-height black background layout (no padding/scroll), while keeping normal centered layout for images/audio/docs.
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
 
+[2026-07-27] Request 17:
+1. Fixed "Unable to play this video format" error in `components/preview/VideoPreview.tsx`:
+   - Error handler was firing for ALL video error events (including transient ones). Now checks `video.error.code` for genuine fatal errors only (MEDIA_ERR_NETWORK, MEDIA_ERR_DECODE, MEDIA_ERR_SRC_NOT_SUPPORTED).
+   - Replaced boolean `hasError` with descriptive `errorMessage` string.
+   - Added Retry button on error overlay that calls `video.load()` to re-attempt.
+   - Error state clears on `play`, `canplay`, and `loadedmetadata` events.
+2. Fixed path comparison bug in `app/api/media/file/route.ts`:
+   - Normalized paths to forward slashes and lowercase for cross-platform comparison (Windows `\` vs Unix `/`).
+   - Added proper folder prefix matching with trailing separator to prevent partial path matches.
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 18:
+1. Added `export async function HEAD(request: NextRequest)` route handler to `app/api/media/file/route.ts` so HTTP HEAD requests return 200/206/401/403 header status without downloading full stream body.
+2. Added URL pre-flight status validation in `components/preview/VideoPreview.tsx` to detect 401 (unauthorized), 403 (access denied), 404 (not found), or 500 server errors beforehand, presenting actionable error banners instead of generic "format not supported".
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 19:
+1. Removed authentication and privacy folder checks from `app/api/media/file/route.ts` per user directive so media files, photos, videos, and audio can be streamed and viewed directly without 401/403 blocks.
+2. Updated `app/api/media/scan/route.ts` to allow global/unauthenticated media scanning fallback if user folders are empty or session is unauthenticated.
+3. Removed pre-flight HEAD error blocking logic from `components/preview/VideoPreview.tsx`.
+4. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
 
 
 

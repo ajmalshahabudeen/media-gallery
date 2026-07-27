@@ -87,12 +87,20 @@ export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
           </div>
         </DrawerHeader>
 
-        {/* Main Media Preview Area (Flexible & Scrollable for mobile) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center items-center bg-muted/10">
-          <div className="w-full max-w-5xl my-auto">
+        {/* Main Media Preview Area */}
+        {file.type === "video" ? (
+          /* Immersive full-height video player — no scroll, no padding */
+          <div className="flex-1 bg-black flex items-center justify-center overflow-hidden">
             {renderMediaContent()}
           </div>
-        </div>
+        ) : (
+          /* Standard scrollable centered layout for images, audio, docs */
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center items-center bg-muted/10">
+            <div className="w-full max-w-5xl my-auto">
+              {renderMediaContent()}
+            </div>
+          </div>
+        )}
 
         {/* Bottom Details Drawer / Footer Panel */}
         <div className="border-t bg-card p-4 shrink-0">
