@@ -93,6 +93,25 @@ Status: Completed.
 2. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 12:
+1. Updated `app/icon.tsx` to render a rounded black background with white "M".
+2. Updated `app/manifest.ts` PWA manifest with name `Server Gallery`, short name `Server Gallery`, description, icons, and theme options.
+3. Created `/api/server/ping/route.ts` API route with CORS headers for LAN server ping and IP discovery.
+4. Created `components/NetworkScanner.tsx` component enabling offline PWA manifest apps and devices to scan local subnets on port 38479 to discover and connect to the server when the server's local Wi-Fi IP changes.
+5. Embedded `NetworkScanner` into `app/dashboard/layout.tsx` top navigation bar.
+6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 13:
+1. Built full offline PWA fallback system to handle cases where installed PWA apps cannot reach old server IP (e.g. when server Wi-Fi IP changes).
+2. Created Service Worker `public/sw.js` precaching `/offline` route and serving cached offline page on navigation network failures.
+3. Created `components/ServiceWorkerRegister.tsx` to register `public/sw.js` across all pages in `app/layout.tsx`.
+4. Created `app/offline/page.tsx` offline fallback screen which automatically runs background LAN network scanning across local subnets on port 38479 when unreachable, detects the new server IP, displays a countdown alert, and automatically redirects the PWA client to `http://<new-ip>:38479/dashboard`.
+5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
+
 
 
 

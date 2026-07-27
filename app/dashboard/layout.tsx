@@ -25,6 +25,8 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 
+import { NetworkScanner } from "@/components/NetworkScanner";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -152,7 +154,8 @@ export default function DashboardLayout({
                 <span className="font-bold text-sm">Media Gallery</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <NetworkScanner />
               <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 Port 38479
               </span>
