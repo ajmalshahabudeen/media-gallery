@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { MediaFile } from "@/store/useMediaStore";
+import { MediaFile, useMediaStore } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
   Music as AudioIcon,
   FileText,
   Eye,
+  Star,
 } from "lucide-react";
 
 interface MediaCardProps {
@@ -22,6 +23,9 @@ interface MediaCardProps {
 }
 
 export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
+  const { favorites, toggleFavorite } = useMediaStore();
+  const isFavorite = favorites.some((f) => f.path === file.path);
+
   const [isHovered, setIsHovered] = useState(false);
   const [isPcScreen, setIsPcScreen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -53,10 +57,30 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     }
   };
 
+  const renderFavoriteButton = (customClass = "absolute top-2 right-2 z-20") => (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleFavorite(file);
+      }}
+      className={`size-7 rounded-full bg-black/50 backdrop-blur-md border border-white/10 hover:bg-black/80 hover:scale-110 transition-all ${customClass}`}
+      title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+    >
+      <Star
+        className={`size-3.5 transition-colors ${
+          isFavorite ? "fill-amber-400 text-amber-400" : "text-white/80 hover:text-white"
+        }`}
+      />
+    </Button>
+  );
+
   const renderCardThumbnail = (aspectClass: string = "aspect-video") => {
     if (file.type === "image") {
       return (
         <div className={`relative w-full ${aspectClass} overflow-hidden bg-muted/40 group-hover:brightness-95 transition-all`}>
+          {renderFavoriteButton()}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={thumbnailUrl}
@@ -71,6 +95,7 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     if (file.type === "video") {
       return (
         <div className={`relative w-full ${aspectClass} overflow-hidden bg-slate-950 flex items-center justify-center border-b border-purple-500/10`}>
+          {renderFavoriteButton()}
           {/* Base Poster Thumbnail (from Redis thumbnail cache) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -134,6 +159,7 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     if (file.type === "audio") {
       return (
         <div className={`relative w-full ${aspectClass} overflow-hidden bg-linear-to-br from-emerald-950/60 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
+          {renderFavoriteButton()}
           <div className="size-11 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-md">
             <AudioIcon className="size-5" />
           </div>
@@ -146,6 +172,7 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
 
     return (
       <div className={`relative w-full ${aspectClass} overflow-hidden bg-muted/40 flex flex-col items-center justify-center gap-2 p-4`}>
+        {renderFavoriteButton("absolute top-2 right-2 z-20 bg-muted/80 text-foreground")}
         <FileText className="size-8 text-muted-foreground" />
         <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">
           {file.extension.replace(".", "") || "Document"}

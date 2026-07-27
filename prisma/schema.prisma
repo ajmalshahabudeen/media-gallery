@@ -20,6 +20,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   mediaFolders  MediaFolder[]
+  favorites     FavoriteMedia[]
 
   role       String?
   banned     Boolean?  @default(false)
@@ -90,6 +91,24 @@ model MediaFolder {
   @@unique([userId, path])
   @@index([userId])
   @@map("media_folder")
+}
+
+model FavoriteMedia {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path       String
+  name       String
+  folder     String
+  type       String
+  extension  String
+  size       Int      @default(0)
+  modifiedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, path])
+  @@index([userId])
+  @@map("favorite_media")
 }
 
 model SystemLog {

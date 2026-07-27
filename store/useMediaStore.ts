@@ -8,6 +8,10 @@ export type ViewMode =
   | "detailed-cards"
   | "detailed-list";
 
+export type GroupByMode = "none" | "folder" | "type" | "date";
+export type SortByField = "name" | "date" | "size";
+export type SortOrder = "asc" | "desc";
+
 export interface MediaFile {
   id: string;
   name: string;
@@ -39,9 +43,13 @@ export interface IndexingProgressState {
 interface MediaState {
   folders: MediaFolderItem[];
   files: MediaFile[];
+  favorites: MediaFile[];
   activeFolder: string | null;
   selectedType: "all" | "image" | "video" | "audio";
   viewMode: ViewMode;
+  groupBy: GroupByMode;
+  sortBy: SortByField;
+  sortOrder: SortOrder;
   searchQuery: string;
   isLoading: boolean;
   isScanning: boolean;
@@ -51,9 +59,14 @@ interface MediaState {
   setSearchQuery: (query: string) => void;
   setSelectedType: (type: "all" | "image" | "video" | "audio") => void;
   setViewMode: (mode: ViewMode) => void;
+  setGroupBy: (mode: GroupByMode) => void;
+  setSortBy: (field: SortByField) => void;
+  setSortOrder: (order: SortOrder) => void;
   setActiveFolder: (folder: string | null) => void;
 
   fetchFolders: () => Promise<void>;
+  fetchFavorites: () => Promise<void>;
+  toggleFavorite: (file: MediaFile) => Promise<boolean>;
   addFolder: (path: string, name?: string) => Promise<boolean>;
   removeFolder: (id: string) => Promise<boolean>;
   scanMedia: (force?: boolean) => Promise<void>;
@@ -67,9 +80,13 @@ export const useMediaStore = create<MediaState>()(
     (set, get) => ({
       folders: [],
       files: [],
+      favorites: [],
       activeFolder: null,
       selectedType: "all",
       viewMode: "detailed-cards",
+      groupBy: "none",
+      sortBy: "name",
+      sortOrder: "asc",
       searchQuery: "",
       isLoading: false,
       isScanning: false,
@@ -86,6 +103,9 @@ export const useMediaStore = create<MediaState>()(
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSelectedType: (type) => set({ selectedType: type }),
       setViewMode: (mode) => set({ viewMode: mode }),
+      setGroupBy: (mode) => set({ groupBy: mode }),
+      setSortBy: (field) => set({ sortBy: field }),
+      setSortOrder: (order) => set({ sortOrder: order }),
       setActiveFolder: (folder) => set({ activeFolder: folder }),
 
       fetchFolders: async () => {
@@ -100,6 +120,35 @@ export const useMediaStore = create<MediaState>()(
           // ignore
         } finally {
           set({ isLoading: false });
+        }
+      },
+
+      fetchFavorites: async () => {
+        try {
+          const res = await fetch("/api/media/favorites");
+          if (res.ok) {
+            const data = await res.json();
+            set({ favorites: data.favorites || [] });
+          }
+        } catch {
+          // ignore
+        }
+      },
+
+      toggleFavorite: async (file: MediaFile) => {
+        try {
+          const res = await fetch("/api/media/favorites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(file),
+          });
+          if (res.ok) {
+            await get().fetchFavorites();
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
         }
       },
 
@@ -186,6 +235,9 @@ export const useMediaStore = create<MediaState>()(
         viewMode: state.viewMode,
         selectedType: state.selectedType,
         activeFolder: state.activeFolder,
+        groupBy: state.groupBy,
+        sortBy: state.sortBy,
+        sortOrder: state.sortOrder,
       }),
     }
   )

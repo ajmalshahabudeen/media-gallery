@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   Users,
   ScrollText,
+  Star,
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -54,6 +55,12 @@ export default function DashboardLayout({
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      name: "Favorites",
+      href: "/dashboard/favorites",
+      icon: Star,
+      active: pathname === "/dashboard/favorites",
     },
     ...(isAdmin
       ? [
@@ -166,9 +173,9 @@ export default function DashboardLayout({
         </Sidebar>
 
         {/* Main Content Area */}
-        <SidebarInset className="flex flex-1 flex-col h-screen overflow-hidden relative">
-          {/* Top Bar with Sidebar Trigger - Pinned fixed on top */}
-          <header className="fixed top-0 right-0 left-0 md:left-(--sidebar-width,16rem) z-30 border-b bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-200">
+        <SidebarInset className="flex flex-1 flex-col h-screen overflow-hidden">
+          {/* Top Bar with Sidebar Trigger - Pinned on top */}
+          <header className="shrink-0 z-30 border-b bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-200">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="hover:bg-muted" />
               <div className="flex items-center gap-2 md:hidden">
@@ -189,7 +196,7 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto px-4 pb-4 pt-20 md:px-8 md:pb-8 md:pt-24">{children}</main>
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

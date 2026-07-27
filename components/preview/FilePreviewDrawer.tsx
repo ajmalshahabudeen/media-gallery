@@ -1,6 +1,6 @@
 "use client";
 
-import { MediaFile } from "@/store/useMediaStore";
+import { MediaFile, useMediaStore } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/formatSize";
 import { VideoPreview } from "./VideoPreview";
 import { PhotoPreview } from "./PhotoPreview";
@@ -22,6 +22,7 @@ import {
   Folder,
   Info,
   X,
+  Star,
 } from "lucide-react";
 
 interface FilePreviewDrawerProps {
@@ -30,8 +31,11 @@ interface FilePreviewDrawerProps {
 }
 
 export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
+  const { favorites, toggleFavorite } = useMediaStore();
+
   if (!file) return null;
 
+  const isFavorite = favorites.some((f) => f.path === file.path);
   const fileUrl = `/api/media/file?path=${encodeURIComponent(file.path)}`;
 
   const renderMediaContent = () => {
@@ -79,6 +83,23 @@ export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toggleFavorite(file)}
+              className="gap-1.5 rounded-full border shadow-xs"
+              title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            >
+              <Star
+                className={`size-4 transition-colors ${
+                  isFavorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"
+                }`}
+              />
+              <span className="text-xs font-semibold hidden sm:inline">
+                {isFavorite ? "Favorited" : "Favorite"}
+              </span>
+            </Button>
+
             <DrawerClose render={
               <Button variant="ghost" size="icon-sm" onClick={onClose} className="rounded-full">
                 <X className="size-5" />
