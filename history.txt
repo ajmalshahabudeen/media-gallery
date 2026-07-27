@@ -270,7 +270,14 @@ Status: Completed.
 1. Eliminated sidebar hydration layout flash/collapse jump on page reload by converting `app/dashboard/layout.tsx` into a Next.js Server Component that reads `cookies()` from `next/headers` (`sidebar_state` cookie) synchronously on the server.
 2. Created `components/DashboardLayoutClient.tsx` client component wrapper receiving server-rendered `defaultOpen={defaultOpen}` prop.
 3. Verified clean compilation with `bun x tsc --noEmit`, `bun run lint`, and `bun run build` (0 errors, 0 warnings).
+[2026-07-27] Request 40:
+1. Diagnosed `exec /app/docker-entrypoint.sh: no such file or directory` error: caused by Windows CRLF line endings in shell scripts on Docker Alpine images.
+2. Updated `docker-entrypoint.sh` to unix LF format and added `sed -i 's/\r$//' /app/docker-entrypoint.sh` in `Dockerfile` to sanitize line endings during build.
+3. Updated `"lint": "eslint ."` in `package.json` and verified `bun run lint` and `bun run build` run cleanly with 0 errors.
+4. Provided comprehensive architectural answer on using AdGuard Home with `*.home.arpa` DNS rewrites, explaining local DNS setup, port 53 considerations, and HTTPS/TLS reverse proxy integration for PWA.
 Status: Completed.
+
+
 
 
 

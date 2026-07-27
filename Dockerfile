@@ -22,8 +22,8 @@ RUN bun install --frozen-lockfile
 # Copy application source code
 COPY . .
 
-# Make entrypoint script executable
-RUN chmod +x /app/docker-entrypoint.sh
+# Make entrypoint script executable and convert line endings
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
 # Generate Prisma Client & Build Next.js
 RUN bun run db:generate
