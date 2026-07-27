@@ -255,7 +255,15 @@ Status: Completed.
 3. Updated `components/preview/FilePreviewDrawer.tsx` to automatically trigger media view logs whenever a user opens/plays a media file preview.
 4. Added `MEDIA_VIEW (Watched)` filter and purple event badge to `app/dashboard/logs/page.tsx` for tracking watched media logs in real time.
 5. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+[2026-07-27] Request 37:
+1. Refactored `components/ui/dialog.tsx` adding `max-h-[85vh] sm:max-h-[90vh] overflow-y-auto`, `max-w-[calc(100%-2rem)]`, rounded borders, and responsive padding (`p-4 sm:p-6`) to prevent modal overflow.
+2. Updated Log Record Details dialog in `app/dashboard/logs/page.tsx` with responsive metadata grid (`grid-cols-1 sm:grid-cols-2`), string wrapping (`break-all`, `break-words`), and JSON payload code formatting (`break-all whitespace-pre-wrap max-w-full overflow-x-auto`). Reviewed all user management and log dialog popups for 100% mobile friendliness.
+3. Enhanced sidebar state persistence in `components/ui/sidebar.tsx` and `store/useMediaStore.ts` using `sidebar_state` cookie and `localStorage` to ensure user collapse/expanded preferences are remembered across page reloads and sessions.
+4. Created `components/loader.tsx` full-screen skeleton shimmer loader along with Next.js loading boundaries `app/loading.tsx` and `app/dashboard/loading.tsx` to eliminate layout shifts during route transitions.
+5. Created `app/error.tsx`, `app/dashboard/error.tsx` (unhandled error boundary cards with reload button), and `app/not-found.tsx` (custom 404 page).
+6. Verified clean compilation with `bun x tsc --noEmit`, `bun run lint`, and `bun run build` (0 errors, 0 warnings).
 Status: Completed.
+
 
 
 

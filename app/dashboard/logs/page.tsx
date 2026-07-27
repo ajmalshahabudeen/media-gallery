@@ -363,28 +363,28 @@ export default function AdminLogsPage() {
 
       {/* Log Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-xl">
           <DialogHeader className="border-b pb-4">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               {selectedLog && getLevelBadge(selectedLog.level)}
               {selectedLog && getTypeBadge(selectedLog.type)}
             </div>
             <DialogTitle className="text-base font-bold">Log Record Details</DialogTitle>
-            <DialogDescription className="text-xs font-mono">
+            <DialogDescription className="text-xs font-mono break-all">
               Log ID: {selectedLog?.id}
             </DialogDescription>
           </DialogHeader>
 
           {selectedLog && (
-            <div className="flex flex-col gap-4 py-3 text-xs">
+            <div className="flex flex-col gap-4 py-2 text-xs overflow-hidden">
               {/* Event Message Banner */}
-              <div className="p-3 rounded-lg bg-muted/40 border flex items-start gap-2.5">
+              <div className="p-3 rounded-lg bg-muted/40 border flex items-start gap-2.5 min-w-0">
                 <Activity className="size-4 text-primary shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-foreground">{selectedLog.message}</span>
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <span className="font-semibold text-foreground break-words leading-relaxed">{selectedLog.message}</span>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
                     <span className="flex items-center gap-1">
-                      <Clock className="size-3" />
+                      <Clock className="size-3 shrink-0" />
                       {new Date(selectedLog.timestamp).toISOString()}
                     </span>
                   </div>
@@ -392,26 +392,26 @@ export default function AdminLogsPage() {
               </div>
 
               {/* Grid Metadata */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1 min-w-0">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1">
-                    <User className="size-3" /> User Identity
+                    <User className="size-3 shrink-0" /> User Identity
                   </span>
-                  <span className="font-mono font-semibold truncate">
+                  <span className="font-mono font-semibold break-all text-xs">
                     {selectedLog.userEmail || "Anonymous / System"}
                   </span>
                   {selectedLog.userId && (
-                    <span className="text-[10px] text-muted-foreground font-mono truncate">
+                    <span className="text-[10px] text-muted-foreground font-mono break-all">
                       ID: {selectedLog.userId}
                     </span>
                   )}
                 </div>
 
-                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1">
+                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1 min-w-0">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1">
-                    <Globe className="size-3" /> Network IP
+                    <Globe className="size-3 shrink-0" /> Network IP
                   </span>
-                  <span className="font-mono font-semibold">
+                  <span className="font-mono font-semibold break-all text-xs">
                     {selectedLog.ipAddress || "Local Host / Internal"}
                   </span>
                   <span className="text-[10px] text-muted-foreground font-mono">
@@ -419,12 +419,12 @@ export default function AdminLogsPage() {
                   </span>
                 </div>
 
-                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1 col-span-2">
+                <div className="p-3 rounded-lg bg-muted/20 border flex flex-col gap-1 col-span-1 sm:col-span-2 min-w-0">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1">
-                    <Laptop className="size-3" /> Client Device & User-Agent
+                    <Laptop className="size-3 shrink-0" /> Client Device & User-Agent
                   </span>
-                  <span className="font-semibold">{selectedLog.deviceName}</span>
-                  <span className="text-[10px] text-muted-foreground font-mono break-all">
+                  <span className="font-semibold text-xs break-words">{selectedLog.deviceName}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono break-all leading-normal">
                     {selectedLog.userAgent || "No user agent header provided"}
                   </span>
                 </div>
@@ -432,11 +432,11 @@ export default function AdminLogsPage() {
 
               {/* Parsed JSON Metadata */}
               {selectedLog.metadata && (
-                <div className="flex flex-col gap-1.5 mt-1">
+                <div className="flex flex-col gap-1.5 mt-1 min-w-0">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">
                     Structured Log Payload (JSON Metadata)
                   </span>
-                  <pre className="p-3 rounded-lg bg-slate-950 text-slate-100 font-mono text-[11px] overflow-x-auto max-h-48 border">
+                  <pre className="p-3 rounded-lg bg-slate-950 text-slate-100 font-mono text-[10px] sm:text-[11px] overflow-x-auto max-h-48 border break-all whitespace-pre-wrap max-w-full">
                     {JSON.stringify(parseMetadataObject(selectedLog.metadata), null, 2)}
                   </pre>
                 </div>

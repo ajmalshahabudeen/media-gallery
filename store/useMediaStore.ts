@@ -56,6 +56,7 @@ interface MediaState {
   scannedAt: string | null;
   indexingProgress: IndexingProgressState;
 
+  sidebarOpen: boolean;
   setSearchQuery: (query: string) => void;
   setSelectedType: (type: "all" | "image" | "video" | "audio") => void;
   setViewMode: (mode: ViewMode) => void;
@@ -63,6 +64,7 @@ interface MediaState {
   setSortBy: (field: SortByField) => void;
   setSortOrder: (order: SortOrder) => void;
   setActiveFolder: (folder: string | null) => void;
+  setSidebarOpen: (open: boolean) => void;
 
   fetchFolders: () => Promise<void>;
   fetchFavorites: () => Promise<void>;
@@ -100,6 +102,7 @@ export const useMediaStore = create<MediaState>()(
         startTime: null,
       },
 
+      sidebarOpen: true,
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSelectedType: (type) => set({ selectedType: type }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -107,6 +110,7 @@ export const useMediaStore = create<MediaState>()(
       setSortBy: (field) => set({ sortBy: field }),
       setSortOrder: (order) => set({ sortOrder: order }),
       setActiveFolder: (folder) => set({ activeFolder: folder }),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
       fetchFolders: async () => {
         set({ isLoading: true });
@@ -238,6 +242,7 @@ export const useMediaStore = create<MediaState>()(
         groupBy: state.groupBy,
         sortBy: state.sortBy,
         sortOrder: state.sortOrder,
+        sidebarOpen: state.sidebarOpen,
       }),
     }
   )

@@ -85,6 +85,27 @@ function SidebarProvider({
     return defaultOpen;
   });
 
+  React.useEffect(() => {
+    try {
+      const match = document.cookie.match(new RegExp("(?:^|; )" + SIDEBAR_COOKIE_NAME + "=([^;]*)"));
+      let val: boolean | null = null;
+      if (match) {
+        val = match[1] === "true";
+      } else {
+        const local = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+        if (local !== null) val = local === "true";
+      }
+      if (val !== null) {
+        const targetVal = val;
+        queueMicrotask(() => {
+          _setOpen(targetVal);
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const open = openProp ?? _open
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
