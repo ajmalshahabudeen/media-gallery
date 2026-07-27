@@ -335,7 +335,20 @@ Status: Completed.
 [2026-07-27] Request 56:
 1. Separated copy state in `components/PwaInstallPrompt.tsx` into `copiedType: "flags" | "origin" | null` so Step 1 ("Copy Flag URL") and Step 2 ("Copy Origin") display independent copy feedback.
 2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 57:
+1. Explained the 3 reasons why Android Chrome falls back to a Chrome tab shortcut when installing over HTTP (Google WebAPK server requirement for HTTPS, manifest ID alignment).
+2. Updated `app/manifest.ts` setting `id: '/'` to match `scope: '/'`.
+3. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 58:
+1. Added Android Standalone App flag (`chrome://flags/#enable-desktop-pwas-app-icon-shortcuts`) section with a dedicated 1-click copy button into `components/PwaInstallPrompt.tsx`.
+2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 59:
+1. Integrated a dedicated **PWA Mobile & LAN Setup Guide** card into `app/dashboard/settings/page.tsx` displaying the exact 4-step setup guide with 1-click copy buttons for Chrome flags and server origin.
+2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
 Status: Completed.
+
+
+
 
 
 

@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Offline-First Home Server Media Gallery',
     start_url: '/dashboard',
     scope: '/',
-    id: '/dashboard',
+    id: '/',
     display: 'standalone',
     orientation: 'any',
     background_color: '#09090b',
