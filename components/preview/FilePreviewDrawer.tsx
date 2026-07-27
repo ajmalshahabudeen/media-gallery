@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { MediaFile, useMediaStore } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/formatSize";
 import { VideoPreview } from "./VideoPreview";
@@ -32,6 +33,20 @@ interface FilePreviewDrawerProps {
 
 export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
   const { favorites, toggleFavorite } = useMediaStore();
+
+  useEffect(() => {
+    if (file) {
+      fetch("/api/media/log-view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          path: file.path,
+          type: file.type,
+        }),
+      }).catch(() => {});
+    }
+  }, [file]);
 
   if (!file) return null;
 

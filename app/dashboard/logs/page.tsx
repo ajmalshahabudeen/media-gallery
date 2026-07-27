@@ -147,6 +147,13 @@ export default function AdminLogsPage() {
   };
 
   const getTypeBadge = (type: string) => {
+    if (type.includes("MEDIA_VIEW")) {
+      return (
+        <Badge variant="outline" className="text-[10px] font-mono text-purple-400 border-purple-500/30 bg-purple-500/10">
+          {type}
+        </Badge>
+      );
+    }
     if (type.includes("SUCCESS") || type.includes("CREATED")) {
       return (
         <Badge variant="outline" className="text-[10px] font-mono text-emerald-600 border-emerald-500/30">
@@ -247,6 +254,7 @@ export default function AdminLogsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All Types</SelectItem>
+                  <SelectItem value="MEDIA_VIEW">MEDIA_VIEW (Watched)</SelectItem>
                   <SelectItem value="LOGIN_SUCCESS">LOGIN_SUCCESS</SelectItem>
                   <SelectItem value="LOGIN_FAILURE">LOGIN_FAILURE</SelectItem>
                   <SelectItem value="REGISTER_SUCCESS">REGISTER_SUCCESS</SelectItem>

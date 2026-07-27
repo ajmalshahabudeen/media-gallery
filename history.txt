@@ -249,10 +249,14 @@ Status: Completed.
 4. Added `FavoriteMedia` model to `prisma/schema.prisma` and ran `bun run db:generate` & `bun run db:push`.
 5. Created `/api/media/favorites/route.ts` API route handler and `/dashboard/favorites` page with a dedicated sidebar link (`⭐ Favorites`).
 6. Built `components/preview/MediaGalleryGrid.tsx` with Group By (folder, type, date, none), Sort By (name, date, size asc/desc), ViewModes, and star favorite toggles on `MediaCard` and `FilePreviewDrawer`.
-[2026-07-27] Request 35:
-1. Replaced native `<select>` tags in `components/preview/MediaGalleryGrid.tsx` with `@/components/ui/select.tsx` components (`Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`).
-2. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+[2026-07-27] Request 36:
+1. Added `mediaView()` logging method to `ServerLogger` class in `lib/logger.ts` for tracking opened/watched media items.
+2. Created `/api/media/log-view/route.ts` API route handler to log user IP, user agent, email, device name, and file path.
+3. Updated `components/preview/FilePreviewDrawer.tsx` to automatically trigger media view logs whenever a user opens/plays a media file preview.
+4. Added `MEDIA_VIEW (Watched)` filter and purple event badge to `app/dashboard/logs/page.tsx` for tracking watched media logs in real time.
+5. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
+
 
 
 

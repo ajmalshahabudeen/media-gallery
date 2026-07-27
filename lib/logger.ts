@@ -148,6 +148,30 @@ class ServerLogger {
       metadata: details.metadata,
     });
   }
+
+  mediaView(details: {
+    fileName: string;
+    filePath: string;
+    mediaType: string;
+    userEmail?: string | null;
+    userId?: string | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  }) {
+    return this.log("INFO", {
+      type: "MEDIA_VIEW",
+      message: `Opened media preview: ${details.fileName}`,
+      userEmail: details.userEmail,
+      userId: details.userId,
+      ipAddress: details.ipAddress,
+      userAgent: details.userAgent,
+      status: "SUCCESS",
+      metadata: {
+        path: details.filePath,
+        type: details.mediaType,
+      },
+    });
+  }
 }
 
 export const logger = new ServerLogger();
