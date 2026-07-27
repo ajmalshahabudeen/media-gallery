@@ -9,7 +9,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Download, Smartphone, Share, PlusSquare, Monitor, CheckCircle2 } from "lucide-react";
+import copy from "copy-to-clipboard";
+import { Download, Smartphone, ShieldCheck, Copy, Check, ExternalLink } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -25,6 +26,13 @@ export function PwaInstallPrompt() {
     return false;
   });
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [copiedType, setCopiedType] = useState<"flags" | "origin" | null>(null);
+  const [currentOrigin] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return "http://192.168.1.101:38479";
+  });
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -55,9 +63,20 @@ export function PwaInstallPrompt() {
       }
       setDeferredPrompt(null);
     } else {
-      // Show local network install guide
       setIsGuideOpen(true);
     }
+  };
+
+  const copyFlagsUrl = () => {
+    copy("chrome://flags/#unsafely-treat-insecure-origin-as-secure");
+    setCopiedType("flags");
+    setTimeout(() => setCopiedType(null), 2000);
+  };
+
+  const copyOriginUrl = () => {
+    copy(currentOrigin);
+    setCopiedType("origin");
+    setTimeout(() => setCopiedType(null), 2000);
   };
 
   if (isInstalled) return null;
@@ -69,7 +88,7 @@ export function PwaInstallPrompt() {
         size="xs"
         onClick={handleInstallClick}
         className="gap-1.5 border-dashed border-primary/40 text-primary hover:bg-primary/10"
-        title="Install Server Gallery PWA App on your device"
+        title="Install Server Gallery PWA App"
       >
         <Download className="size-3.5" />
         <span className="font-semibold text-xs hidden sm:inline">Install App</span>
@@ -77,48 +96,63 @@ export function PwaInstallPrompt() {
 
       <Dialog open={isGuideOpen} onOpenChange={setIsGuideOpen}>
         <DialogContent className="max-w-md p-6 gap-5">
-          <DialogHeader>
+          <DialogHeader className="pt-14">
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-primary/10 p-2 text-primary">
                 <Smartphone className="size-5" />
               </div>
-              <DialogTitle className="text-base font-bold">Install Server Gallery PWA</DialogTitle>
+              <DialogTitle className="text-base font-bold">Enable PWA Installation on HTTP LAN</DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground">
-              How to install Server Gallery as an app on your local network (HTTP / Wi-Fi).
+              To allow Chrome / Edge to install this PWA over local network HTTP, enable this built-in browser flag once.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 text-xs">
-            {/* Chrome / Edge Desktop & Android */}
+            {/* Step 1: Chrome Flag */}
             <div className="p-3.5 rounded-xl border bg-muted/20 flex flex-col gap-2">
-              <div className="flex items-center gap-2 font-bold text-foreground">
-                <Monitor className="size-4 text-primary" />
-                <span>Chrome / Edge (Desktop & Android)</span>
+              <div className="flex items-center justify-between font-bold text-foreground">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-primary" />
+                  <span>Step 1: Open Chrome Flag</span>
+                </div>
+                <Button variant="ghost" size="xs" onClick={copyFlagsUrl} className="h-7 text-[11px] gap-1">
+                  {copiedType === "flags" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                  <span>{copiedType === "flags" ? "Copied!" : "Copy Flag URL"}</span>
+                </Button>
               </div>
-              <ol className="list-decimal list-inside text-muted-foreground flex flex-col gap-1 font-mono text-[11px]">
-                <li>Click the browser menu (⋮ or ⋯ top right)</li>
-                <li>Select <strong>Save & Share</strong> or <strong>More Tools</strong></li>
-                <li>Click <strong>Install Server Gallery...</strong> or <strong>Add to Home Screen</strong></li>
-              </ol>
+              <p className="text-[11px] text-muted-foreground">
+                Paste this into Chrome/Edge address bar:
+              </p>
+              <code className="bg-background px-2.5 py-1.5 rounded border text-[11px] font-mono select-all break-all text-primary">
+                chrome://flags/#unsafely-treat-insecure-origin-as-secure
+              </code>
             </div>
 
-            {/* iOS Safari */}
+            {/* Step 2: Add Origin */}
             <div className="p-3.5 rounded-xl border bg-muted/20 flex flex-col gap-2">
-              <div className="flex items-center gap-2 font-bold text-foreground">
-                <Share className="size-4 text-primary" />
-                <span>iPhone / iPad (Safari)</span>
+              <div className="flex items-center justify-between font-bold text-foreground">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="size-4 text-primary" />
+                  <span>Step 2: Add Your Server Origin</span>
+                </div>
+                <Button variant="ghost" size="xs" onClick={copyOriginUrl} className="h-7 text-[11px] gap-1">
+                  {copiedType === "origin" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                  <span>{copiedType === "origin" ? "Copied!" : "Copy Origin"}</span>
+                </Button>
               </div>
-              <ol className="list-decimal list-inside text-muted-foreground flex flex-col gap-1 font-mono text-[11px]">
-                <li>Tap the <strong>Share</strong> button at the bottom bar</li>
-                <li>Scroll down and tap <strong>Add to Home Screen</strong> (<PlusSquare className="size-3 inline mx-0.5" />)</li>
-                <li>Tap <strong>Add</strong> top right</li>
-              </ol>
+              <p className="text-[11px] text-muted-foreground">
+                Enable <strong>Insecure origins treated as secure</strong> and paste:
+              </p>
+              <code className="bg-background px-2.5 py-1.5 rounded border text-[11px] font-mono select-all break-all text-emerald-500">
+                {currentOrigin || "http://192.168.1.101:38479"}
+              </code>
             </div>
 
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px]">
-              <CheckCircle2 className="size-4 shrink-0" />
-              <span>PWA will launch as a standalone app with offline recovery scanner!</span>
+            {/* Step 3: Relaunch */}
+            <div className="p-3.5 rounded-xl border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 flex flex-col gap-1 text-[11px]">
+              <span className="font-bold">Step 3: Click Relaunch</span>
+              <span>After restarting Chrome/Edge, click <strong>Install App</strong> again to install Server Gallery natively!</span>
             </div>
           </div>
         </DialogContent>

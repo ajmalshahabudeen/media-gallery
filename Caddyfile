@@ -1,0 +1,9 @@
+{
+    # Prevents Caddy from trying to install the CA inside the container
+    skip_install_trust
+    auto_https off
+}
+
+http://:38479 {
+    reverse_proxy web:3000
+}

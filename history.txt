@@ -281,6 +281,76 @@ Status: Completed.
 3. Verified both `media_gallery_app` (port 38479) and `media_gallery_redis` (port 6379) are active and healthy via `docker ps`.
 Status: Completed.
 
+[2026-07-27] Request 42:
+1. Created Caddyfile with tls internal reverse proxy configuration routing port 80 (HTTPS redirect) and port 443 to web:3000.
+2. Updated docker-compose.yml to add caddy container service with ports 80:80 and 443:443, caddy_data & caddy_config volumes, exposed 3000 port for web service, and updated BETTER_AUTH_URL=https://localhost.
+3. Simplified components/PwaInstallPrompt.tsx by removing the manual HTTP installation guide modal and retaining native browser PWA install prompt button on HTTPS.
+4. Updated README.md with full Caddy HTTPS reverse proxy documentation, trusted root CA extraction and installation steps across Windows, macOS, Android, and iOS, plus mkcert instructions.
+5. Updated run.bat, run.sh, and components/DashboardLayoutClient.tsx header text to HTTPS (https://localhost).
+6. Executed bun run lint (0 errors, 0 warnings) and bun run build (compiled successfully with 0 errors).
+[2026-07-27] Request 43:
+1. Explained 3 clear strategies for running multiple Next.js apps with Caddy reverse proxy: Domain/Host-based routing, Port-based routing, and Subpath routing.
+Status: Completed.
+
+[2026-07-27] Request 44:
+1. Updated `Caddyfile` to use Option 1 (Hostname and Domain-based routing) supporting `localhost, media-gallery.local, :443` and structured comments for multi-app routing.
+2. Updated `README.md` to reflect Option 1 Caddyfile structure.
+3. Verified clean lint (`bun run lint`) and production build (`bun run build`) with 0 errors.
+[2026-07-27] Request 45:
+1. Explained why `media-gallery.local` fails to resolve out-of-the-box without local DNS/hosts file entries, and provided 3 resolution methods (Hosts file, mDNS/Bonjour, Router/AdGuard DNS rewrite).
+[2026-07-27] Request 46:
+1. Explained the fundamental difference between DNS (Domain Resolution / Phonebook) and Caddy (HTTPS SSL/TLS Encryption, Reverse Proxy, Port 80/443 Routing, and PWA enabler).
+[2026-07-27] Request 47:
+1. Ran `ipconfig` and identified host Wi-Fi IPv4 address (`192.168.1.101`).
+2. Explained 3 reasons why phone access failed and provided 3 exact steps to connect from phone (using `https://192.168.1.101`, allowing ports 80/443 in Windows Firewall, and bypassing browser security warning).
+[2026-07-27] Request 48:
+1. Guided user on running PowerShell as Administrator to create the inbound Windows Firewall rule for ports 80 and 443.
+[2026-07-27] Request 49:
+1. Diagnosed `ERR_SSL_PROTOCOL_ERROR`: caused by explicit SNI domain filtering in `Caddyfile` when accessing via raw IP address (`192.168.1.101`).
+[2026-07-27] Request 50:
+1. Resolved `ERR_SSL_PROTOCOL_ERROR` when accessing via LAN IP by updating `Caddyfile` to serve HTTP on port 80 directly (`reverse_proxy web:3000`) alongside HTTPS on port 443.
+2. Verified `http://192.168.1.101` returns HTTP 200 OK cleanly without forcing SSL redirects or triggering certificate protocol errors on mobile devices.
+3. Restarted `media_gallery_caddy` container.
+[2026-07-27] Request 51:
+1. Configured Caddy and Docker Compose to use dedicated unique application port `38479:38479`.
+2. Updated `Caddyfile`, `docker-compose.yml`, `run.bat`, `run.sh`, `components/DashboardLayoutClient.tsx`, and `README.md` to use port `38479`.
+3. Verified `bun run lint` (0 errors) and `bun run build` (0 errors), and recreated Docker containers.
+[2026-07-27] Request 52:
+1. Enabled HTTPS with `tls internal` on dedicated port `38479` in `Caddyfile`.
+2. Updated `BETTER_AUTH_URL=https://localhost:38479` in `docker-compose.yml`.
+3. Updated `run.bat`, `run.sh`, and `components/DashboardLayoutClient.tsx` to `https://localhost:38479`.
+4. Verified `bun run lint` (0 errors) and `bun run build` (0 errors), and recreated Docker containers.
+[2026-07-27] Request 53:
+1. Resolved `ERR_SSL_PROTOCOL_ERROR` on custom port 38479 by configuring Caddy for HTTP (`http://:38479`).
+2. Updated `Caddyfile`, `docker-compose.yml`, `run.bat`, `run.sh`, `components/DashboardLayoutClient.tsx`, and `README.md` to `http://localhost:38479`.
+3. Verified `bun run lint` (0 errors) and `bun run build` (0 errors), and recreated Docker containers.
+[2026-07-27] Request 54:
+1. Built dynamic Chrome Flag PWA setup guide modal into `components/PwaInstallPrompt.tsx` with 1-click copy buttons for `chrome://flags/#unsafely-treat-insecure-origin-as-secure` and `http://192.168.1.101:38479`.
+2. Updated `README.md` with Chrome Flag PWA installation documentation.
+3. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 55:
+1. Installed `copy-to-clipboard` via Bun (`bun add copy-to-clipboard`) to support fallback clipboard copy over HTTP / unsecure origins.
+2. Updated `components/PwaInstallPrompt.tsx` to use `copy(...)` for reliable 1-click copying across HTTP network origins.
+3. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 56:
+1. Separated copy state in `components/PwaInstallPrompt.tsx` into `copiedType: "flags" | "origin" | null` so Step 1 ("Copy Flag URL") and Step 2 ("Copy Origin") display independent copy feedback.
+2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+Status: Completed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

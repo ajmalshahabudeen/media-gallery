@@ -51,39 +51,26 @@ Once promoted, log out and log back in (or refresh). The **Users** and **System 
 
 ---
 
-## 🚀 Quick Start with Docker Compose
+## 🚀 Quick Start with Docker Compose & Caddy HTTPS Proxy
 
-### Prerequisites
-- [Docker Desktop](https://www.docker.com/) or Docker Engine with Docker Compose.
+### 🔒 Best Free + Easy + Quick Solution: Caddy Reverse Proxy with `tls internal`
 
-### 1. Clone & Configure
+To get HTTPS working on your LAN IPs (e.g. `https://192.168.1.50` or `https://localhost`) with a Dockerized Next.js app, we include Caddy as a reverse proxy using `tls internal`.
 
-```bash
-git clone https://github.com/your-repo/media-gallery.git
-cd media-gallery
+### 1. `Caddyfile`
+
+```caddy
+{
+    # Prevents Caddy from trying to install the CA inside the container
+    skip_install_trust
+}
+
+:38479 {
+    reverse_proxy web:3000
+}
 ```
 
-### 2. Launch Stack
-
-Start the application container and Redis instance:
-
-```bash
-docker compose up -d
-```
-
-Access the server in your browser or PWA:
-
-```text
-http://localhost:38479
-# Or on your local network:
-http://<YOUR_SERVER_IP>:38479
-```
-
----
-
-## 🛠️ Docker Architecture & Volumes
-
-Everything runs independently inside Docker:
+### 2. `docker-compose.yml`
 
 ```yaml
 services:
@@ -96,8 +83,8 @@ services:
   web:
     build: .
     container_name: media_gallery_app
-    ports:
-      - "38479:3000"
+    expose:
+      - "3000"
     environment:
       - DATABASE_URL=file:/app/prisma_db/dev.db
       - REDIS_URL=redis://redis:6379
@@ -107,7 +94,91 @@ services:
       - ${HOST_MEDIA_PATH:-./}:/host_media:ro
       - C:\:/host_drives/c:ro              # Mount host drives for media scanning
       - D:\:/host_drives/d:ro
+    depends_on:
+      - redis
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: media_gallery_caddy
+    ports:
+      - "38479:38479"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - default
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  db_data:
+  caddy_data:
+  caddy_config:
 ```
+
+### 3. Launch Stack
+
+```bash
+docker compose up -d
+```
+
+Access the server in your browser or PWA:
+- Open `https://YOUR_LAN_IP` (e.g., `https://192.168.1.50` or `https://localhost`).
+- Click **Advanced → Proceed** on initial browser local CA warning.
+
+---
+
+### 🛡️ Making Caddy HTTPS Trusted on Devices (Phones, PCs, Tablets)
+
+1. Extract Caddy’s root certificate from the running container:
+
+```bash
+docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+```
+
+2. Install `caddy-root.crt` as a **Trusted Root CA** on each device:
+   - **Windows**: Double-click `caddy-root.crt` → Install Certificate → Local Machine → Place all certificates in: **Trusted Root Certification Authorities**.
+   - **macOS**: Double-click `caddy-root.crt` → add to System keychain → set to Always Trust.
+   - **Android**: Settings → Security & Privacy → More Security Settings → Encryption & Credentials → Install a Certificate → CA Certificate.
+   - **iOS**: AirDrop/Email `caddy-root.crt` → Settings → Profile Downloaded → Install → Settings → General → About → Certificate Trust Settings → Enable Full Trust.
+
+After installing the root CA, the warning disappears permanently.
+
+---
+
+### 📲 Installing PWA on Local HTTP via Chrome Flags (Zero Certificate Config)
+
+If accessing via HTTP (e.g. `http://192.168.1.101:38479`), Chrome and Edge allow installing PWAs by treating your server IP as a secure origin:
+
+1. Open this URL in Chrome / Edge:
+   `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Enable the flag and enter your server IP:
+   `http://192.168.1.101:38479`
+3. Change dropdown to **Enabled** and click **Relaunch**.
+4. The **Install App** button will trigger native PWA installation!
+
+---
+
+### 💡 Alternative (mkcert)
+
+If you prefer certificates that are already trusted on your main dev machine:
+
+```bash
+# Install mkcert once, then:
+mkcert -install
+mkcert localhost 127.0.0.1 ::1 192.168.1.50   # replace with your LAN IP
+```
+
+Mount the generated `.pem` files into Caddy and replace `tls internal` in your `Caddyfile` with `tls /etc/caddy/cert.pem /etc/caddy/key.pem`.
+
+---
+
+## 🛠️ Docker Architecture & Volumes
+
+Everything runs independently inside Docker with Caddy acting as reverse proxy exposing ports `80` and `443`.
 
 *Database Auto-Initialization:* On container boot, `docker-entrypoint.sh` automatically initializes and synchronizes the SQLite schema (`bun run db:push`).
 
