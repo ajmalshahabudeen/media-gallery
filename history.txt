@@ -1,0 +1,18 @@
+[2026-07-27] Request:
+1. Support authentication on all local network IPs/hosts (localhost, 127.0.0.1, 192.168.*.*, etc.).
+2. Add sign-in and sign-up pages.
+3. Use proxy.ts for Next.js 16 request routing (do not rename to middleware.ts).
+4. Use shadcn UI only without custom tailwindcss.
+5. Update README.md to "this is a nextjs + docker app".
+
+Status: Completed.
+- Configured Better Auth with trustedOrigins for local network wildcard matching (http://localhost:3000, http://127.0.0.1:3000, http://192.168.*.*:3000, etc.) in auth.ts.
+- Updated package.json dev script to "next dev -H 0.0.0.0".
+- Created sign-in (/sign-in) and sign-up (/sign-up) pages using shadcn UI components.
+- Created protected /dashboard page and home page navigation using shadcn UI components.
+- Updated proxy.ts for Next.js 16 proxy request session validation & route protection.
+- Updated prisma/schema.prisma with User, Session, Account, Verification models and generated/pushed SQLite dev.db.
+- Fixed 500 error on POST /api/auth/sign-up/email by replacing blocked native C++ better-sqlite3 with pure JS @prisma/adapter-libsql (PrismaLibSql) in lib/prisma.ts.
+- Fixed Better Auth Base URL warning by adding dynamic baseURL configuration with allowedHosts: ["*"] and fallback in auth.ts.
+- Updated README.md to "this is a nextjs + docker app".
+- Ran bun run lint and bun run build successfully without errors.
