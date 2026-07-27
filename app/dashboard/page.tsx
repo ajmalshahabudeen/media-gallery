@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMediaStore, MediaFile } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/utils";
-import { FilePreviewModal } from "@/components/preview/FilePreviewModal";
+import { FilePreviewDrawer } from "@/components/preview/FilePreviewDrawer";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
 import {
   Card,
@@ -90,7 +90,8 @@ export default function DashboardGalleryPage() {
   };
 
   /**
-   * Helper to render real thumbnails for card views
+   * High-performance grid thumbnail rendering.
+   * Prevents loading parallel video connections in grid items to keep playback ultra-smooth.
    */
   const renderThumbnail = (file: MediaFile, aspectClass: string = "aspect-video") => {
     const fileUrl = `/api/media/file?path=${encodeURIComponent(file.path)}`;
@@ -111,28 +112,24 @@ export default function DashboardGalleryPage() {
 
     if (file.type === "video") {
       return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-black flex items-center justify-center`}>
-          <video
-            src={`${fileUrl}#t=0.5`}
-            preload="metadata"
-            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-          />
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all">
-            <div className="size-10 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center shadow-lg">
-              <Play className="size-5 fill-current ml-0.5" />
-            </div>
+        <div className={`relative w-full ${aspectClass} overflow-hidden bg-gradient-to-br from-purple-950/80 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-purple-500/10`}>
+          <div className="size-11 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-md">
+            <Play className="size-5 fill-current ml-0.5" />
           </div>
+          <span className="text-[10px] font-mono text-purple-300 uppercase tracking-widest font-semibold">
+            Video Track
+          </span>
         </div>
       );
     }
 
     if (file.type === "audio") {
       return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-gradient-to-br from-emerald-950/60 to-emerald-900/20 flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
-          <div className="size-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+        <div className={`relative w-full ${aspectClass} overflow-hidden bg-gradient-to-br from-emerald-950/60 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
+          <div className="size-11 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-md">
             <AudioIcon className="size-5" />
           </div>
-          <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-semibold">
+          <span className="text-[10px] font-mono text-emerald-300 uppercase tracking-widest font-semibold">
             Audio File
           </span>
         </div>
@@ -142,8 +139,8 @@ export default function DashboardGalleryPage() {
     return (
       <div className={`relative w-full ${aspectClass} overflow-hidden bg-muted/40 flex flex-col items-center justify-center gap-2 p-4`}>
         <FileText className="size-8 text-muted-foreground" />
-        <span className="text-[10px] font-mono text-muted-foreground uppercase">
-          {file.extension || "Document"}
+        <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">
+          {file.extension.replace(".", "") || "Document"}
         </span>
       </div>
     );
@@ -312,7 +309,7 @@ export default function DashboardGalleryPage() {
         <>
           {/* VIEW 1: Compact List View */}
           {viewMode === "list" && (
-            <Card className="divide-y overflow-hidden">
+            <Card className="divide-y overflow-hidden border">
               {filteredFiles.map((file) => (
                 <div
                   key={file.id}
@@ -326,6 +323,7 @@ export default function DashboardGalleryPage() {
                         <img
                           src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
                           alt={file.name}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -394,7 +392,7 @@ export default function DashboardGalleryPage() {
                       <span className="font-bold text-base truncate group-hover:text-primary transition-colors" title={file.name}>
                         {file.name}
                       </span>
-                      <Badge variant="secondary" className="uppercase text-xs shrink-0">
+                      <Badge variant="secondary" className="uppercase text-xs shrink-0 font-mono">
                         {file.extension.replace(".", "") || file.type}
                       </Badge>
                     </div>
@@ -429,7 +427,7 @@ export default function DashboardGalleryPage() {
                         <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors" title={file.name}>
                           {file.name}
                         </span>
-                        <Badge variant="outline" className="text-[10px] uppercase shrink-0">
+                        <Badge variant="outline" className="text-[10px] uppercase shrink-0 font-mono">
                           {file.extension.replace(".", "") || file.type}
                         </Badge>
                       </div>
@@ -443,7 +441,7 @@ export default function DashboardGalleryPage() {
                     <span className="font-mono font-medium text-foreground">
                       {formatFileSize(file.size)}
                     </span>
-                    <span className="capitalize text-[11px] bg-muted px-2 py-0.5 rounded">
+                    <span className="capitalize text-[11px] bg-muted px-2 py-0.5 rounded font-medium">
                       {file.type}
                     </span>
                   </div>
@@ -454,7 +452,7 @@ export default function DashboardGalleryPage() {
 
           {/* VIEW 5: Detailed List View (Table) */}
           {viewMode === "detailed-list" && (
-            <Card className="overflow-x-auto">
+            <Card className="overflow-x-auto border">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider">
@@ -481,6 +479,7 @@ export default function DashboardGalleryPage() {
                             <img
                               src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
                               alt={file.name}
+                              loading="lazy"
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -495,7 +494,7 @@ export default function DashboardGalleryPage() {
                         {file.path}
                       </td>
                       <td className="p-3">
-                        <Badge variant="outline" className="uppercase text-[10px]">
+                        <Badge variant="outline" className="uppercase text-[10px] font-mono">
                           {file.extension.replace(".", "") || file.type}
                         </Badge>
                       </td>
@@ -520,8 +519,8 @@ export default function DashboardGalleryPage() {
         </>
       )}
 
-      {/* Universal File Preview Modal */}
-      <FilePreviewModal
+      {/* Universal Full-Screen Bottom Drawer File Preview */}
+      <FilePreviewDrawer
         file={previewMedia}
         onClose={() => setPreviewMedia(null)}
       />

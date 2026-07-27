@@ -74,4 +74,13 @@ Status: Completed.
 7. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 9:
+1. Replaced preview dialog modal with a full-screen mobile-friendly bottom drawer using `@components/ui/drawer.tsx` (`FilePreviewDrawer.tsx`). Features touch swipe handle, top sticky header, mobile-responsive media area, and bottom file metadata panel.
+2. Fixed video playback & thumbnail loading performance hang by upgrading `scripts/scanner.py` with Python `ProcessPoolExecutor` multiprocessing and a lightweight socket-based Redis client (`RedisClient`).
+3. Eliminated grid card socket pool exhaustion by removing simultaneous `<video preload="metadata">` renders in grid view in favor of high-efficiency visual cards and lazy image loading.
+4. Added HTTP caching headers (`Cache-Control: public, max-age=86400, immutable`) to `/api/media/file/route.ts` for instant browser caching.
+5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
 

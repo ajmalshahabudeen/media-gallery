@@ -1,0 +1,165 @@
+"use client";
+
+import { useState } from "react";
+import { MediaFile } from "@/store/useMediaStore";
+import { formatFileSize } from "@/lib/formatSize";
+import { VideoPreview } from "./VideoPreview";
+import { PhotoPreview } from "./PhotoPreview";
+import { AudioPreview } from "./AudioPreview";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerClose,
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Copy,
+  Check,
+  ExternalLink,
+  FileText,
+  Calendar,
+  HardDrive,
+  Folder,
+  Info,
+  X,
+} from "lucide-react";
+
+interface FilePreviewDrawerProps {
+  file: MediaFile | null;
+  onClose: () => void;
+}
+
+export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
+  const [copied, setCopied] = useState(false);
+
+  if (!file) return null;
+
+  const fileUrl = `/api/media/file?path=${encodeURIComponent(file.path)}`;
+
+  const copyPath = () => {
+    navigator.clipboard.writeText(file.path);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const renderMediaContent = () => {
+    switch (file.type) {
+      case "video":
+        return <VideoPreview src={fileUrl} title={file.name} />;
+      case "image":
+        return <PhotoPreview src={fileUrl} title={file.name} />;
+      case "audio":
+        return <AudioPreview src={fileUrl} title={file.name} />;
+      default:
+        return (
+          <div className="flex flex-col items-center justify-center p-12 bg-muted/20 border rounded-2xl gap-4 text-center my-auto">
+            <div className="size-20 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground shadow-sm">
+              <FileText className="size-10" />
+            </div>
+            <div>
+              <h4 className="font-bold text-lg">{file.name}</h4>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                Document / Binary File ({file.extension || "unknown"})
+              </p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <Drawer open={!!file} onOpenChange={(open) => !open && onClose()} showSwipeHandle={true}>
+      <DrawerContent className="h-[100dvh] max-h-[100dvh] w-full rounded-t-2xl sm:rounded-t-3xl flex flex-col bg-background p-0 border-t shadow-2xl overflow-hidden">
+        {/* Sticky Mobile-Friendly Header */}
+        <DrawerHeader className="flex flex-row items-center justify-between gap-4 p-4 border-b bg-card shrink-0">
+          <div className="flex flex-col gap-1 min-w-0 text-left">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="uppercase text-[10px] shrink-0 font-mono">
+                {file.extension.replace(".", "") || file.type}
+              </Badge>
+              <DrawerTitle className="text-base sm:text-lg font-bold truncate tracking-normal normal-case" title={file.name}>
+                {file.name}
+              </DrawerTitle>
+            </div>
+            <DrawerDescription className="text-xs truncate font-mono text-muted-foreground text-left" title={file.path}>
+              {file.path}
+            </DrawerDescription>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={copyPath}
+              className="gap-1.5 text-xs hidden sm:flex"
+            >
+              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+              <span>{copied ? "Copied" : "Copy Path"}</span>
+            </Button>
+            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="xs" className="gap-1.5 text-xs">
+                <ExternalLink className="size-3.5" />
+                <span className="hidden sm:inline">Open</span>
+              </Button>
+            </a>
+            <DrawerClose render={
+              <Button variant="ghost" size="icon-sm" onClick={onClose} className="rounded-full">
+                <X className="size-5" />
+              </Button>
+            } />
+          </div>
+        </DrawerHeader>
+
+        {/* Main Media Preview Area (Flexible & Scrollable for mobile) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col justify-center items-center bg-muted/10">
+          <div className="w-full max-w-5xl my-auto">
+            {renderMediaContent()}
+          </div>
+        </div>
+
+        {/* Bottom Details Drawer / Footer Panel */}
+        <div className="border-t bg-card p-4 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 border">
+              <HardDrive className="size-4 text-primary shrink-0" />
+              <div className="flex flex-col truncate">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Size</span>
+                <span className="font-bold text-xs">{formatFileSize(file.size)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 border">
+              <Info className="size-4 text-primary shrink-0" />
+              <div className="flex flex-col truncate">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Type</span>
+                <span className="font-bold text-xs truncate">{file.mimeType}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 border">
+              <Folder className="size-4 text-primary shrink-0" />
+              <div className="flex flex-col truncate">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Folder</span>
+                <span className="font-bold text-xs truncate">{file.folder}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/40 border">
+              <Calendar className="size-4 text-primary shrink-0" />
+              <div className="flex flex-col truncate">
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold">Modified</span>
+                <span className="font-bold text-xs">
+                  {new Date(file.modifiedAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
