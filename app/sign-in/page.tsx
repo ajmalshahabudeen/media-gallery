@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
 import { authClient } from "@/auth-client";
 import {
   Card,
@@ -17,39 +18,47 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 export default function SignInPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignInFormData>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
+  const onSubmit = async (data: SignInFormData) => {
+    setServerError(null);
     try {
       const { error: resError } = await authClient.signIn.email({
-        email,
-        password,
+        email: data.email,
+        password: data.password,
         callbackURL: "/dashboard",
       });
 
       if (resError) {
-        setError(resError.message || "Invalid email or password.");
+        setServerError(resError.message || "Invalid email or password.");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        setServerError(err.message);
       } else {
-        setError("An unexpected error occurred.");
+        setServerError("An unexpected error occurred.");
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -64,10 +73,10 @@ export default function SignInPage() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {error && (
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            {serverError && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{serverError}</AlertDescription>
               </Alert>
             )}
 
@@ -77,10 +86,17 @@ export default function SignInPage() {
                 id="email"
                 type="email"
                 placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /\S+@\S+\.\S+/,
+                    message: "Entered value does not match email format",
+                  },
+                })}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -89,14 +105,21 @@ export default function SignInPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                {...register("password", {
+                  required: "Password is required",
+                  minLength: {
+                    value: 6,
+                    message: "Password must be at least 6 characters",
+                  },
+                })}
               />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full mt-2">
-              {loading ? "Signing in..." : "Sign In"}
+            <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
+              {isSubmitting ? "Signing in..." : "Sign In"}
             </Button>
           </form>
         </CardContent>

@@ -1,18 +1,66 @@
-[2026-07-27] Request:
+[2026-07-27] Request 1:
 1. Support authentication on all local network IPs/hosts (localhost, 127.0.0.1, 192.168.*.*, etc.).
 2. Add sign-in and sign-up pages.
 3. Use proxy.ts for Next.js 16 request routing (do not rename to middleware.ts).
 4. Use shadcn UI only without custom tailwindcss.
 5. Update README.md to "this is a nextjs + docker app".
-
 Status: Completed.
-- Configured Better Auth with trustedOrigins for local network wildcard matching (http://localhost:3000, http://127.0.0.1:3000, http://192.168.*.*:3000, etc.) in auth.ts.
-- Updated package.json dev script to "next dev -H 0.0.0.0".
-- Created sign-in (/sign-in) and sign-up (/sign-up) pages using shadcn UI components.
-- Created protected /dashboard page and home page navigation using shadcn UI components.
-- Updated proxy.ts for Next.js 16 proxy request session validation & route protection.
-- Updated prisma/schema.prisma with User, Session, Account, Verification models and generated/pushed SQLite dev.db.
-- Fixed 500 error on POST /api/auth/sign-up/email by replacing blocked native C++ better-sqlite3 with pure JS @prisma/adapter-libsql (PrismaLibSql) in lib/prisma.ts.
-- Fixed Better Auth Base URL warning by adding dynamic baseURL configuration with allowedHosts: ["*"] and fallback in auth.ts.
-- Updated README.md to "this is a nextjs + docker app".
-- Ran bun run lint and bun run build successfully without errors.
+
+[2026-07-27] Request 2:
+1. Create layout for dashboard inside app/dashboard.
+2. Create profile and settings pages (/dashboard/profile, /dashboard/settings).
+3. In profile page: upload profile picture, reset password using react-hook-form.
+4. In settings page: add media library folder (Linux, Windows home directory, or external drive link).
+5. Create Docker environment (Dockerfile & docker-compose.yml).
+6. Use Python to fetch all files and folders inside configured media library folder.
+7. Create bash script (run.sh) for 1-click Docker launch on port 38479 and auto open browser.
+8. Use Zustand for state management and Redis for caching.
+9. Refactor sign-in and sign-up pages to use react-hook-form.
+Status: Completed.
+- Created responsive sidebar Dashboard layout (app/dashboard/layout.tsx).
+- Created Profile page (app/dashboard/profile/page.tsx) for avatar upload, name update, and password reset using react-hook-form.
+- Created Settings page (app/dashboard/settings/page.tsx) to configure Windows/Linux/external media folders using react-hook-form.
+- Built Python scanner (scripts/scanner.py) for media files/folders extraction.
+- Integrated Zustand store (store/useMediaStore.ts) and Redis caching with graceful fallback (lib/redis.ts).
+- Refactored /sign-in and /sign-up forms with react-hook-form and shadcn UI inputs.
+- Created Dockerfile, docker-compose.yml (web on port 38479 + redis container), run.sh, and run.bat 1-click scripts.
+- Ran bun run lint and bun run build with 0 errors.
+
+[2026-07-27] Request 3 (continue):
+1. Verified build and lint pipeline using Bun (`bun run build` & `bun run lint`).
+2. Resolved all ESLint unused variable warnings across API routes and Redis helper.
+3. Confirmed clean compilation with 0 errors and 0 warnings.
+[2026-07-27] Request 4:
+1. Enhanced run.bat and run.sh with comprehensive Docker environment checks.
+2. Added Docker CLI installation check (`where docker` / `command -v docker`).
+3. Added Docker Daemon active status check (`docker info`).
+4. Added container status detection (`media_gallery_app`).
+5. Added automatic image rebuild on code changes (`docker compose up -d --build`).
+6. Added `.dockerignore` to reduce context transfer size from 950MB to 1.25MB.
+7. Fixed Dockerfile ENV variables for `prisma generate` during container build.
+8. Verified clean launch of `media_gallery_app` and `media_gallery_redis` on port 38479.
+Status: Completed.
+
+[2026-07-27] Request 5:
+1. Resolved "Invalid origin" error in Docker environment.
+2. Updated `auth.ts` trustedOrigins with host port `:38479` patterns and wildcards (`http://localhost:38479`, `http://127.0.0.1:38479`, `http://192.168.*.*:38479`, `http://*`, `https://*`).
+3. Set `BETTER_AUTH_URL=http://localhost:38479` in `docker-compose.yml` and `Dockerfile`.
+4. Rebuilt image and verified `media_gallery_app` container starts cleanly with `✓ Ready in 101ms` on port 38479.
+Status: Completed.
+
+[2026-07-27] Request 6:
+1. Fixed Windows host drive scanning (e.g., `F:\videos`, `C:\...`) inside Docker containers by implementing `resolve_target_path()` in `scripts/scanner.py`.
+2. Added Windows drive volume mounts (`/host_drives/c`, `/host_drives/d`, `/host_drives/e`, `/host_drives/f`) and `/host_media` in `docker-compose.yml`.
+3. Created real-time progress streaming from `scanner.py` (`sys.stderr`) to `/api/media/scan` and `/api/media/progress`.
+4. Built `IndexingProgressBanner` component displaying live file counter, folder counter, current directory path, and latest indexed file snippet.
+5. Embedded real-time indexing progress banner across both Dashboard (`app/dashboard/page.tsx`) and Settings (`app/dashboard/settings/page.tsx`) pages.
+6. Ran `bun run lint` and `bun run build` with 0 errors and verified Docker container launch (`✓ Ready in 108ms`).
+Status: Completed.
+
+[2026-07-27] Request 7:
+1. Clarified Windows Docker drive mount behavior: Docker Desktop requires specified host drive paths to exist on the host machine (non-existent letters fail with `mkdir <Letter>:\`).
+2. Checked host system drives (`C:\`, `D:\`, `E:\`, `F:\`) via PowerShell.
+3. Updated `docker-compose.yml` to mount all host drives (`C:\`, `D:\`, `E:\`, `F:\`), `${HOST_MEDIA_PATH}`, and `${HOST_EXTRA_DRIVE}` slot.
+4. Verified clean container startup with `docker compose up -d`.
+Status: Completed.
+

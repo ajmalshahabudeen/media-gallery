@@ -1,0 +1,44 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: media_gallery_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: media_gallery_app
+    restart: always
+    ports:
+      - "38479:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=file:./dev.db
+      - REDIS_URL=redis://redis:6379
+      - BETTER_AUTH_SECRET=CwYFhm1l4L4Vb30mm4SgTSf558hAd8ZV
+      - BETTER_AUTH_URL=http://localhost:38479
+    volumes:
+      - ./dev.db:/app/dev.db
+      - ${HOST_MEDIA_PATH:-./}:/host_media:ro
+      - C:\:/host_drives/c:ro
+      - D:\:/host_drives/d:ro
+      - E:\:/host_drives/e:ro
+      - F:\:/host_drives/f:ro
+      - ${HOST_EXTRA_DRIVE:-./}:/host_drives/extra:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis_data:
