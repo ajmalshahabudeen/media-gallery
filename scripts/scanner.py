@@ -195,6 +195,11 @@ def scan_directory_multiprocess(raw_target_path):
                 all_files.extend(files_batch)
                 all_folders_set.update(folders_batch)
 
+                # Push media file task into Redis queue for background preview generator
+                for f in files_batch:
+                    if f["type"] in ("image", "video"):
+                        redis_client.lpush("media_preview_tasks", json.dumps({"path": f["path"], "type": f["type"]}))
+
                 if len(all_files) - last_emit_count >= 15 or len(all_files) == 1:
                     latest_name = files_batch[-1]["name"] if files_batch else ""
                     emit_progress(len(all_files), len(all_folders_set), current_rel, latest_name, redis_client)

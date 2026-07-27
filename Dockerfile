@@ -1,7 +1,7 @@
 FROM oven/bun:1.3.14-alpine AS base
 
-# Install Python 3, OpenSSL, and dependencies
-RUN apk add --no-cache python3 py3-pip nodejs npm openssl bash
+# Install Python 3, ffmpeg, Pillow, OpenSSL, and dependencies
+RUN apk add --no-cache python3 py3-pip py3-pillow ffmpeg nodejs npm openssl bash
 
 WORKDIR /app
 

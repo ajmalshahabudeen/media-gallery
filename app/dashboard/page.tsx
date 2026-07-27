@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMediaStore, MediaFile } from "@/store/useMediaStore";
-import { formatFileSize } from "@/lib/utils";
 import { FilePreviewDrawer } from "@/components/preview/FilePreviewDrawer";
+import { MediaCard } from "@/components/preview/MediaCard";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
 import {
   Card,
@@ -20,18 +20,12 @@ import {
   RefreshCw,
   Search,
   Folder,
-  Image as ImageIcon,
-  Video as VideoIcon,
-  Music as AudioIcon,
-  FileText,
   Settings,
   List,
   LayoutGrid,
   Grid3x3,
   Grid,
   Table,
-  Play,
-  Eye,
 } from "lucide-react";
 
 export type ViewMode =
@@ -76,76 +70,6 @@ export default function DashboardGalleryPage() {
 
     return matchesSearch && matchesType && matchesFolder;
   });
-
-  const getMediaIcon = (type: string) => {
-    switch (type) {
-      case "image":
-        return <ImageIcon className="size-5 text-blue-500" />;
-      case "video":
-        return <VideoIcon className="size-5 text-purple-500" />;
-      case "audio":
-        return <AudioIcon className="size-5 text-emerald-500" />;
-      default:
-        return <FileText className="size-5 text-gray-500" />;
-    }
-  };
-
-  /**
-   * High-performance grid thumbnail rendering.
-   * Prevents loading parallel video connections in grid items to keep playback ultra-smooth.
-   */
-  const renderThumbnail = (file: MediaFile, aspectClass: string = "aspect-video") => {
-    const fileUrl = `/api/media/file?path=${encodeURIComponent(file.path)}`;
-
-    if (file.type === "image") {
-      return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-muted/40 group-hover:brightness-95 transition-all`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fileUrl}
-            alt={file.name}
-            loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        </div>
-      );
-    }
-
-    if (file.type === "video") {
-      return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-linear-to-br from-purple-950/80 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-purple-500/10`}>
-          <div className="size-11 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-md">
-            <Play className="size-5 fill-current ml-0.5" />
-          </div>
-          <span className="text-[10px] font-mono text-purple-300 uppercase tracking-widest font-semibold">
-            Video Track
-          </span>
-        </div>
-      );
-    }
-
-    if (file.type === "audio") {
-      return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-linear-to-br from-emerald-950/60 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
-          <div className="size-11 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-md">
-            <AudioIcon className="size-5" />
-          </div>
-          <span className="text-[10px] font-mono text-emerald-300 uppercase tracking-widest font-semibold">
-            Audio File
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <div className={`relative w-full ${aspectClass} overflow-hidden bg-muted/40 flex flex-col items-center justify-center gap-2 p-4`}>
-        <FileText className="size-8 text-muted-foreground" />
-        <span className="text-[10px] font-mono text-muted-foreground uppercase font-semibold">
-          {file.extension.replace(".", "") || "Document"}
-        </span>
-      </div>
-    );
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -312,45 +236,12 @@ export default function DashboardGalleryPage() {
           {viewMode === "list" && (
             <Card className="divide-y overflow-hidden border">
               {filteredFiles.map((file) => (
-                <div
+                <MediaCard
                   key={file.id}
+                  file={file}
+                  viewMode={viewMode}
                   onClick={() => setPreviewMedia(file)}
-                  className="flex items-center justify-between p-3 hover:bg-muted/40 cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="size-9 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0 border">
-                      {file.type === "image" ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
-                          alt={file.name}
-                          loading="lazy"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        getMediaIcon(file.type)
-                      )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-semibold truncate group-hover:text-primary transition-colors" title={file.name}>
-                        {file.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate" title={file.path}>
-                        {file.folder}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
-                    <span className="font-mono font-medium">{formatFileSize(file.size)}</span>
-                    <Badge variant="outline" className="uppercase text-[10px]">
-                      {file.extension.replace(".", "") || file.type}
-                    </Badge>
-                    <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Eye className="size-3.5 text-primary" />
-                    </Button>
-                  </div>
-                </div>
+                />
               ))}
             </Card>
           )}
@@ -359,21 +250,12 @@ export default function DashboardGalleryPage() {
           {viewMode === "small-cards" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
               {filteredFiles.map((file) => (
-                <Card
+                <MediaCard
                   key={file.id}
+                  file={file}
+                  viewMode={viewMode}
                   onClick={() => setPreviewMedia(file)}
-                  className="cursor-pointer hover:shadow-md transition-shadow group overflow-hidden border"
-                >
-                  {renderThumbnail(file, "aspect-square")}
-                  <div className="p-2 flex flex-col gap-0.5">
-                    <span className="text-xs font-medium truncate" title={file.name}>
-                      {file.name}
-                    </span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {formatFileSize(file.size)}
-                    </span>
-                  </div>
-                </Card>
+                />
               ))}
             </div>
           )}
@@ -382,32 +264,12 @@ export default function DashboardGalleryPage() {
           {viewMode === "big-cards" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredFiles.map((file) => (
-                <Card
+                <MediaCard
                   key={file.id}
+                  file={file}
+                  viewMode={viewMode}
                   onClick={() => setPreviewMedia(file)}
-                  className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden border"
-                >
-                  {renderThumbnail(file, "aspect-video")}
-                  <CardContent className="p-4 flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-base truncate group-hover:text-primary transition-colors" title={file.name}>
-                        {file.name}
-                      </span>
-                      <Badge variant="secondary" className="uppercase text-xs shrink-0 font-mono">
-                        {file.extension.replace(".", "") || file.type}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate" title={file.path}>
-                      {file.path}
-                    </p>
-                    <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
-                      <span className="font-mono font-semibold text-foreground">
-                        {formatFileSize(file.size)}
-                      </span>
-                      <span>{new Date(file.modifiedAt).toLocaleDateString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                />
               ))}
             </div>
           )}
@@ -416,37 +278,12 @@ export default function DashboardGalleryPage() {
           {viewMode === "detailed-cards" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredFiles.map((file) => (
-                <Card
+                <MediaCard
                   key={file.id}
+                  file={file}
+                  viewMode={viewMode}
                   onClick={() => setPreviewMedia(file)}
-                  className="cursor-pointer hover:shadow-md transition-all group overflow-hidden flex flex-col justify-between border"
-                >
-                  <div>
-                    {renderThumbnail(file, "aspect-video")}
-                    <CardContent className="p-4 flex flex-col gap-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-semibold text-sm truncate group-hover:text-primary transition-colors" title={file.name}>
-                          {file.name}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] uppercase shrink-0 font-mono">
-                          {file.extension.replace(".", "") || file.type}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate" title={file.path}>
-                        {file.path}
-                      </span>
-                    </CardContent>
-                  </div>
-
-                  <div className="px-4 py-3 bg-muted/20 border-t flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-mono font-medium text-foreground">
-                      {formatFileSize(file.size)}
-                    </span>
-                    <span className="capitalize text-[11px] bg-muted px-2 py-0.5 rounded font-medium">
-                      {file.type}
-                    </span>
-                  </div>
-                </Card>
+                />
               ))}
             </div>
           )}
@@ -468,50 +305,12 @@ export default function DashboardGalleryPage() {
                 </thead>
                 <tbody className="divide-y">
                   {filteredFiles.map((file) => (
-                    <tr
+                    <MediaCard
                       key={file.id}
+                      file={file}
+                      viewMode={viewMode}
                       onClick={() => setPreviewMedia(file)}
-                      className="hover:bg-muted/40 cursor-pointer transition-colors group"
-                    >
-                      <td className="p-2">
-                        <div className="size-10 rounded overflow-hidden bg-muted flex items-center justify-center border">
-                          {file.type === "image" ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
-                              alt={file.name}
-                              loading="lazy"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            getMediaIcon(file.type)
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3 font-semibold text-sm truncate max-w-xs group-hover:text-primary transition-colors" title={file.name}>
-                        {file.name}
-                      </td>
-                      <td className="p-3 text-muted-foreground truncate max-w-xs hidden md:table-cell" title={file.path}>
-                        {file.path}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline" className="uppercase text-[10px] font-mono">
-                          {file.extension.replace(".", "") || file.type}
-                        </Badge>
-                      </td>
-                      <td className="p-3 font-mono font-medium">
-                        {formatFileSize(file.size)}
-                      </td>
-                      <td className="p-3 text-muted-foreground hidden sm:table-cell">
-                        {new Date(file.modifiedAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button variant="outline" size="xs" className="gap-1">
-                          <Eye className="size-3" />
-                          <span>Preview</span>
-                        </Button>
-                      </td>
-                    </tr>
+                    />
                   ))}
                 </tbody>
               </table>

@@ -214,6 +214,26 @@ Status: Completed.
 4. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 26:
+1. Created `scripts/preview_generator.py` Python background worker with `ProcessPoolExecutor`, low CPU priority (`os.nice(10)`), and batch sleeping for CPU-friendly generation of image WebP thumbnails and video poster/hover sneak-peek previews.
+2. Updated `scripts/scanner.py` to automatically push discovered media items into `media_preview_tasks` Redis queue.
+3. Implemented `/api/media/thumbnail` and `/api/media/hover` route handlers serving cached WebP binary buffers directly from Redis with long-term browser HTTP caching headers (`Cache-Control: public, max-age=2592000, immutable`).
+4. Built `components/preview/MediaCard.tsx` with PC screen mouse pointer detection (`window.matchMedia("(pointer: fine)")`) to play animated WebP hover sneak peeks exclusively on PC desktop screens while keeping touch/mobile devices on static poster thumbnails.
+5. Updated `Dockerfile` (added `ffmpeg` & `py3-pillow` Alpine packages) and `docker-entrypoint.sh` to launch `preview_generator.py --daemon` silently in the background at container launch.
+6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 27:
+1. Resolved Docker layer corruption and container name conflict errors.
+2. Executed `docker builder prune -f` clearing 20.36GB of stale build layers.
+3. Updated `run.bat` and `run.sh` with automatic orphan cleanup (`docker compose down --remove-orphans`) and build cache-prune recovery fallback.
+4. Built images cleanly with `ffmpeg` & `py3-pillow` and launched `media_gallery_app` and `media_gallery_redis` on port 38479 (`✓ Ready in 105ms`).
+5. Confirmed `[PreviewGenerator] Worker loop started in background...` daemon status in container logs.
+Status: Completed.
+
+
+
+
 
 
 

@@ -64,4 +64,18 @@ export async function clearCache(pattern = "*"): Promise<void> {
   }
 }
 
+export async function getBufferCache(key: string): Promise<Buffer | null> {
+  if (!redisClient) return null;
+  try {
+    if (redisClient.status === "wait") {
+      await redisClient.connect().catch(() => {});
+    }
+    if (redisClient.status !== "ready") return null;
+    const data = await redisClient.getBuffer(key);
+    return data && data.length > 0 ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 export { redisClient };

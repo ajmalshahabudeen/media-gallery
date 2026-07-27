@@ -40,13 +40,16 @@ fi
 
 # 5. Build and launch containers with code change detection
 echo "[3/4] Building images & launching containers..."
-docker compose up -d --build
-
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to build or start Docker containers."
-    echo "Showing recent container logs:"
-    docker compose logs --tail=20
-    exit 1
+docker compose down --remove-orphans &> /dev/null
+if ! docker compose up -d --build; then
+    echo "⚠️ Warning: Normal build failed. Clearing corrupted build cache and retrying..."
+    docker builder prune -f
+    if ! (docker compose build --no-cache && docker compose up -d); then
+        echo "❌ Error: Failed to build or start Docker containers after cache reset."
+        echo "Showing recent container logs:"
+        docker compose logs --tail=20
+        exit 1
+    fi
 fi
 
 # 6. Verify container health & running status

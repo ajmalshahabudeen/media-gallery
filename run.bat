@@ -40,14 +40,21 @@ if %ERRORLEVEL% EQU 0 (
 
 :: 4. Build and start containers with auto-rebuild on code changes
 echo [4/4] Building ^& launching containers...
+docker compose down --remove-orphans >nul 2>&1
 docker compose up -d --build
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to start Docker containers.
-    echo.
-    echo Container logs:
-    docker compose logs --tail=20
-    pause
-    exit /b %ERRORLEVEL%
+    echo [WARNING] Normal build failed. Clearing corrupted build cache and retrying...
+    docker builder prune -f
+    docker compose build --no-cache
+    docker compose up -d
+    if %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to start Docker containers after cache reset.
+        echo.
+        echo Container logs:
+        docker compose logs --tail=20
+        pause
+        exit /b %ERRORLEVEL%
+    )
 )
 
 :: 5. Health verification
