@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { getBufferCache } from "@/lib/redis";
+import { getNormalizedPathHash } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing file path parameter" }, { status: 400 });
   }
 
-  const hash = crypto.createHash("md5").update(filePathParam).digest("hex");
+  const hash = getNormalizedPathHash(filePathParam);
   const hoverKey = `hover:${hash}`;
 
   const cachedBuffer = await getBufferCache(hoverKey);
@@ -26,6 +26,6 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Return 404 if hover sneak-peek WebP is not yet generated
-  return NextResponse.json({ error: "Hover preview not found or not ready" }, { status: 404 });
+  // Return HTTP 204 No Content if hover sneak peek is not yet generated in Redis
+  return new NextResponse(null, { status: 204 });
 }

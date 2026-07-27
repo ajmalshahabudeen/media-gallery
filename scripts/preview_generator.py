@@ -20,27 +20,53 @@ except ImportError:
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.heic', '.avif'}
 VIDEO_EXTENSIONS = {'.mp4', '.webm', '.mkv', '.avi', '.mov', '.flv', '.wmv', '.m4v'}
 
+def encode_resp_command(*args):
+    """Encode arguments into a standard Redis RESP command array."""
+    parts = [f"*{len(args)}\r\n".encode('utf-8')]
+    for arg in args:
+        if isinstance(arg, str):
+            arg_bytes = arg.encode('utf-8')
+        elif isinstance(arg, int):
+            arg_bytes = str(arg).encode('utf-8')
+        elif isinstance(arg, bytes):
+            arg_bytes = arg
+        else:
+            arg_bytes = str(arg).encode('utf-8')
+        parts.append(f"${len(arg_bytes)}\r\n".encode('utf-8') + arg_bytes + b"\r\n")
+    return b"".join(parts)
+
 class RedisClient:
     """Lightweight Python Redis client using standard TCP socket (RESP protocol)."""
     def __init__(self, host='127.0.0.1', port=6379, timeout=3.0):
+        redis_url = os.environ.get('REDIS_URL', '')
+        if 'redis://' in redis_url:
+            try:
+                parts = redis_url.replace('redis://', '').split('/')[0].split(':')
+                if parts[0]:
+                    host = parts[0]
+                if len(parts) > 1 and parts[1].isdigit():
+                    port = int(parts[1])
+            except Exception:
+                pass
         self.host = os.environ.get('REDIS_HOST', host)
         self.port = int(os.environ.get('REDIS_PORT', port))
         self.timeout = timeout
 
     def _connect(self):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(self.timeout)
-            sock.connect((self.host, self.port))
-            return sock
-        except Exception:
+        hosts_to_try = [self.host]
+        for candidate in ['redis', '127.0.0.1', 'localhost', 'host.docker.internal']:
+            if candidate not in hosts_to_try:
+                hosts_to_try.append(candidate)
+
+        for h in hosts_to_try:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self.timeout)
-                sock.connect(('127.0.0.1', 6379))
+                sock.connect((h, self.port))
                 return sock
             except Exception:
-                return None
+                continue
+        return None
 
     def get_bytes(self, key):
         """GET key returning raw bytes"""
@@ -48,11 +74,9 @@ class RedisClient:
         if not sock:
             return None
         try:
-            key_bytes = key.encode('utf-8')
-            cmd = f"*2\r\n$3\r\nGET\r\n${len(key_bytes)}\r\n".encode('utf-8') + key_bytes + b"\r\n"
+            cmd = encode_resp_command("GET", key)
             sock.sendall(cmd)
             
-            # Simple RESP parser for Bulk String ($length\r\ndata\r\n)
             header = b""
             while b"\r\n" not in header:
                 chunk = sock.recv(128)
@@ -88,8 +112,7 @@ class RedisClient:
         if not sock:
             return False
         try:
-            key_bytes = key.encode('utf-8')
-            cmd = f"*2\r\n$6\r\nEXISTS\r\n${len(key_bytes)}\r\n".encode('utf-8') + key_bytes + b"\r\n"
+            cmd = encode_resp_command("EXISTS", key)
             sock.sendall(cmd)
             resp = sock.recv(128)
             sock.close()
@@ -103,13 +126,7 @@ class RedisClient:
         if not sock:
             return False
         try:
-            key_bytes = key.encode('utf-8')
-            ex_bytes = str(ex).encode('utf-8')
-            cmd = (
-                f"*4\r\n$3\r\nSET\r\n${len(key_bytes)}\r\n".encode('utf-8') + key_bytes +
-                f"\r\n${len(value_bytes)}\r\n".encode('utf-8') + value_bytes +
-                f"\r\n$2\r\nEX\r\n${len(ex_bytes)}\r\n".encode('utf-8') + ex_bytes + b"\r\n"
-            )
+            cmd = encode_resp_command("SET", key, value_bytes, "EX", ex)
             sock.sendall(cmd)
             resp = sock.recv(128)
             sock.close()
@@ -123,8 +140,7 @@ class RedisClient:
         if not sock:
             return None
         try:
-            key_bytes = key.encode('utf-8')
-            cmd = f"*2\r\n$4\r\nRPOP\r\n${len(key_bytes)}\r\n".encode('utf-8') + key_bytes + b"\r\n"
+            cmd = encode_resp_command("RPOP", key)
             sock.sendall(cmd)
             
             header = b""
@@ -156,8 +172,53 @@ class RedisClient:
         except Exception:
             return None
 
+import re
+
+def resolve_target_path(target_path):
+    if not target_path:
+        return target_path
+    if os.path.exists(target_path):
+        return target_path
+
+    drive_match = re.match(r'^([a-zA-Z]):[/\\]?(.*)', target_path)
+    if drive_match:
+        drive_letter = drive_match.group(1).lower()
+        subpath = drive_match.group(2).replace('\\', '/').strip('/')
+        candidate_paths = [
+            os.path.join(f"/host_drives/{drive_letter}", subpath),
+            os.path.join("/host_media", subpath),
+            os.path.join(f"/mnt/{drive_letter}", subpath),
+            os.path.join(f"/{drive_letter}", subpath),
+            "/host_media"
+        ]
+        for candidate in candidate_paths:
+            if candidate and os.path.exists(candidate):
+                return candidate
+
+    if os.path.exists("/host_media"):
+        return "/host_media"
+
+    return target_path
+
+def normalize_file_path(path_str):
+    """Normalize Windows/Linux paths to a unified forward-slash representation for consistent MD5 hashing."""
+    if not path_str:
+        return ""
+    normalized = path_str.replace('\\', '/').strip()
+    if normalized.startswith('/host_drives/'):
+        parts = normalized.split('/host_drives/', 1)[1]
+        if parts:
+            drive_letter = parts[0].lower()
+            sub = parts[1:].lstrip('/')
+            return f"{drive_letter}:/{sub}".lower()
+    drive_match = re.match(r'^([a-zA-Z]):/(.*)', normalized)
+    if drive_match:
+        return f"{drive_match.group(1).lower()}:/{drive_match.group(2)}".lower()
+    return normalized.lower()
+
 def get_hash(file_path):
-    return hashlib.md5(file_path.encode('utf-8')).hexdigest()
+    norm_path = normalize_file_path(file_path)
+    return hashlib.md5(norm_path.encode('utf-8')).hexdigest()
 
 def generate_image_thumbnail(file_path):
     """Generate resized WebP thumbnail for images."""
@@ -222,6 +283,7 @@ def generate_video_hover_preview(file_path):
             "-t", "2",
             "-i", file_path,
             "-vf", "fps=8,scale=320:-1:flags=lanczos",
+            "-f", "webp",
             "-c:v", "libwebp",
             "-lossless", "0",
             "-q:v", "55",
@@ -238,10 +300,14 @@ def generate_video_hover_preview(file_path):
         pass
     return None
 
-def process_file_task(file_path, redis_client):
+def process_file_task(raw_file_path, redis_client):
     """Process single task: generate & cache thumbnail and hover play preview."""
+    file_path = resolve_target_path(raw_file_path)
+    if not file_path or not os.path.exists(file_path):
+        return
+
     ext = os.path.splitext(file_path)[1].lower()
-    path_hash = get_hash(file_path)
+    path_hash = get_hash(raw_file_path)
     
     thumb_key = f"thumb:{path_hash}"
     hover_key = f"hover:{path_hash}"
@@ -284,7 +350,7 @@ def worker_loop(daemon=True):
                 try:
                     task = json.loads(task_json)
                     file_path = task.get("path")
-                    if file_path and os.path.exists(file_path):
+                    if file_path:
                         process_file_task(file_path, redis_client)
                 except Exception:
                     pass

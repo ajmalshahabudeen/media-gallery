@@ -26,6 +26,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/prisma_db/dev.db
       - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
       - BETTER_AUTH_SECRET=CwYFhm1l4L4Vb30mm4SgTSf558hAd8ZV
       - BETTER_AUTH_URL=http://localhost:38479
     volumes:

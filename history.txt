@@ -223,13 +223,20 @@ Status: Completed.
 6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
-[2026-07-27] Request 27:
-1. Resolved Docker layer corruption and container name conflict errors.
-2. Executed `docker builder prune -f` clearing 20.36GB of stale build layers.
-3. Updated `run.bat` and `run.sh` with automatic orphan cleanup (`docker compose down --remove-orphans`) and build cache-prune recovery fallback.
-4. Built images cleanly with `ffmpeg` & `py3-pillow` and launched `media_gallery_app` and `media_gallery_redis` on port 38479 (`✓ Ready in 105ms`).
-5. Confirmed `[PreviewGenerator] Worker loop started in background...` daemon status in container logs.
+[2026-07-27] Request 30:
+1. Diagnosed broken thumbnails and 404 console errors on video sneak peeks:
+   - `preview_generator.py` inside Linux container was missing `resolve_target_path`, causing `os.path.exists("F:\\...")` to return `False` on Windows drive paths and skip thumbnail generation.
+   - MD5 path hashing differed between raw Windows paths (`F:\...`) and container paths (`/host_drives/f/...`).
+   - Video thumbnail fallback redirected to `/api/media/file?path=...video.mp4`, putting `.mp4` video streams inside browser `<img>` tags, resulting in broken image icons.
+   - Uncached `/api/media/hover` returned HTTP 404, logging console errors in Chrome.
+2. Added `resolve_target_path` to `preview_generator.py` and unified `getNormalizedPathHash` in `lib/utils.ts` and `normalize_file_path` in Python so paths compute identical MD5 keys.
+3. Updated `/api/media/thumbnail/route.ts` for video files without cached thumbnails to return an inline SVG video poster badge (`Content-Type: image/svg+xml`) instead of redirecting to `.mp4`.
+4. Updated `/api/media/hover/route.ts` to return HTTP `204 No Content` for uncached hover requests, keeping browser console logs 100% clean.
+5. Rebuilt and restarted containers cleanly with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
+
+
+
 
 
 

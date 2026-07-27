@@ -17,27 +17,36 @@ MEDIA_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | AUDIO_EXTENSIONS
 class RedisClient:
     """Lightweight Python Redis client using standard TCP socket (RESP protocol)."""
     def __init__(self, host='127.0.0.1', port=6379, timeout=2.0):
-        # Inside Docker, host might be 'redis'
+        redis_url = os.environ.get('REDIS_URL', '')
+        if 'redis://' in redis_url:
+            try:
+                parts = redis_url.replace('redis://', '').split('/')[0].split(':')
+                if parts[0]:
+                    host = parts[0]
+                if len(parts) > 1 and parts[1].isdigit():
+                    port = int(parts[1])
+            except Exception:
+                pass
         self.host = os.environ.get('REDIS_HOST', host)
         self.port = int(os.environ.get('REDIS_PORT', port))
         self.timeout = timeout
         self._sock = None
 
     def _connect(self):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(self.timeout)
-            sock.connect((self.host, self.port))
-            return sock
-        except Exception:
-            # Fallback to localhost if host name fails
+        hosts_to_try = [self.host]
+        for candidate in ['redis', '127.0.0.1', 'localhost', 'host.docker.internal']:
+            if candidate not in hosts_to_try:
+                hosts_to_try.append(candidate)
+
+        for h in hosts_to_try:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(self.timeout)
-                sock.connect(('127.0.0.1', 6379))
+                sock.connect((h, self.port))
                 return sock
             except Exception:
-                return None
+                continue
+        return None
 
     def set(self, key, value, ex=3600):
         """SET key value EX ex"""

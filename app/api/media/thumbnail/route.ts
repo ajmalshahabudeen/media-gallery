@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
+import path from "path";
 import { getBufferCache } from "@/lib/redis";
+import { getNormalizedPathHash } from "@/lib/utils";
+
+const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".m4v"]);
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -10,7 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing file path parameter" }, { status: 400 });
   }
 
-  const hash = crypto.createHash("md5").update(filePathParam).digest("hex");
+  const hash = getNormalizedPathHash(filePathParam);
   const thumbKey = `thumb:${hash}`;
 
   const cachedBuffer = await getBufferCache(thumbKey);
@@ -26,8 +29,24 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Fallback redirect to full file stream endpoint if thumbnail is not yet generated
-  const fileUrl = new URL("/api/media/file", request.url);
-  fileUrl.searchParams.set("path", filePathParam);
-  return NextResponse.redirect(fileUrl);
+  const ext = path.extname(filePathParam).toLowerCase();
+
+  // For images: redirect to raw file stream
+  if (!VIDEO_EXTENSIONS.has(ext)) {
+    const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:38479";
+    const proto = request.headers.get("x-forwarded-proto") || "http";
+    const redirectUrl = `${proto}://${host}/api/media/file?path=${encodeURIComponent(filePathParam)}`;
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // For videos: return clean SVG poster graphic while background generator is rendering thumbnail
+  const svgPoster = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" fill="none"><rect width="480" height="270" fill="#090d16"/><circle cx="240" cy="135" r="32" fill="#7c3aed" fill-opacity="0.2" stroke="#a855f7" stroke-width="2"/><polygon points="234,121 254,135 234,149" fill="#a855f7"/><text x="240" y="192" fill="#94a3b8" font-family="sans-serif" font-size="11" text-anchor="middle" font-weight="600">PREPARING THUMBNAIL...</text></svg>`;
+
+  return new NextResponse(svgPoster, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "no-store, must-revalidate",
+    },
+  });
 }

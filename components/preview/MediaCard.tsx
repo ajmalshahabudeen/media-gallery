@@ -88,7 +88,14 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
             <img
               src={hoverUrl}
               alt={`${file.name} hover preview`}
-              onLoad={() => setHoverImageLoaded(true)}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                  setHoverImageLoaded(true);
+                } else {
+                  setHoverImageLoaded(false);
+                }
+              }}
               onError={() => setHoverImageLoaded(false)}
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
                 hoverImageLoaded ? "opacity-100" : "opacity-0"
