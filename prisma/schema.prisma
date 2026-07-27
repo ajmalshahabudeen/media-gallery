@@ -91,3 +91,25 @@ model MediaFolder {
   @@index([userId])
   @@map("media_folder")
 }
+
+model SystemLog {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  level        String   // "INFO" | "WARN" | "ERROR"
+  type         String   // "LOGIN_SUCCESS" | "LOGIN_FAILURE" | "REGISTER" | "USER_CRUD" | "MEDIA_SCAN" | "SYSTEM"
+  message      String
+  userEmail    String?
+  userId       String?
+  ipAddress    String?
+  deviceName   String?
+  userAgent    String?
+  status       String   // "SUCCESS" | "FAILURE" | "WARNING"
+  metadata     String?  // JSON formatted details string
+  attemptCount Int?     @default(1)
+
+  @@index([timestamp])
+  @@index([level])
+  @@index([type])
+  @@index([userEmail])
+  @@map("system_log")
+}

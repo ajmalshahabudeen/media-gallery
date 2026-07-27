@@ -11,6 +11,8 @@ import {
   Settings as SettingsIcon,
   LogOut,
   Image as ImageIcon,
+  Users,
+  ScrollText,
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { NetworkScanner } from "@/components/NetworkScanner";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export default function DashboardLayout({
   children,
@@ -42,6 +45,8 @@ export default function DashboardLayout({
     router.refresh();
   };
 
+  const isAdmin = session?.user && (session.user as { role?: string }).role === "admin";
+
   const navItems = [
     {
       name: "Gallery",
@@ -49,6 +54,22 @@ export default function DashboardLayout({
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
     },
+    ...(isAdmin
+      ? [
+          {
+            name: "Users",
+            href: "/dashboard/users",
+            icon: Users,
+            active: pathname === "/dashboard/users",
+          },
+          {
+            name: "System Logs",
+            href: "/dashboard/logs",
+            icon: ScrollText,
+            active: pathname === "/dashboard/logs",
+          },
+        ]
+      : []),
     {
       name: "Profile",
       href: "/dashboard/profile",
@@ -156,6 +177,7 @@ export default function DashboardLayout({
             </div>
             <div className="flex items-center gap-3">
               <NetworkScanner />
+              <ModeToggle />
               <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 Port 38479
               </span>

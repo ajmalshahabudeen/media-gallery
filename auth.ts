@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 import { admin } from "better-auth/plugins";
+import { logger } from "@/lib/logger";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:38479",
@@ -10,6 +11,33 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await logger.authAttempt({
+            type: "REGISTER_SUCCESS",
+            email: user.email,
+            userId: user.id,
+            message: `New user registered: ${user.email} (${user.name})`,
+          });
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (session) => {
+          await logger.authAttempt({
+            type: "LOGIN_SUCCESS",
+            userId: session.userId,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+            message: `User logged in successfully`,
+          });
+        },
+      },
+    },
   },
   trustedOrigins: [
     "http://localhost:38479",

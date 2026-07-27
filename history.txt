@@ -166,6 +166,28 @@ Status: Completed.
 4. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 20:
+1. Added `SystemLog` model to `prisma/schema.prisma` tracking log level (`INFO`, `WARN`, `ERROR`), type (`LOGIN_SUCCESS`, `LOGIN_FAILURE`, `REGISTER`, `USER_CRUD`, `MEDIA_SCAN`, etc.), message, user email, userId, IP address, parsed device name, user agent, and JSON metadata.
+2. Created `lib/logger.ts` dual server console and SQLite database logger utility producing informative, colorized terminal output and persisting log records.
+3. Added database hooks in `auth.ts` to log user registration and login session events.
+4. Created `/api/admin/users/route.ts` and `/api/admin/logs/route.ts` guarded by admin session role checks.
+5. Dynamically updated `app/dashboard/layout.tsx` sidebar to display **Users** (`/dashboard/users`) and **System Logs** (`/dashboard/logs`) navigation links when `session.user.role === "admin"`.
+6. Created `/dashboard/users` admin dashboard with full user CRUD, role modification, banning/unbanning, account deletion, and filterable shadcn DataTable.
+7. Created `/dashboard/logs` admin logs viewer with level badges, type filters, search, IP/device metadata, and a **View Full Details** dialog displaying JSON payload.
+8. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 21:
+1. Installed `next-themes` via `bun add next-themes`.
+2. Created `components/theme-provider.tsx` wrapping `NextThemesProvider`.
+3. Updated `app/layout.tsx` adding `suppressHydrationWarning` to `<html>` and wrapping body children in `<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>`.
+4. Created `components/mode-toggle.tsx` dropdown menu for Light, Dark, and System theme toggling using `lucide-react` Sun/Moon icons.
+5. Embedded `<ModeToggle />` in the top header navigation bar of `app/dashboard/layout.tsx`.
+6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
+
 
 
 
