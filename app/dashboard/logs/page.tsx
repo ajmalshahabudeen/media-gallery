@@ -381,7 +381,7 @@ export default function AdminLogsPage() {
               <div className="p-3 rounded-lg bg-muted/40 border flex items-start gap-2.5 min-w-0">
                 <Activity className="size-4 text-primary shrink-0 mt-0.5" />
                 <div className="flex flex-col gap-1 min-w-0 flex-1">
-                  <span className="font-semibold text-foreground break-words leading-relaxed">{selectedLog.message}</span>
+                  <span className="font-semibold text-foreground wrap-break-word leading-relaxed">{selectedLog.message}</span>
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
                     <span className="flex items-center gap-1">
                       <Clock className="size-3 shrink-0" />
@@ -423,7 +423,7 @@ export default function AdminLogsPage() {
                   <span className="text-[10px] text-muted-foreground uppercase font-bold flex items-center gap-1">
                     <Laptop className="size-3 shrink-0" /> Client Device & User-Agent
                   </span>
-                  <span className="font-semibold text-xs break-words">{selectedLog.deviceName}</span>
+                  <span className="font-semibold text-xs wrap-break-word">{selectedLog.deviceName}</span>
                   <span className="text-[10px] text-muted-foreground font-mono break-all leading-normal">
                     {selectedLog.userAgent || "No user agent header provided"}
                   </span>

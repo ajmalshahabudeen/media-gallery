@@ -262,7 +262,17 @@ Status: Completed.
 4. Created `components/loader.tsx` full-screen skeleton shimmer loader along with Next.js loading boundaries `app/loading.tsx` and `app/dashboard/loading.tsx` to eliminate layout shifts during route transitions.
 5. Created `app/error.tsx`, `app/dashboard/error.tsx` (unhandled error boundary cards with reload button), and `app/not-found.tsx` (custom 404 page).
 6. Verified clean compilation with `bun x tsc --noEmit`, `bun run lint`, and `bun run build` (0 errors, 0 warnings).
+[2026-07-27] Request 38:
+1. Integrated sidebar state control directly into `app/dashboard/layout.tsx` by consuming `sidebarOpen` and `setSidebarOpen` from `useMediaStore` and passing controlled `open` and `onOpenChange` props to `<SidebarProvider open={sidebarOpen} onOpenChange={handleSidebarOpenChange}>`.
+2. Added client mount `useEffect` in `app/dashboard/layout.tsx` to read and sync the `sidebar_state` cookie and `localStorage` directly inside layout.
+3. Verified clean compilation with `bun x tsc --noEmit`, `bun run lint`, and `bun run build` (0 errors, 0 warnings).
+[2026-07-27] Request 39:
+1. Eliminated sidebar hydration layout flash/collapse jump on page reload by converting `app/dashboard/layout.tsx` into a Next.js Server Component that reads `cookies()` from `next/headers` (`sidebar_state` cookie) synchronously on the server.
+2. Created `components/DashboardLayoutClient.tsx` client component wrapper receiving server-rendered `defaultOpen={defaultOpen}` prop.
+3. Verified clean compilation with `bun x tsc --noEmit`, `bun run lint`, and `bun run build` (0 errors, 0 warnings).
 Status: Completed.
+
+
 
 
 
