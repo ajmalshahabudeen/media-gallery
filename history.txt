@@ -192,6 +192,31 @@ Status: Completed.
 3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 23:
+1. Removed `NetworkScanner` from `app/dashboard/layout.tsx` header (since offline discovery is handled by static `public/offline.html`).
+2. Ensured header is sticky on top (`sticky top-0 z-30`).
+3. Updated `app/icon.tsx` resolution to 512x512 PNG (up from 32x32) to satisfy Chrome PWA install criteria.
+4. Updated `app/manifest.ts` icons array with 512x512 PNG entries (`purpose: 'any'` and `purpose: 'maskable'`) and relative paths (`start_url: '/dashboard'`, `scope: '/'`), resolving Chrome audit warning ("No supplied icon is at least 144 pixels square").
+5. Created `components/PwaInstallPrompt.tsx` giving 1-click PWA installation and step-by-step installation guides for local network HTTP on Chrome, Edge, and iOS Safari.
+6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 24:
+1. Confirmed and verified `app/icon.tsx` (512x512 PNG) functions simultaneously as browser favicon and PWA manifest 144px+ install icon.
+2. Created `app/apple-icon.tsx` (180x180 PNG) for iOS Home Screen touch icon compatibility.
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 25:
+1. Updated `app/manifest.ts` icons array to use static PNG icon files from `public/`: `/android-chrome-192x192.png` (192x192, `purpose: 'any'`), `/android-chrome-512x512.png` (512x512, `purpose: 'any'`), and `/android-chrome-512x512.png` (512x512, `purpose: 'maskable'`).
+2. Updated `app/layout.tsx` metadata `icons` property to reference `/favicon-32x32.png`, `/favicon-16x16.png`, and `/apple-touch-icon.png`.
+3. Updated `public/sw.js` Service Worker `PRECACHE_ASSETS` list to cache static icons for offline installation.
+4. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
+
+
 
 
 

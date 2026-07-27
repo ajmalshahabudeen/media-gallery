@@ -1,8 +1,14 @@
-const CACHE_NAME = "server-gallery-cache-v2";
+const CACHE_NAME = "server-gallery-cache-v3";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
   OFFLINE_URL,
+  "/android-chrome-192x192.png",
+  "/android-chrome-512x512.png",
+  "/apple-touch-icon.png",
+  "/favicon-32x32.png",
+  "/favicon-16x16.png",
+  "/manifest.webmanifest",
 ];
 
 self.addEventListener("install", (event) => {

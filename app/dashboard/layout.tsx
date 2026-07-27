@@ -27,7 +27,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 
-import { NetworkScanner } from "@/components/NetworkScanner";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { ModeToggle } from "@/components/mode-toggle";
 
 export default function DashboardLayout({
@@ -166,8 +166,8 @@ export default function DashboardLayout({
 
         {/* Main Content Area */}
         <SidebarInset className="flex flex-1 flex-col overflow-hidden">
-          {/* Top Bar with Sidebar Trigger */}
-          <header className="border-b bg-card px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          {/* Top Bar with Sidebar Trigger - Sticky on top */}
+          <header className="sticky top-0 z-30 border-b bg-card px-4 py-3 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="hover:bg-muted" />
               <div className="flex items-center gap-2 md:hidden">
@@ -176,7 +176,7 @@ export default function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <NetworkScanner />
+              <PwaInstallPrompt />
               <ModeToggle />
               <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 Port 38479
