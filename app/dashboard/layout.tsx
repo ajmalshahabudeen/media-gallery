@@ -12,6 +12,18 @@ import {
   LogOut,
   Image as ImageIcon,
 } from "lucide-react";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarTrigger,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
 export default function DashboardLayout({
   children,
@@ -60,88 +72,96 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-muted/10">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card flex flex-col justify-between p-4 hidden md:flex shrink-0">
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-3 px-2">
-            <div className="rounded-md bg-primary p-2 text-primary-foreground">
-              <ImageIcon className="size-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-base leading-none">Media Gallery</h2>
-              <span className="text-xs text-muted-foreground">Next.js + Docker</span>
-            </div>
-          </div>
-
-          <nav className="flex flex-col gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <Button
-                    variant={item.active ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3"
-                  >
-                    <Icon className="size-4" />
-                    <span>{item.name}</span>
-                  </Button>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* User Footer */}
-        <div className="border-t pt-4 flex flex-col gap-3">
-          {!isPending && session?.user && (
-            <div className="flex items-center gap-3 px-2">
-              <Avatar className="size-9">
-                <AvatarImage src={session.user.image || ""} alt={session.user.name || "User"} />
-                <AvatarFallback>{getInitials(session.user.name)}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col truncate text-left">
-                <span className="text-sm font-medium truncate">
-                  {session.user.name || "User"}
-                </span>
-                <span className="text-xs text-muted-foreground truncate">
-                  {session.user.email}
-                </span>
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        {/* Modern Sidebar using @components/ui/sidebar.tsx */}
+        <Sidebar variant="sidebar" collapsible="icon">
+          <SidebarHeader className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary p-2 text-primary-foreground shrink-0 shadow-sm">
+                <ImageIcon className="size-5" />
+              </div>
+              <div className="flex flex-col truncate group-data-[collapsible=icon]:hidden">
+                <h2 className="font-bold text-base leading-tight truncate">Media Gallery</h2>
+                <span className="text-xs text-muted-foreground truncate">Next.js + Docker</span>
               </div>
             </div>
-          )}
+          </SidebarHeader>
 
-          <Button variant="destructive" size="sm" onClick={handleSignOut} className="w-full justify-start gap-2">
-            <LogOut className="size-4" />
-            <span>Sign Out</span>
-          </Button>
-        </div>
-      </aside>
+          <SidebarContent className="p-2">
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={item.active}
+                      tooltip={item.name}
+                      render={
+                        <Link href={item.href} className="flex items-center gap-3 w-full">
+                          <Icon className="size-4 shrink-0" />
+                          <span className="font-medium">{item.name}</span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarContent>
 
-      {/* Main Content Container */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile Header */}
-        <header className="border-b bg-card p-4 flex items-center justify-between md:hidden">
-          <div className="flex items-center gap-2">
-            <ImageIcon className="size-5 text-primary" />
-            <span className="font-semibold">Media Gallery</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button variant={item.active ? "secondary" : "ghost"} size="sm">
-                  {item.name}
-                </Button>
-              </Link>
-            ))}
-            <Button variant="destructive" size="xs" onClick={handleSignOut}>
-              Sign Out
+          <SidebarFooter className="p-4 border-t border-sidebar-border flex flex-col gap-3">
+            {!isPending && session?.user && (
+              <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+                <Avatar className="size-9 shrink-0 border border-border">
+                  <AvatarImage src={session.user.image || ""} alt={session.user.name || "User"} />
+                  <AvatarFallback className="text-xs font-bold">{getInitials(session.user.name)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col truncate text-left group-data-[collapsible=icon]:hidden">
+                  <span className="text-sm font-semibold truncate leading-tight">
+                    {session.user.name || "User"}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {session.user.email}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleSignOut}
+              className="w-full justify-start gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+              title="Sign Out"
+            >
+              <LogOut className="size-4 shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">Sign Out</span>
             </Button>
-          </div>
-        </header>
+          </SidebarFooter>
+        </Sidebar>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        {/* Main Content Area */}
+        <SidebarInset className="flex flex-1 flex-col overflow-hidden">
+          {/* Top Bar with Sidebar Trigger */}
+          <header className="border-b bg-card px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="hover:bg-muted" />
+              <div className="flex items-center gap-2 md:hidden">
+                <ImageIcon className="size-5 text-primary" />
+                <span className="font-bold text-sm">Media Gallery</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+                Port 38479
+              </span>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

@@ -64,3 +64,14 @@ Status: Completed.
 4. Verified clean container startup with `docker compose up -d`.
 Status: Completed.
 
+[2026-07-27] Request 8:
+1. Refactored `app/dashboard/layout.tsx` to use `@components/ui/sidebar.tsx` design system components (`SidebarProvider`, `Sidebar`, `SidebarHeader`, `SidebarContent`, `SidebarFooter`, `SidebarMenu`, `SidebarMenuItem`, `SidebarMenuButton`, `SidebarTrigger`, `SidebarInset`).
+2. Added file preview components (`components/preview/FilePreviewModal.tsx`, `VideoPreview.tsx`, `PhotoPreview.tsx`, `AudioPreview.tsx`) supporting video with full controls, photo lightbox with zoom/pan/rotate, audio player with wave animation, and document viewer.
+3. Created `/api/media/file/route.ts` streaming API supporting HTTP Range partial content (HTTP 206) for video seeking and thumbnail generation.
+4. Added card view thumbnails for images, video poster previews, and audio/document icon cards.
+5. Added 5 viewing types: `list`, `small-cards`, `big-cards`, `detailed-cards`, and `detailed-list`.
+6. Created `formatFileSize()` in `lib/formatSize.ts` to format file sizes using B, KB, MB, GB, and TB.
+7. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
