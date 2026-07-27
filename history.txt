@@ -186,6 +186,13 @@ Status: Completed.
 6. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 22:
+1. Created `scripts/make-admin.ts` CLI script to promote any user to `admin` role directly via Docker container (`docker exec -it media_gallery_app bun run scripts/make-admin.ts user@example.com`) or local CLI (`bun run scripts/make-admin.ts user@example.com`).
+2. Updated [README.md](file:///c:/programming/docker/media-gallery/README.md) with comprehensive documentation covering application features, Docker Compose deployment, volume architecture, project structure, and admin CLI usage.
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
 
 
 
