@@ -1,4 +1,12 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+export type ViewMode =
+  | "list"
+  | "small-cards"
+  | "big-cards"
+  | "detailed-cards"
+  | "detailed-list";
 
 export interface MediaFile {
   id: string;
@@ -33,6 +41,7 @@ interface MediaState {
   files: MediaFile[];
   activeFolder: string | null;
   selectedType: "all" | "image" | "video" | "audio";
+  viewMode: ViewMode;
   searchQuery: string;
   isLoading: boolean;
   isScanning: boolean;
@@ -41,6 +50,7 @@ interface MediaState {
 
   setSearchQuery: (query: string) => void;
   setSelectedType: (type: "all" | "image" | "video" | "audio") => void;
+  setViewMode: (mode: ViewMode) => void;
   setActiveFolder: (folder: string | null) => void;
 
   fetchFolders: () => Promise<void>;
@@ -52,118 +62,131 @@ interface MediaState {
 
 let progressInterval: ReturnType<typeof setInterval> | null = null;
 
-export const useMediaStore = create<MediaState>((set, get) => ({
-  folders: [],
-  files: [],
-  activeFolder: null,
-  selectedType: "all",
-  searchQuery: "",
-  isLoading: false,
-  isScanning: false,
-  scannedAt: null,
-  indexingProgress: {
-    isIndexing: false,
-    scannedFiles: 0,
-    scannedFolders: 0,
-    currentFolder: "",
-    latestFile: "",
-    startTime: null,
-  },
+export const useMediaStore = create<MediaState>()(
+  persist(
+    (set, get) => ({
+      folders: [],
+      files: [],
+      activeFolder: null,
+      selectedType: "all",
+      viewMode: "detailed-cards",
+      searchQuery: "",
+      isLoading: false,
+      isScanning: false,
+      scannedAt: null,
+      indexingProgress: {
+        isIndexing: false,
+        scannedFiles: 0,
+        scannedFolders: 0,
+        currentFolder: "",
+        latestFile: "",
+        startTime: null,
+      },
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setSelectedType: (type) => set({ selectedType: type }),
-  setActiveFolder: (folder) => set({ activeFolder: folder }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      setSelectedType: (type) => set({ selectedType: type }),
+      setViewMode: (mode) => set({ viewMode: mode }),
+      setActiveFolder: (folder) => set({ activeFolder: folder }),
 
-  fetchFolders: async () => {
-    set({ isLoading: true });
-    try {
-      const res = await fetch("/api/media/folders");
-      if (res.ok) {
-        const data = await res.json();
-        set({ folders: data.folders || [] });
-      }
-    } catch {
-      // ignore
-    } finally {
-      set({ isLoading: false });
+      fetchFolders: async () => {
+        set({ isLoading: true });
+        try {
+          const res = await fetch("/api/media/folders");
+          if (res.ok) {
+            const data = await res.json();
+            set({ folders: data.folders || [] });
+          }
+        } catch {
+          // ignore
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      addFolder: async (path, name) => {
+        try {
+          const res = await fetch("/api/media/folders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path, name }),
+          });
+          if (res.ok) {
+            await get().fetchFolders();
+            await get().scanMedia(true);
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+
+      removeFolder: async (id) => {
+        try {
+          const res = await fetch(`/api/media/folders?id=${id}`, {
+            method: "DELETE",
+          });
+          if (res.ok) {
+            await get().fetchFolders();
+            await get().scanMedia(true);
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+
+      fetchProgress: async () => {
+        try {
+          const res = await fetch("/api/media/progress");
+          if (res.ok) {
+            const data = await res.json();
+            set({ indexingProgress: data });
+          }
+        } catch {
+          // ignore
+        }
+      },
+
+      scanMedia: async (force = false) => {
+        set({ isScanning: true });
+
+        if (!progressInterval) {
+          progressInterval = setInterval(() => {
+            get().fetchProgress();
+          }, 500);
+        }
+
+        try {
+          const url = `/api/media/scan${force ? "?force=true" : ""}`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            set({
+              files: data.files || [],
+              scannedAt: data.scannedAt || new Date().toISOString(),
+            });
+          }
+        } catch {
+          // ignore
+        } finally {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+          }
+          await get().fetchProgress();
+          set({ isScanning: false });
+        }
+      },
+    }),
+    {
+      name: "media_gallery_preferences",
+      partialize: (state) => ({
+        viewMode: state.viewMode,
+        selectedType: state.selectedType,
+        activeFolder: state.activeFolder,
+      }),
     }
-  },
-
-  addFolder: async (path, name) => {
-    try {
-      const res = await fetch("/api/media/folders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path, name }),
-      });
-      if (res.ok) {
-        await get().fetchFolders();
-        await get().scanMedia(true);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  },
-
-  removeFolder: async (id) => {
-    try {
-      const res = await fetch(`/api/media/folders?id=${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        await get().fetchFolders();
-        await get().scanMedia(true);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  },
-
-  fetchProgress: async () => {
-    try {
-      const res = await fetch("/api/media/progress");
-      if (res.ok) {
-        const data = await res.json();
-        set({ indexingProgress: data });
-      }
-    } catch {
-      // ignore
-    }
-  },
-
-  scanMedia: async (force = false) => {
-    set({ isScanning: true });
-
-    // Start progress polling
-    if (!progressInterval) {
-      progressInterval = setInterval(() => {
-        get().fetchProgress();
-      }, 500);
-    }
-
-    try {
-      const url = `/api/media/scan${force ? "?force=true" : ""}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        set({
-          files: data.files || [],
-          scannedAt: data.scannedAt || new Date().toISOString(),
-        });
-      }
-    } catch {
-      // ignore
-    } finally {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-      }
-      await get().fetchProgress();
-      set({ isScanning: false });
-    }
-  },
-}));
+  )
+);

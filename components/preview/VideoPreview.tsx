@@ -150,7 +150,7 @@ export function VideoPreview({ src, title }: VideoPreviewProps) {
       />
 
       {/* Video Overlay controls */}
-      <div className="bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 flex flex-col gap-3 transition-opacity">
+      <div className="bg-linear-to-t from-black/90 via-black/40 to-transparent p-4 flex flex-col gap-3 transition-opacity">
         {/* Seek Bar */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/80 font-mono w-12 text-right">
@@ -228,7 +228,7 @@ export function VideoPreview({ src, title }: VideoPreviewProps) {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <span className="text-xs text-white/70 font-medium truncate max-w-[150px] hidden md:inline" title={title}>
+            <span className="text-xs text-white/70 font-medium truncate max-w-37.5 hidden md:inline" title={title}>
               {title}
             </span>
 

@@ -48,16 +48,17 @@ export default function DashboardGalleryPage() {
     isScanning,
     searchQuery,
     selectedType,
+    viewMode,
     activeFolder,
     setSearchQuery,
     setSelectedType,
+    setViewMode,
     setActiveFolder,
     scanMedia,
     fetchFolders,
   } = useMediaStore();
 
   const [previewMedia, setPreviewMedia] = useState<MediaFile | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("detailed-cards");
 
   useEffect(() => {
     fetchFolders();
@@ -112,7 +113,7 @@ export default function DashboardGalleryPage() {
 
     if (file.type === "video") {
       return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-gradient-to-br from-purple-950/80 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-purple-500/10`}>
+        <div className={`relative w-full ${aspectClass} overflow-hidden bg-linear-to-br from-purple-950/80 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-purple-500/10`}>
           <div className="size-11 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-md">
             <Play className="size-5 fill-current ml-0.5" />
           </div>
@@ -125,7 +126,7 @@ export default function DashboardGalleryPage() {
 
     if (file.type === "audio") {
       return (
-        <div className={`relative w-full ${aspectClass} overflow-hidden bg-gradient-to-br from-emerald-950/60 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
+        <div className={`relative w-full ${aspectClass} overflow-hidden bg-linear-to-br from-emerald-950/60 via-slate-900 to-black flex flex-col items-center justify-center gap-2 p-4 border-b border-emerald-500/10`}>
           <div className="size-11 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-md">
             <AudioIcon className="size-5" />
           </div>

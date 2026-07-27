@@ -71,7 +71,7 @@ export function PhotoPreview({ src, title }: PhotoPreviewProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center justify-center bg-black/90 rounded-lg overflow-hidden border border-border/50 select-none min-h-[400px]"
+      className="relative flex flex-col items-center justify-center bg-black/90 rounded-lg overflow-hidden border border-border/50 select-none min-h-100"
     >
       {/* Top Toolbar */}
       <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-lg">

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { MediaFile } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/formatSize";
 import { VideoPreview } from "./VideoPreview";
@@ -17,9 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Copy,
-  Check,
-  ExternalLink,
   FileText,
   Calendar,
   HardDrive,
@@ -34,17 +30,9 @@ interface FilePreviewDrawerProps {
 }
 
 export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
-  const [copied, setCopied] = useState(false);
-
   if (!file) return null;
 
   const fileUrl = `/api/media/file?path=${encodeURIComponent(file.path)}`;
-
-  const copyPath = () => {
-    navigator.clipboard.writeText(file.path);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const renderMediaContent = () => {
     switch (file.type) {
@@ -73,7 +61,7 @@ export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
 
   return (
     <Drawer open={!!file} onOpenChange={(open) => !open && onClose()} showSwipeHandle={true}>
-      <DrawerContent className="h-[100dvh] max-h-[100dvh] w-full rounded-t-2xl sm:rounded-t-3xl flex flex-col bg-background p-0 border-t shadow-2xl overflow-hidden">
+      <DrawerContent className="h-dvh max-h-dvh w-full rounded-t-2xl sm:rounded-t-3xl flex flex-col bg-background p-0 border-t shadow-2xl overflow-hidden">
         {/* Sticky Mobile-Friendly Header */}
         <DrawerHeader className="flex flex-row items-center justify-between gap-4 p-4 border-b bg-card shrink-0">
           <div className="flex flex-col gap-1 min-w-0 text-left">
@@ -91,21 +79,6 @@ export function FilePreviewDrawer({ file, onClose }: FilePreviewDrawerProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={copyPath}
-              className="gap-1.5 text-xs hidden sm:flex"
-            >
-              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
-              <span>{copied ? "Copied" : "Copy Path"}</span>
-            </Button>
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="xs" className="gap-1.5 text-xs">
-                <ExternalLink className="size-3.5" />
-                <span className="hidden sm:inline">Open</span>
-              </Button>
-            </a>
             <DrawerClose render={
               <Button variant="ghost" size="icon-sm" onClick={onClose} className="rounded-full">
                 <X className="size-5" />

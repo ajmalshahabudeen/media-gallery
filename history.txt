@@ -82,5 +82,18 @@ Status: Completed.
 5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
+[2026-07-27] Request 10:
+1. Integrated Zustand `persist` middleware in `store/useMediaStore.ts` to remember user gallery preferences (`viewMode`, `selectedType`, `activeFolder`).
+2. Updated `app/dashboard/page.tsx` to read and set `viewMode` directly from `useMediaStore`.
+3. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+[2026-07-27] Request 11:
+1. Removed `Copy Path` and `Open File` header buttons and unused state/imports from `components/preview/FilePreviewDrawer.tsx`.
+2. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
+
+
+
 
 

@@ -82,7 +82,7 @@ export function AudioPreview({ src, title }: AudioPreviewProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 bg-gradient-to-br from-emerald-950/40 via-card to-background rounded-xl border border-emerald-500/20 shadow-lg">
+    <div className="flex flex-col gap-6 p-6 bg-linear-to-br from-emerald-950/40 via-card to-background rounded-xl border border-emerald-500/20 shadow-lg">
       <audio ref={audioRef} src={src} preload="metadata" />
 
       {/* Audio Icon & Wave graphic */}
