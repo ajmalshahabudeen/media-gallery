@@ -26,7 +26,7 @@ export function PwaInstallPrompt() {
     return false;
   });
   const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [copiedType, setCopiedType] = useState<"flags" | "origin" | "standalone" | null>(null);
+  const [copiedType, setCopiedType] = useState<"flags" | "origin" | null>(null);
   const [currentOrigin] = useState(() => {
     if (typeof window !== "undefined") {
       return window.location.origin;
@@ -79,12 +79,6 @@ export function PwaInstallPrompt() {
     setTimeout(() => setCopiedType(null), 2000);
   };
 
-  const copyStandaloneFlagUrl = () => {
-    copy("chrome://flags/#enable-desktop-pwas-app-icon-shortcuts");
-    setCopiedType("standalone");
-    setTimeout(() => setCopiedType(null), 2000);
-  };
-
   if (isInstalled) return null;
 
   return (
@@ -110,7 +104,7 @@ export function PwaInstallPrompt() {
               <DialogTitle className="text-base font-bold">Enable PWA Installation on HTTP LAN</DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground">
-              To allow Chrome / Edge to install this PWA over local network HTTP, enable these built-in browser flags once.
+              To allow Chrome / Edge to install this PWA over local network HTTP, enable this built-in browser flag once.
             </DialogDescription>
           </DialogHeader>
 
@@ -148,37 +142,17 @@ export function PwaInstallPrompt() {
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Enable <strong>Insecure origins treated as secure</strong> and paste:
+                Set dropdown to <strong>Enabled</strong> and paste your server origin:
               </p>
               <code className="bg-background px-2.5 py-1.5 rounded border text-[11px] font-mono select-all break-all text-emerald-500">
                 {currentOrigin || "http://192.168.1.101:38479"}
               </code>
             </div>
 
-            {/* Step 3: Standalone App Mode Flag (Android) */}
-            <div className="p-3.5 rounded-xl border bg-muted/20 flex flex-col gap-2">
-              <div className="flex items-center justify-between font-bold text-foreground">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="size-4 text-primary" />
-                  <span>Step 3: Standalone App Flag (Android)</span>
-                </div>
-                <Button variant="ghost" size="xs" onClick={copyStandaloneFlagUrl} className="h-7 text-[11px] gap-1">
-                  {copiedType === "standalone" ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
-                  <span>{copiedType === "standalone" ? "Copied!" : "Copy Flag URL"}</span>
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Removes address bar on Android shortcuts:
-              </p>
-              <code className="bg-background px-2.5 py-1.5 rounded border text-[11px] font-mono select-all break-all text-amber-500">
-                chrome://flags/#enable-desktop-pwas-app-icon-shortcuts
-              </code>
-            </div>
-
-            {/* Step 4: Relaunch */}
+            {/* Step 3: Relaunch & Install */}
             <div className="p-3.5 rounded-xl border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 flex flex-col gap-1 text-[11px]">
-              <span className="font-bold">Step 4: Click Relaunch</span>
-              <span>After restarting Chrome/Edge, click <strong>Install App</strong> to install Server Gallery in full-screen app mode!</span>
+              <span className="font-bold">Step 3: Click Relaunch & Install App</span>
+              <span>Click <strong>Relaunch</strong> at the bottom of Chrome. After restarting, click <strong>Install App</strong> or Chrome menu $\rightarrow$ <strong>Add to Home Screen</strong>!</span>
             </div>
           </div>
         </DialogContent>

@@ -345,7 +345,15 @@ Status: Completed.
 [2026-07-27] Request 59:
 1. Integrated a dedicated **PWA Mobile & LAN Setup Guide** card into `app/dashboard/settings/page.tsx` displaying the exact 4-step setup guide with 1-click copy buttons for Chrome flags and server origin.
 2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 60:
+1. Updated Step 3 flag in `components/PwaInstallPrompt.tsx` and `app/dashboard/settings/page.tsx` from deprecated `#enable-desktop-pwas-app-icon-shortcuts` to current Chrome 120+ Universal App Install flag: `chrome://flags/#web-app-universal-install`.
+2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
+[2026-07-27] Request 61:
+1. Streamlined PWA setup guide in `components/PwaInstallPrompt.tsx` and `app/dashboard/settings/page.tsx` into a clean 3-step workflow focused exclusively on `chrome://flags/#unsafely-treat-insecure-origin-as-secure` (the single required flag in Chrome 150+).
+2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
 Status: Completed.
+
+
 
 
 
