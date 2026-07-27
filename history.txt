@@ -118,7 +118,13 @@ Status: Completed.
 5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
 Status: Completed.
 
-
+[2026-07-27] Request 15:
+1. Made `app/manifest.ts` dynamic - reads the request `Host` header to generate absolute URLs (start_url, scope, icon src) matching the actual LAN IP so PWA installs work from any local network address.
+2. Replaced `app/offline/page.tsx` (Next.js React page) with `public/offline.html` — a fully self-contained static HTML file with inline CSS/JS. This is critical because when the server is unreachable, the service worker cannot fetch Next.js JS/CSS bundles, so React pages can't render.
+3. Updated `public/sw.js` to precache `offline.html` instead of the `/offline` Next.js route. Bumped cache version to v2. Added inline HTML fallback as absolute last resort.
+4. Deleted `app/offline/` directory (React-based offline page that couldn't work without server).
+5. Verified clean compilation with `bun x tsc --noEmit` and `bun run lint` (0 errors, 0 warnings).
+Status: Completed.
 
 
 

@@ -1,11 +1,19 @@
 import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers'
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const headersList = await headers()
+  const host = headersList.get('host') || 'localhost:38479'
+  const protocol = headersList.get('x-forwarded-proto') || 'http'
+  const origin = `${protocol}://${host}`
+
   return {
     name: 'Server Gallery',
     short_name: 'Server Gallery',
     description: 'Media Gallery Server',
-    start_url: '/',
+    start_url: `${origin}/dashboard`,
+    scope: `${origin}/`,
+    id: '/dashboard',
     display: 'standalone',
     orientation: 'any',
     background_color: '#09090b',
@@ -13,19 +21,21 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['photo', 'video', 'utilities'],
     icons: [
       {
-        src: '/icon',
+        src: `${origin}/icon`,
         sizes: '32x32',
         type: 'image/png',
       },
       {
-        src: '/icon',
+        src: `${origin}/icon`,
         sizes: '192x192',
         type: 'image/png',
+        purpose: 'any',
       },
       {
-        src: '/icon',
+        src: `${origin}/icon`,
         sizes: '512x512',
         type: 'image/png',
+        purpose: 'any',
       },
     ],
   }
