@@ -15,7 +15,7 @@ export function IndexingProgressBanner() {
   const { scannedFiles, scannedFolders, currentFolder, latestFile } = indexingProgress;
 
   return (
-    <Card className="border-primary/30 bg-linear-to-r from-primary/5 via-background to-primary/10 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+    <Card className="border-primary/30 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
       <CardContent className="p-4 flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
