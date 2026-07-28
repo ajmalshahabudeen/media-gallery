@@ -1,0 +1,399 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  SafeAreaView,
+} from "react-native";
+import {
+  FolderPlus,
+  Trash2,
+  Server,
+  RefreshCw,
+  LogOut,
+  User as UserIcon,
+  Shield,
+  Folder,
+} from "lucide-react-native";
+import { useMobileStore } from "../../store/useMobileStore";
+import { ServerConfigModal } from "../../components/ServerConfigModal";
+
+export default function SettingsScreen() {
+  const {
+    user,
+    serverUrl,
+    folders,
+    addFolder,
+    removeFolder,
+    scanMedia,
+    isScanning,
+    logout,
+  } = useMobileStore();
+
+  const [folderInput, setFolderInput] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [showServerModal, setShowServerModal] = useState(false);
+
+  const handleAddFolder = async () => {
+    if (!folderInput.trim()) {
+      Alert.alert("Error", "Please enter a folder path.");
+      return;
+    }
+    setAdding(true);
+    const success = await addFolder(folderInput.trim());
+    setAdding(false);
+
+    if (success) {
+      setFolderInput("");
+      Alert.alert("Success", "Media folder added!");
+    } else {
+      Alert.alert("Error", "Could not add folder. Check server permissions.");
+    }
+  };
+
+  const handleRemoveFolder = (id: string, name?: string) => {
+    Alert.alert(
+      "Remove Folder",
+      `Are you sure you want to remove ${name || "this folder"} from Media Library?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            await removeFolder(id);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: () => logout(),
+      },
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Title */}
+        <Text style={styles.title}>Settings</Text>
+
+        {/* Profile Card */}
+        <View style={styles.card}>
+          <View style={styles.profileRow}>
+            <View style={styles.avatarCircle}>
+              <UserIcon size={24} color="#818cf8" />
+            </View>
+
+            <View style={styles.profileDetails}>
+              <Text style={styles.userName}>{user?.name || "User"}</Text>
+              <Text style={styles.userEmail}>{user?.email || "user@example.com"}</Text>
+              {user?.role === "admin" && (
+                <View style={styles.adminBadge}>
+                  <Shield size={10} color="#a855f7" />
+                  <Text style={styles.adminBadgeText}>ADMINISTRATOR</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Server Connection Section */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Server size={18} color="#818cf8" />
+            <Text style={styles.cardTitle}>LAN Server Settings</Text>
+          </View>
+
+          <Text style={styles.serverUrlText} numberOfLines={1}>
+            {serverUrl}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => setShowServerModal(true)}
+          >
+            <Text style={styles.actionBtnText}>Configure / Test Connection</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Media Folders Section */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Folder size={18} color="#818cf8" />
+            <Text style={styles.cardTitle}>Media Library Folders</Text>
+          </View>
+
+          <Text style={styles.cardSub}>
+            Folders configured on your host server for indexing photos, videos, and music.
+          </Text>
+
+          {/* Add Folder Form */}
+          <View style={styles.addFolderRow}>
+            <TextInput
+              style={styles.folderInput}
+              placeholder="e.g. C:\Media or /host_drives/c/Media"
+              placeholderTextColor="#64748b"
+              value={folderInput}
+              onChangeText={setFolderInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={handleAddFolder}
+              disabled={adding}
+            >
+              {adding ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <FolderPlus size={18} color="#ffffff" />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Folders List */}
+          {folders.map((f) => (
+            <View key={f.id} style={styles.folderItem}>
+              <View style={styles.folderInfo}>
+                <Text style={styles.folderPath} numberOfLines={1}>
+                  {f.path}
+                </Text>
+                {f.name ? <Text style={styles.folderName}>{f.name}</Text> : null}
+              </View>
+
+              <TouchableOpacity
+                onPress={() => handleRemoveFolder(f.id, f.name || f.path)}
+                style={styles.deleteFolderBtn}
+              >
+                <Trash2 size={16} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+
+        {/* Scan Actions */}
+        <TouchableOpacity
+          style={styles.scanBtn}
+          onPress={() => scanMedia(true)}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <ActivityIndicator color="#ffffff" size="small" />
+          ) : (
+            <RefreshCw size={18} color="#ffffff" />
+          )}
+          <Text style={styles.scanBtnText}>
+            {isScanning ? "Scanning Media Library..." : "Trigger Full Library Rescan"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+          <LogOut size={18} color="#ef4444" />
+          <Text style={styles.signOutBtnText}>Sign Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <ServerConfigModal
+        visible={showServerModal}
+        onClose={() => setShowServerModal(false)}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0f172a",
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#f8fafc",
+    marginBottom: 16,
+  },
+  card: {
+    backgroundColor: "#1e293b",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#334155",
+    marginBottom: 14,
+  },
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#1e1b4b",
+    borderColor: "#4338ca",
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  profileDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#f8fafc",
+  },
+  userEmail: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 2,
+  },
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+    marginTop: 6,
+  },
+  adminBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#c084fc",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#f8fafc",
+  },
+  cardSub: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 12,
+  },
+  serverUrlText: {
+    fontSize: 13,
+    color: "#cbd5e1",
+    backgroundColor: "#0f172a",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  actionBtn: {
+    backgroundColor: "#334155",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  actionBtnText: {
+    color: "#f8fafc",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  addFolderRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  folderInput: {
+    flex: 1,
+    backgroundColor: "#0f172a",
+    color: "#f8fafc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  addBtn: {
+    backgroundColor: "#6366f1",
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  folderItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#0f172a",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 6,
+  },
+  folderInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  folderPath: {
+    fontSize: 12,
+    color: "#e2e8f0",
+  },
+  folderName: {
+    fontSize: 10,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  deleteFolderBtn: {
+    padding: 6,
+  },
+  scanBtn: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#4f46e5",
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  scanBtnText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  signOutBtn: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  signOutBtnText: {
+    color: "#ef4444",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+});

@@ -353,19 +353,21 @@ Status: Completed.
 2. Verified `bun run lint` (0 errors) and `bun run build` (0 errors).
 Status: Completed.
 
+[2026-07-28] Request 62:
+1. Scanned web application modules (`prisma`, `app`, `components`, `lib`, `scripts`, `store`).
+2. Created comprehensive implementation plan (`implementation_plan.md`) for building an exact mobile copy of the Media Gallery application in React Native / Expo (`mobile/`).
+3. Installed mobile dependencies via Bun (`@react-native-async-storage/async-storage`, `expo-av`, `lucide-react-native`, `react-native-svg`, `zustand`).
+4. Built HTTP client (`src/lib/api.ts`) supporting dynamic LAN Server URL configuration, connection ping diagnostic tool, and Better-Auth session tokens.
+5. Built mobile Zustand store (`src/store/useMobileStore.ts`) for auth, media items, folder management, favorites, search, sort, and indexing progress.
+6. Created mobile UI components & screens: `ServerConfigModal`, `IndexingProgressBanner`, `MediaCard`, `FilePreviewModal` (image zoom, video/audio players, sharing), Sign In / Sign Up screens, Gallery Dashboard screen, Favorites screen, Settings & Folders screen, and Admin Users & System Logs screen.
+7. Verified TypeScript compilation (`bun x tsc --noEmit`) with 0 errors.
+Status: Completed.
 
-
-
-
-
-
-
-
-
-
-
-
-
+[2026-07-28] Request 63:
+1. Restored `module.exports` CommonJS format in `mobile/babel.config.js`.
+2. Fixed `Cannot find native module 'ExponentAV'` error by wrapping `expo-av` in a safe `try/catch` requirement in `FilePreviewModal.tsx`, preventing top-level crashes in Expo Go (SDK 57) while maintaining playback options and external stream fallback.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
 
 
 
