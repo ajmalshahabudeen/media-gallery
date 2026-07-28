@@ -441,3 +441,37 @@ Status: Completed.
    - Configured `detachInactiveScreens={false}` and `freezeOnBlur={false}` so inactive tab touch handlers are never frozen or unmounted on Android.
 2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
+
+[2026-07-28] Request 75:
+1. Configured Admin tab hiding (`href: isAdmin ? undefined : null`) so the Admin tab is hidden when the user is not an administrator.
+2. Removed text labels (`tabBarShowLabel: false`) to keep only icons.
+3. Enhanced iPhone-style frosted glass UI (`BlurView` intensity 90, `rgba(15, 23, 42, 0.6)` translucent backdrop, `rgba(255, 255, 255, 0.25)` glass outline border).
+4. Reduced tab bar width (`left: 54`, `right: 54`, `height: 56`, `borderRadius: 28`) for a compact, centered pill look.
+5. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 76:
+1. Centered tab icons both vertically and horizontally in `mobile/src/app/(tabs)/_layout.tsx` (`tabBarItemStyle: { justifyContent: "center", alignItems: "center", height: 56 }`, `tabBarIconStyle: { marginTop: 0, marginBottom: 0 }`).
+2. Applied iOS `systemMaterialDark` backdrop blur (`intensity={95}`, `rgba(15, 23, 42, 0.45)` translucent glass background) for an authentic iPhone frosted glass look.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 77:
+1. Redesigned floating tab bar in `mobile/src/app/(tabs)/_layout.tsx`:
+   - Floating pill capsule dock with elevated drop shadow and smooth 28px border radius.
+   - Strictly icon-only navigation with `tabBarShowLabel: false`.
+   - Authentic iOS frosted glass UI: `<BlurView tint="systemMaterialDark" intensity={95} />`, translucent dark slate backdrop (`rgba(15, 23, 42, 0.45)`), 1.2px glass border (`rgba(255, 255, 255, 0.24)`), and top glass specular reflection highlight line.
+   - Dynamic compact width (`sideMargin` 76 for standard 3-tab layout, 56 for 4-tab admin layout) for a sleek, centered floating dock look.
+   - Active tab glowing pill indicator (`rgba(129, 140, 248, 0.22)` indigo fill with glowing `#a5b4fc` active icon color).
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 78:
+1. Refined floating tab bar UI in `mobile/src/app/(tabs)/_layout.tsx`:
+   - Fixed icon dimensions and container overflow by using fixed 48x38px pill wrappers (`width: 48, height: 38, borderRadius: 19`).
+   - Cleaned up backdrop blur styling with solid dark slate base color (`rgba(15, 23, 42, 0.82)`) and smooth `BlurView` backdrop tint.
+   - Adjusted side margins (`sideMargin` 64 for 3-tab layout, 44 for 4-tab admin layout) and height (60px) for balanced, elegant icon padding.
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+
