@@ -8,12 +8,11 @@
     "scheme": "mobile",
     "userInterfaceStyle": "dark",
     "androidStatusBar": {
-      "backgroundColor": "#0f172a",
+      "backgroundColor": "#00000000",
       "barStyle": "light-content",
       "translucent": true
     },
     "android": {
-      "edgeToEdge": true,
       "backgroundColor": "#0f172a",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",

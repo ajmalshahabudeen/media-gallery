@@ -1,10 +1,17 @@
 import React, { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import * as SystemUI from "expo-system-ui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useMobileStore } from "../store/useMobileStore";
+
+let NavigationBar: any = null;
+try {
+  NavigationBar = require("expo-navigation-bar");
+} catch {
+  // ignore
+}
 
 export default function RootLayout() {
   const { initApp, isAuthenticated, authChecked } = useMobileStore();
@@ -13,6 +20,16 @@ export default function RootLayout() {
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync("#0f172a");
+    if (Platform.OS === "android" && NavigationBar) {
+      try {
+        NavigationBar.setPositionAsync("absolute");
+        NavigationBar.setBackgroundColorAsync("#00000000");
+        NavigationBar.setButtonStyleAsync("light");
+        NavigationBar.setBehaviorAsync("inset-swipe");
+      } catch {
+        // ignore
+      }
+    }
     initApp();
   }, []);
 

@@ -409,3 +409,35 @@ Status: Completed.
 2. Updated `SafeAreaView` in `index.tsx`, `favorites.tsx`, `settings.tsx`, and `admin.tsx` to use `edges={["bottom"]}` and added `paddingTop: 44` to headers so dark background `#0f172a` extends edge-to-edge full screen behind the status bar.
 3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
+
+[2026-07-28] Request 70:
+1. Removed invalid `"edgeToEdge": true` property from `mobile/app.json` under `"android"`, resolving the IDE JSON schema validation error.
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 71:
+1. Removed top-level `"androidNavigationBar"` property from `mobile/app.json` to resolve IDE schema validation.
+2. Installed `expo-navigation-bar` and configured programmatic edge-to-edge full screen navigation bar handling (`NavigationBar.setPositionAsync("absolute")`, `NavigationBar.setBackgroundColorAsync("#00000000")`) in `mobile/src/app/_layout.tsx`.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 72:
+1. Changed `androidStatusBar.backgroundColor` to `"#00000000"` (fully transparent) in `mobile/app.json`.
+2. Configured `NavigationBar.setBehaviorAsync("inset-swipe")` and `NavigationBar.setPositionAsync("absolute")` in `mobile/src/app/_layout.tsx` for full screen immersive mode.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 73:
+1. Fixed tab switching unresponsiveness in `mobile/src/app/(tabs)/_layout.tsx`:
+   - Added `pointerEvents="none"` to `BlurView` in `tabBarBackground` to prevent backdrop from intercepting touch events.
+   - Removed `overflow: "hidden"` from `tabBarStyle` which was clipping Android touch hit bounds.
+   - Fixed `href` navigation in `Tabs.Screen name="admin"` to prevent push route conflicts.
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 74:
+1. Fixed single-click tab navigation lockup in `mobile/src/app/(tabs)/_layout.tsx`:
+   - Replaced conditional JSX branching of `<Tabs.Screen name="admin">` with a static screen declaration using `href: isAdmin ? undefined : null`, preventing React Navigation state desynchronization.
+   - Configured `detachInactiveScreens={false}` and `freezeOnBlur={false}` so inactive tab touch handlers are never frozen or unmounted on Android.
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.

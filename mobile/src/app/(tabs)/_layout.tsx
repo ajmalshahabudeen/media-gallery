@@ -11,21 +11,32 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
+        freezeOnBlur: false,
         tabBarBackground: () => (
-          <BlurView
-            tint="dark"
-            intensity={80}
+          <View
+            pointerEvents="none"
             style={[
               StyleSheet.absoluteFill,
               {
                 borderRadius: 31,
                 overflow: "hidden",
-                backgroundColor: "rgba(15, 23, 42, 0.65)",
               },
             ]}
-          />
+          >
+            <BlurView
+              tint="dark"
+              intensity={80}
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: "rgba(15, 23, 42, 0.75)",
+                },
+              ]}
+            />
+          </View>
         ),
         tabBarStyle: {
           position: "absolute",
@@ -38,14 +49,16 @@ export default function TabsLayout() {
           borderTopWidth: 0,
           borderWidth: 1.5,
           borderColor: "rgba(255, 255, 255, 0.2)",
-          paddingBottom: 8,
-          paddingTop: 8,
+          paddingBottom: 6,
+          paddingTop: 6,
           elevation: 16,
           shadowColor: "#000000",
           shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.5,
           shadowRadius: 18,
-          overflow: "hidden",
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
         tabBarActiveTintColor: "#a5b4fc",
         tabBarInactiveTintColor: "#94a3b8",
@@ -83,7 +96,7 @@ export default function TabsLayout() {
         name="admin"
         options={{
           title: "Admin",
-          href: isAdmin ? "/admin" : null,
+          href: isAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => <ShieldAlert size={size} color={color} />,
         }}
       />
