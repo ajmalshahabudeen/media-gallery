@@ -508,3 +508,25 @@ Status: Completed.
 2. Verified `bun x expo prebuild --platform android` completes cleanly without status bar deprecation warnings.
 3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
+
+[2026-07-28] Request 83:
+1. Created cross-platform offline build script `mobile/scripts/build-android-offline.sh` supporting Windows (Git Bash/cmd) and Linux/macOS.
+2. Fixed Gradle wrapper distribution URL in `android/gradle/wrapper/gradle-wrapper.properties` to valid Gradle release `gradle-8.10.2-bin.zip`.
+3. Added `"android:offline:build": "bash ./scripts/build-android-offline.sh"` script to `mobile/package.json`.
+4. Updated `mobile/README.md` to document the 1-click build command.
+5. Executed `bun run android:offline:build` to build the standalone release APK.
+[2026-07-28] Request 84:
+1. Diagnosed terminal errors in `bun run android:offline:build`:
+   - `ClassNotFoundException: org.gradle.launcher.GradleMain` was caused by corrupted wrapper jar before prebuild.
+   - `EBUSY: resource busy or locked` error was caused by terminal being inside `mobile/android` directory while prebuild tried to wipe `android/`.
+   - `cmd.exe /c "gradlew.bat assembleRelease"` launched an interactive subshell in bash instead of non-interactive execution.
+2. Updated `mobile/scripts/build-android-offline.sh` to use `./gradlew.bat assembleRelease` directly in Windows environments.
+Status: Completed.
+
+[2026-07-28] Request 85:
+1. Created feature-complete Android builder Dockerfile (`mobile/Dockerfile.android`) with Ubuntu 22.04, OpenJDK 17, Node.js 20, Bun 1.x, and Android SDK 35/34 + cmdline-tools.
+2. Created container build runner script (`mobile/scripts/container-build-apk.sh`) executing `bun install`, `bun x expo prebuild --platform android --clean`, Gradle wrapper fix, `./gradlew assembleRelease`, and exporting `app-release.apk` to `/app/build/app-release.apk`.
+3. Updated `mobile/scripts/build-android-offline.sh` to check Docker CLI/daemon, build `mobile-android-builder:latest` image, launch container with `--rm` (auto-removed after completion), mount local directory, and verify local APK export at `mobile/build/app-release.apk`.
+4. Updated `mobile/README.md` with Docker containerized build documentation.
+5. Verified TypeScript compilation (`bun run lint`) with 0 errors and launched `bash ./scripts/build-android-offline.sh`.
+Status: Completed.

@@ -68,33 +68,33 @@ Building via EAS Cloud requires an Expo account, but does not require local Andr
 
 ---
 
-### Option 2: Offline Local Build (Local Gradle Build) 🛠️
+### Option 2: Docker Containerized Offline Build (Recommended) 🐳
 
-Building locally does not require an Expo cloud account, but requires Android Studio, Android SDK, and Java (JDK 17+) installed on your machine.
+Building via Docker requires no local Java or Android SDK installation. The build runs inside an isolated, feature-complete Android builder container (`mobile-android-builder`), exports the APK directly to your host workspace (`build/app-release.apk`), and automatically destroys the build container when finished (`--rm`).
 
-1. **Generate Native Android Project (Prebuild):**
+#### Automated 1-Click Command:
+```bash
+bun run android:offline:build
+```
+*(Runs `./scripts/build-android-offline.sh`, which builds the `mobile-android-builder` Docker image with JDK 17 & Android SDK 35, compiles `app-release.apk`, exports it locally, and auto-removes the container)*
+
+#### Manual Docker Build Steps:
+
+1. **Build Builder Image:**
    ```bash
-   bun x expo prebuild --platform android
+   docker build -t mobile-android-builder:latest -f Dockerfile.android .
    ```
 
-2. **Build APK using Gradle:**
-   - **On Windows (PowerShell/CMD):**
-     ```powershell
-     cd android
-     .\gradlew.bat assembleRelease
-     ```
-   - **On Linux/macOS:**
-     ```bash
-     cd android
-     ./gradlew assembleRelease
-     ```
+2. **Run Build Container & Export APK:**
+   ```bash
+   docker run --rm -v "%cd%:/app" mobile-android-builder:latest bash /app/scripts/container-build-apk.sh
+   ```
 
 3. **Locate & Install APK:**
-   - The compiled standalone APK will be created at:
-     `android/app/build/outputs/apk/release/app-release.apk`
-   - Install on your device via ADB:
+   - Exported APK location: `build/app-release.apk`
+   - Install via ADB:
      ```bash
-     adb install android/app/build/outputs/apk/release/app-release.apk
+     adb install build/app-release.apk
      ```
 
 ---
