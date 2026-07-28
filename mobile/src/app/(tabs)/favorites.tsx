@@ -28,7 +28,7 @@ export default function FavoritesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Favorites</Text>
         <Text style={styles.subtitle}>{favorites.length} starred items</Text>
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 44,
     paddingBottom: 12,
   },
   title: {

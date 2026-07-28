@@ -73,7 +73,7 @@ export default function GalleryScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
       {/* Top Bar Header */}
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 44,
     paddingBottom: 8,
   },
   titleContainer: {},

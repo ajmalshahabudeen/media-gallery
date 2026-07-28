@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import * as SystemUI from "expo-system-ui";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useMobileStore } from "../store/useMobileStore";
 
@@ -11,6 +12,7 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
+    SystemUI.setBackgroundColorAsync("#0f172a");
     initApp();
   }, []);
 
@@ -35,7 +37,7 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0f172a" }}>
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0f172a" } }}>
         <Stack.Screen name="(auth)/sign-in" />

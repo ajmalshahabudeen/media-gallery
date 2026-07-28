@@ -143,7 +143,7 @@ export default function AdminScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       {/* Title */}
       <View style={styles.header}>
         <Text style={styles.title}>Admin Panel</Text>
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 44,
     paddingBottom: 12,
   },
   title: {

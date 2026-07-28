@@ -397,3 +397,15 @@ Status: Completed.
 2. Updated `mobile/src/app/(tabs)/_layout.tsx` to render `<BlurView tint="dark" intensity={80} />` in `tabBarBackground` for real native backdrop blur under the floating frosted glass tab bar.
 3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
+
+[2026-07-28] Request 68:
+1. Configured Android notification status bar background to dark slate (`#0f172a`) in `mobile/app.json` (`androidStatusBar`, `userInterfaceStyle: "dark"`).
+2. Set root System UI background color (`SystemUI.setBackgroundColorAsync("#0f172a")`) and light translucent status bar (`<StatusBar style="light" />`) in `mobile/src/app/_layout.tsx`.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 69:
+1. Configured `"edgeToEdge": true` under `android` in `mobile/app.json`.
+2. Updated `SafeAreaView` in `index.tsx`, `favorites.tsx`, `settings.tsx`, and `admin.tsx` to use `edges={["bottom"]}` and added `paddingTop: 44` to headers so dark background `#0f172a` extends edge-to-edge full screen behind the status bar.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.

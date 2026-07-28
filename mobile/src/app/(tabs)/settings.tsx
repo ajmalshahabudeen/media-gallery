@@ -85,7 +85,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Title */}
         <Text style={styles.title}>Settings</Text>
@@ -222,7 +222,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 44,
     paddingBottom: 100,
   },
   title: {
