@@ -1,48 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import {
   Modal,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
-  Dimensions,
   Share,
   Linking,
+  StatusBar,
 } from "react-native";
 import {
   X,
   Star,
-  Play,
-  Pause,
-  Music,
   FileText,
   Share2,
   Folder,
   Calendar,
   HardDrive,
   ExternalLink,
-  Film,
 } from "lucide-react-native";
 import { MediaFile, useMobileStore } from "../../store/useMobileStore";
-import { buildMediaFileUrl, buildThumbnailUrl } from "../../lib/api";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Safely attempt to load expo-av if available natively
-let ExpoVideo: any = null;
-let ExpoAudio: any = null;
-let ExpoResizeMode: any = null;
-
-try {
-  const expoAv = require("expo-av");
-  ExpoVideo = expoAv.Video;
-  ExpoAudio = expoAv.Audio;
-  ExpoResizeMode = expoAv.ResizeMode;
-} catch {
-  // ExponentAV native module not available in Expo Go client
-}
+import { buildMediaFileUrl } from "../../lib/api";
+import { VideoPlayerView } from "./VideoPlayerView";
+import { AudioPlayerView } from "./AudioPlayerView";
+import { ImageViewerView } from "./ImageViewerView";
 
 interface Props {
   file: MediaFile | null;
@@ -59,60 +41,17 @@ function formatFileSize(bytes: number): string {
 
 export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
   const { serverUrl, favorites, toggleFavorite, logMediaView } = useMobileStore();
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [soundObject, setSoundObject] = useState<any>(null);
 
   const isFavorite = file ? favorites.some((f) => f.path === file.path) : false;
   const mediaUrl = file ? buildMediaFileUrl(serverUrl, file.path) : "";
-  const thumbnailUrl = file ? buildThumbnailUrl(serverUrl, file.path) : "";
 
   useEffect(() => {
     if (file) {
       logMediaView(file.path);
     }
-    return () => {
-      if (soundObject && typeof soundObject.unloadAsync === "function") {
-        soundObject.unloadAsync();
-      }
-    };
   }, [file]);
 
   if (!file) return null;
-
-  const handleToggleAudio = async () => {
-    if (!mediaUrl) return;
-    if (!ExpoAudio) {
-      // Fallback: Open in browser/external player if native module missing
-      Linking.openURL(mediaUrl);
-      return;
-    }
-
-    try {
-      if (soundObject) {
-        if (isPlayingAudio) {
-          await soundObject.pauseAsync();
-          setIsPlayingAudio(false);
-        } else {
-          await soundObject.playAsync();
-          setIsPlayingAudio(true);
-        }
-      } else {
-        const { sound } = await ExpoAudio.Sound.createAsync(
-          { uri: mediaUrl },
-          { shouldPlay: true }
-        );
-        setSoundObject(sound);
-        setIsPlayingAudio(true);
-        sound.setOnPlaybackStatusUpdate((status: any) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setIsPlayingAudio(false);
-          }
-        });
-      }
-    } catch {
-      Linking.openURL(mediaUrl);
-    }
-  };
 
   const handleOpenExternal = () => {
     if (mediaUrl) {
@@ -133,9 +72,11 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
   };
 
   return (
-    <Modal visible={!!file} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={!!file} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
-        {/* Header */}
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+
+        {/* Top Floating Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
             <X size={22} color="#f8fafc" />
@@ -160,65 +101,25 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
           </View>
         </View>
 
-        {/* Media Viewer Area */}
+        {/* Media Player Area */}
         <View style={styles.mediaArea}>
           {file.type === "image" && (
-            <Image
-              source={{ uri: mediaUrl }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
+            <ImageViewerView uri={mediaUrl} />
           )}
 
           {file.type === "video" && (
-            ExpoVideo ? (
-              <ExpoVideo
-                source={{ uri: mediaUrl }}
-                style={styles.fullVideo}
-                useNativeControls
-                resizeMode={ExpoResizeMode ? ExpoResizeMode.CONTAIN : "contain"}
-                isLooping={false}
-                shouldPlay
-              />
-            ) : (
-              <View style={styles.fallbackMediaCard}>
-                <Image
-                  source={{ uri: thumbnailUrl }}
-                  style={styles.fullImage}
-                  resizeMode="contain"
-                />
-                <TouchableOpacity style={styles.openStreamBtn} onPress={handleOpenExternal}>
-                  <Play size={24} color="#ffffff" fill="#ffffff" />
-                  <Text style={styles.openStreamText}>Play Video Stream</Text>
-                </TouchableOpacity>
-              </View>
-            )
+            <VideoPlayerView
+              uri={mediaUrl}
+              onOpenExternal={handleOpenExternal}
+            />
           )}
 
           {file.type === "audio" && (
-            <View style={styles.audioPlayerCard}>
-              <View style={styles.albumArtCircle}>
-                <Music size={54} color="#a855f7" />
-              </View>
-
-              <Text style={styles.audioTitle} numberOfLines={2}>
-                {file.name}
-              </Text>
-              <Text style={styles.audioMeta}>{formatFileSize(file.size)}</Text>
-
-              <TouchableOpacity style={styles.playAudioBtn} onPress={handleToggleAudio}>
-                {isPlayingAudio ? (
-                  <Pause size={28} color="#ffffff" />
-                ) : (
-                  <Play size={28} color="#ffffff" style={{ marginLeft: 3 }} />
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.externalLinkBtn} onPress={handleOpenExternal}>
-                <ExternalLink size={14} color="#94a3b8" />
-                <Text style={styles.externalLinkText}>Open Stream URL</Text>
-              </TouchableOpacity>
-            </View>
+            <AudioPlayerView
+              uri={mediaUrl}
+              title={file.name}
+              fileSizeText={formatFileSize(file.size)}
+            />
           )}
 
           {file.type === "other" && (
@@ -239,7 +140,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
           )}
         </View>
 
-        {/* Details Footer */}
+        {/* Details Footer Ribbon */}
         <View style={styles.footer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metaRow}>
             <View style={styles.metaChip}>
@@ -277,13 +178,16 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    backgroundColor: "rgba(15, 23, 42, 0.9)",
+    backgroundColor: "#0f172a",
+    borderBottomWidth: 1,
+    borderColor: "#1e293b",
+    zIndex: 10,
   },
   headerTitle: {
     flex: 1,
     color: "#f8fafc",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     marginHorizontal: 12,
   },
   headerRight: {
@@ -298,81 +202,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  fullImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.65,
-  },
-  fullVideo: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.65,
-  },
-  fallbackMediaCard: {
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  openStreamBtn: {
-    position: "absolute",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#4f46e5",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  openStreamText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  audioPlayerCard: {
-    alignItems: "center",
-    padding: 24,
-  },
-  albumArtCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#2e1065",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: "#7e22ce",
-  },
-  audioTitle: {
-    color: "#f8fafc",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  audioMeta: {
-    color: "#94a3b8",
-    fontSize: 13,
-    marginBottom: 24,
-  },
-  playAudioBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#7e22ce",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  externalLinkBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 12,
-    padding: 8,
-  },
-  externalLinkText: {
-    color: "#94a3b8",
-    fontSize: 12,
+    backgroundColor: "#000000",
   },
   docCard: {
     alignItems: "center",
@@ -389,6 +219,20 @@ const styles = StyleSheet.create({
     color: "#64748b",
     fontSize: 13,
     marginTop: 6,
+  },
+  externalLinkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 16,
+    padding: 10,
+    backgroundColor: "#1e293b",
+    borderRadius: 12,
+  },
+  externalLinkText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    fontWeight: "600",
   },
   footer: {
     paddingVertical: 14,
@@ -409,9 +253,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
   },
   metaText: {
     color: "#cbd5e1",
     fontSize: 12,
+    fontWeight: "500",
   },
 });

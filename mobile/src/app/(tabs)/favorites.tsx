@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-} from "react-native";
+import { StyleSheet, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Star } from "lucide-react-native";
 import { useMobileStore, MediaFile } from "../../store/useMobileStore";
-import { MediaCard } from "../../components/preview/MediaCard";
+import { MediaControlsHeader } from "../../components/MediaControlsHeader";
+import { MediaListRenderer } from "../../components/MediaListRenderer";
 import { FilePreviewModal } from "../../components/preview/FilePreviewModal";
 
 export default function FavoritesScreen() {
-  const { favorites, fetchFavorites, viewMode } = useMobileStore();
+  const { favorites, fetchFavorites } = useMobileStore();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
 
@@ -29,42 +24,28 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Favorites</Text>
-        <Text style={styles.subtitle}>{favorites.length} starred items</Text>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
-      <FlatList
-        key={viewMode === "grid" ? "fav-grid-2" : "fav-list-1"}
-        data={favorites}
-        keyExtractor={(item) => item.path}
-        numColumns={viewMode === "grid" ? 2 : 1}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#818cf8"
-          />
-        }
-        renderItem={({ item }) => (
-          <MediaCard
-            file={item}
-            viewMode={viewMode}
-            onPress={() => setSelectedFile(item)}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Star size={48} color="#334155" />
-            <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-            <Text style={styles.emptySub}>
-              Tap the star icon on any media item to add it to your favorites.
-            </Text>
-          </View>
-        }
+      {/* Top Header & Search/Filter/Group Controls */}
+      <MediaControlsHeader
+        title="Favorites"
+        itemCount={favorites.length}
+        onRefresh={handleRefresh}
+        isRefreshing={refreshing}
       />
 
+      {/* Sectioned or Flat Media Grid/List */}
+      <MediaListRenderer
+        files={favorites}
+        onSelectFile={setSelectedFile}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        emptyTitle="No Favorites Yet"
+        emptySubtitle="Tap the star icon on any photo, video, or audio file to add it to your favorites."
+        emptyIcon={<Star size={48} color="#334155" />}
+      />
+
+      {/* Full-Screen Media Player & Viewer Modal */}
       <FilePreviewModal
         file={selectedFile}
         onClose={() => setSelectedFile(null)}
@@ -77,42 +58,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0f172a",
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 44,
-    paddingBottom: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#f8fafc",
-  },
-  subtitle: {
-    fontSize: 12,
-    color: "#94a3b8",
-    marginTop: 2,
-  },
-  listContent: {
-    paddingHorizontal: 10,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 80,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#cbd5e1",
-    marginTop: 12,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: "#64748b",
-    marginTop: 4,
-    textAlign: "center",
-    paddingHorizontal: 36,
   },
 });

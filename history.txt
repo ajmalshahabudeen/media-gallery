@@ -474,4 +474,13 @@ Status: Completed.
 2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
 
-
+[2026-07-28] Request 79:
+1. Created `groupBy` store state ("none" | "folder" | "type" | "date") in `useMobileStore.ts` and `groupMediaFiles` utility in `groupMedia.ts`.
+2. Created `MediaControlsHeader.tsx` and `MediaListRenderer.tsx` for shared search, filter, group-by modal, sort controls, and sectioned list rendering.
+3. Updated `favorites.tsx` to have full UI parity with `index.tsx` (Gallery), supporting search, filters, group-by, sort, and pull-to-refresh.
+4. Installed `expo-video` and built native `VideoPlayerView.tsx` with full controls (play/pause, -10s/+10s skip, seek bar, timecode, mute, fullscreen).
+5. Built `AudioPlayerView.tsx` with artwork disc, seek bar, play/pause, -10s/+10s skip, speed rates (0.75x to 2x), and volume toggle.
+6. Built `ImageViewerView.tsx` using `expo-image` with rotate (90° steps) and zoom in/out controls.
+7. Refactored `FilePreviewModal.tsx` to integrate all player viewers.
+8. Verified clean compilation with `bun run lint` (0 errors).
+Status: Completed.

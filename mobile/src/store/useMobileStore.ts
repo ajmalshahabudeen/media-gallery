@@ -50,6 +50,7 @@ interface MobileState {
   viewMode: "grid" | "list" | "cards";
   sortBy: "name" | "date" | "size";
   sortOrder: "asc" | "desc";
+  groupBy: "none" | "folder" | "type" | "date";
   searchQuery: string;
   isLoading: boolean;
   isScanning: boolean;
@@ -62,6 +63,7 @@ interface MobileState {
   setViewMode: (mode: "grid" | "list" | "cards") => void;
   setSortBy: (field: "name" | "date" | "size") => void;
   setSortOrder: (order: "asc" | "desc") => void;
+  setGroupBy: (mode: "none" | "folder" | "type" | "date") => void;
   setActiveFolder: (folder: string | null) => void;
 
   initApp: () => Promise<void>;
@@ -96,6 +98,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   viewMode: "grid",
   sortBy: "name",
   sortOrder: "asc",
+  groupBy: "none",
   searchQuery: "",
   isLoading: false,
   isScanning: false,
@@ -119,6 +122,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setSortBy: (field) => set({ sortBy: field }),
   setSortOrder: (order) => set({ sortOrder: order }),
+  setGroupBy: (mode) => set({ groupBy: mode }),
   setActiveFolder: (folder) => set({ activeFolder: folder }),
 
   initApp: async () => {
