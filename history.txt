@@ -494,3 +494,17 @@ Status: Completed.
 6. Installed `expo-screen-orientation`. Removed `@react-native-community/slider` (native module incompatible with Expo Go).
 7. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
+
+[2026-07-28] Request 81:
+1. Resolved `@react-native-async-storage/async-storage` native module crash by installing SDK 57 compatible version `2.2.0`.
+2. Created `eas.json` with a `preview` profile targeting Android standalone APK output.
+3. Updated `app.json` with Android package name `com.mediagallery.mobile`.
+4. Documented both Online (EAS Cloud) and Offline (Local Gradle `expo prebuild` + `./gradlew assembleRelease`) APK build workflows and installation instructions in `mobile/README.md`.
+5. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-07-28] Request 82:
+1. Replaced top-level deprecated `androidStatusBar` property in `app.json` with `expo-status-bar` plugin configuration.
+2. Verified `bun x expo prebuild --platform android` completes cleanly without status bar deprecation warnings.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.

@@ -7,12 +7,8 @@
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
     "userInterfaceStyle": "dark",
-    "androidStatusBar": {
-      "backgroundColor": "#00000000",
-      "barStyle": "light-content",
-      "translucent": true
-    },
     "android": {
+      "package": "com.mediagallery.mobile",
       "backgroundColor": "#0f172a",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
@@ -28,6 +24,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-status-bar",
+        {
+          "style": "light",
+          "backgroundColor": "#00000000",
+          "translucent": true
+        }
+      ],
       [
         "expo-splash-screen",
         {

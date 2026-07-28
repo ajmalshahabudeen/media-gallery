@@ -1,56 +1,118 @@
-# Welcome to your Expo app 👋
+# Media Gallery Mobile App 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native / Expo mobile client for Media Gallery server.
 
-## Get started
+## Features
 
-1. Install dependencies
+- 🎬 **Video Player**: Full native controls, custom drag-to-seek bar, time length display, skip ±10s, mute, and landscape fullscreen mode.
+- 🎵 **Audio Player**: Disc animation, playback speed options (0.75x - 2.0x), custom seek bar, time display.
+- 🖼️ **Image Viewer**: High quality image viewer with 90° rotation and zoom options.
+- 📁 **Gallery & Parity**: Search, filtering, grouping by folder/type/date, and favorite system.
+- ⚙️ **Server Discovery**: Configurable local server IP connection.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## Getting Started
 
-   ```bash
-   npx expo start
-   ```
+### Prerequisites
 
-In the output, you'll find options to open the app in a
+Ensure you have [Bun](https://bun.sh) installed.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Install Dependencies
 
 ```bash
-npm run reset-project
+bun install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Start Development Server
 
-### Other setup steps
+```bash
+bun run dev
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Or for Android:
 
-## Learn more
+```bash
+bun run android --clear
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Building and Installing APK
 
-## Join the community
+### Option 1: Online Cloud Build (EAS Build - Recommended) ☁️
 
-Join our community of developers creating universal apps.
+Building via EAS Cloud requires an Expo account, but does not require local Android SDK or Java installation.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. **Install EAS CLI:**
+   ```bash
+   bun add -g eas-cli
+   ```
+
+2. **Login to Expo:**
+   ```bash
+   eas login
+   ```
+
+3. **Build Android APK:**
+   ```bash
+   eas build --platform android --profile preview
+   ```
+
+4. **Install on Device:**
+   - Once the cloud build completes, download the generated `.apk` file directly on your Android phone or scan the QR code.
+   - Or install via ADB:
+     ```bash
+     adb install <path-to-downloaded-apk>
+     ```
+
+---
+
+### Option 2: Offline Local Build (Local Gradle Build) 🛠️
+
+Building locally does not require an Expo cloud account, but requires Android Studio, Android SDK, and Java (JDK 17+) installed on your machine.
+
+1. **Generate Native Android Project (Prebuild):**
+   ```bash
+   bun x expo prebuild --platform android
+   ```
+
+2. **Build APK using Gradle:**
+   - **On Windows (PowerShell/CMD):**
+     ```powershell
+     cd android
+     .\gradlew.bat assembleRelease
+     ```
+   - **On Linux/macOS:**
+     ```bash
+     cd android
+     ./gradlew assembleRelease
+     ```
+
+3. **Locate & Install APK:**
+   - The compiled standalone APK will be created at:
+     `android/app/build/outputs/apk/release/app-release.apk`
+   - Install on your device via ADB:
+     ```bash
+     adb install android/app/build/outputs/apk/release/app-release.apk
+     ```
+
+---
+
+## Project Structure
+
+```
+mobile/
+├── src/
+│   ├── app/                 # Expo Router file-based screens
+│   │   ├── (auth)/          # Sign In & Sign Up routes
+│   │   ├── (tabs)/          # Floating pill tab bar screens (Gallery, Favorites, Settings, Admin)
+│   │   ├── fullscreen-video.tsx # Landscape fullscreen video screen
+│   │   └── _layout.tsx      # Root Navigation Stack
+│   ├── components/          # App UI components & preview viewers
+│   │   └── preview/         # VideoPlayerView, AudioPlayerView, ImageViewerView, FilePreviewModal
+│   ├── lib/                 # API client & helpers
+│   └── store/               # Mobile Zustand global store
+├── app.json                 # Expo configuration (Package ID: com.mediagallery.mobile)
+└── eas.json                 # EAS build configuration
+```
