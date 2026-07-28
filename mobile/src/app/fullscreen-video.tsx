@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,48 +7,47 @@ import {
   Pressable,
   Dimensions,
   ActivityIndicator,
+  StatusBar,
+  BackHandler,
   PanResponder,
   GestureResponderEvent,
   PanResponderGestureState,
   LayoutChangeEvent,
 } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Play,
   Pause,
   RotateCcw,
   RotateCw,
-  Maximize,
+  Minimize,
   Volume2,
   VolumeX,
+  ChevronLeft,
 } from "lucide-react-native";
-import { useRouter } from "expo-router";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+let ScreenOrientation: any = null;
+try {
+  ScreenOrientation = require("expo-screen-orientation");
+} catch {
+  // not available
+}
 
-// Safely require expo-video and expo-av
 let ExpoVideoModule: any = null;
-let ExpoAvVideo: any = null;
-let ExpoAvResizeMode: any = null;
-
 try {
   ExpoVideoModule = require("expo-video");
 } catch {
-  // expo-video missing or unlinked
+  // expo-video missing
 }
 
+let ExpoAvVideo: any = null;
+let ExpoAvResizeMode: any = null;
 try {
   const av = require("expo-av");
   ExpoAvVideo = av.Video;
   ExpoAvResizeMode = av.ResizeMode;
 } catch {
   // expo-av missing
-}
-
-interface Props {
-  uri: string;
-  posterUri?: string;
-  onOpenExternal?: () => void;
-  title?: string;
 }
 
 function formatTime(seconds: number): string {
@@ -92,7 +91,7 @@ const SeekBar: React.FC<SeekBarProps> = ({ position, duration, onSeekStart, onSe
         seekingValue.current = ratio * duration;
         setDisplayProgress(ratio);
       },
-      onPanResponderMove: (evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+      onPanResponderMove: (evt: GestureResponderEvent, _gestureState: PanResponderGestureState) => {
         const locationX = evt.nativeEvent.locationX;
         const ratio = Math.max(0, Math.min(1, locationX / barWidth.current));
         seekingValue.current = ratio * duration;
@@ -122,17 +121,10 @@ const SeekBar: React.FC<SeekBarProps> = ({ position, duration, onSeekStart, onSe
       onLayout={handleLayout}
       {...panResponder.panHandlers}
     >
-      {/* Track background */}
       <View style={seekStyles.track}>
         <View style={[seekStyles.trackFill, { width: progressPercent as any }]} />
       </View>
-      {/* Thumb */}
-      <View
-        style={[
-          seekStyles.thumb,
-          { left: progressPercent as any },
-        ]}
-      />
+      <View style={[seekStyles.thumb, { left: progressPercent as any }]} />
     </View>
   );
 };
@@ -140,9 +132,9 @@ const SeekBar: React.FC<SeekBarProps> = ({ position, duration, onSeekStart, onSe
 const seekStyles = StyleSheet.create({
   container: {
     flex: 1,
-    height: 36,
+    height: 40,
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   track: {
     height: 5,
@@ -157,12 +149,12 @@ const seekStyles = StyleSheet.create({
   },
   thumb: {
     position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "#a5b4fc",
-    marginLeft: -8,
-    top: 10,
+    marginLeft: -9,
+    top: 11,
     elevation: 3,
     shadowColor: "#6366f1",
     shadowOffset: { width: 0, height: 2 },
@@ -171,9 +163,12 @@ const seekStyles = StyleSheet.create({
   },
 });
 
-/* ---------- Video Player View ---------- */
-export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExternal, title }) => {
+/* ---------- Fullscreen Video Screen ---------- */
+export default function FullscreenVideoScreen() {
+  const params = useLocalSearchParams<{ uri: string; title?: string }>();
   const router = useRouter();
+  const uri = params.uri || "";
+  const title = params.title || "Video";
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -186,9 +181,10 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const avVideoRef = useRef<any>(null);
   const durationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const screenDims = Dimensions.get("screen");
 
+  // expo-video player
   let expoPlayer: any = null;
-
   if (ExpoVideoModule && typeof ExpoVideoModule.useVideoPlayer === "function") {
     try {
       expoPlayer = ExpoVideoModule.useVideoPlayer(uri, (player: any) => {
@@ -200,6 +196,31 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
     }
   }
 
+  // Lock to landscape on mount, restore on unmount
+  useEffect(() => {
+    if (ScreenOrientation) {
+      ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE
+      ).catch(() => {});
+    }
+    return () => {
+      if (ScreenOrientation) {
+        ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.PORTRAIT_UP
+        ).catch(() => {});
+      }
+    };
+  }, []);
+
+  // Hardware back button exits fullscreen
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleExit();
+      return true;
+    });
+    return () => backHandler.remove();
+  }, []);
+
   // Poll for duration since events may not report it reliably
   useEffect(() => {
     if (expoPlayer) {
@@ -208,7 +229,6 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
           const d = expoPlayer.duration;
           if (d && d > 0 && isFinite(d)) {
             setDuration(d);
-            // Stop polling once we have a valid duration
             if (durationPollRef.current) {
               clearInterval(durationPollRef.current);
               durationPollRef.current = null;
@@ -235,7 +255,6 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
         if (!isSeeking) {
           setPosition(event.currentTime || 0);
         }
-        // Try grabbing duration from event or player
         const d = event.duration || expoPlayer.duration;
         if (d && d > 0 && isFinite(d)) {
           setDuration(d);
@@ -268,7 +287,7 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
     }
   }, [expoPlayer, isSeeking]);
 
-  // Auto-hide controls timer
+  // Auto-hide controls
   useEffect(() => {
     resetHideTimer();
     return () => {
@@ -314,7 +333,10 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
     } else if (avVideoRef.current) {
       avVideoRef.current.getStatusAsync().then((status: any) => {
         if (status.isLoaded) {
-          const newPos = Math.max(0, Math.min(status.durationMillis, status.positionMillis + seconds * 1000));
+          const newPos = Math.max(
+            0,
+            Math.min(status.durationMillis, status.positionMillis + seconds * 1000)
+          );
           avVideoRef.current.setPositionAsync(newPos);
         }
       });
@@ -347,27 +369,21 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
     resetHideTimer();
   };
 
-  const handleFullscreen = () => {
-    // Pause current playback before navigating
+  const handleExit = () => {
     if (expoPlayer) {
       expoPlayer.pause();
-    } else if (avVideoRef.current) {
-      avVideoRef.current.pauseAsync();
     }
-    router.push({
-      pathname: "/fullscreen-video",
-      params: { uri, title: title || "Video" },
-    } as any);
+    router.back();
   };
 
-  const playerHeight = SCREEN_HEIGHT * 0.36;
-
   return (
-    <View style={[styles.container, { width: SCREEN_WIDTH, height: playerHeight }]}>
-      {/* Video Render Layer */}
+    <View style={styles.container}>
+      <StatusBar hidden />
+
+      {/* Video Layer */}
       {ExpoVideoModule?.VideoView && expoPlayer ? (
         <ExpoVideoModule.VideoView
-          style={styles.media}
+          style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
           player={expoPlayer}
           allowsFullscreen={false}
           showsTimecodes={false}
@@ -378,7 +394,7 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
         <ExpoAvVideo
           ref={avVideoRef}
           source={{ uri }}
-          style={styles.media}
+          style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
           resizeMode={ExpoAvResizeMode ? ExpoAvResizeMode.CONTAIN : "contain"}
           shouldPlay={isPlaying}
           isMuted={isMuted}
@@ -397,14 +413,8 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
           }}
         />
       ) : (
-        <View style={styles.fallbackContainer}>
-          <Text style={styles.fallbackText}>Native Video Player Not Available</Text>
-          {onOpenExternal && (
-            <TouchableOpacity style={styles.streamBtn} onPress={onOpenExternal}>
-              <Play size={18} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.streamBtnText}>Play Stream Externally</Text>
-            </TouchableOpacity>
-          )}
+        <View style={styles.fallback}>
+          <Text style={styles.fallbackText}>Video player not available</Text>
         </View>
       )}
 
@@ -415,13 +425,24 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
         </View>
       )}
 
-      {/* Touch target - toggles controls visibility */}
+      {/* Touch target to toggle controls */}
       <Pressable style={StyleSheet.absoluteFill} onPress={toggleControls} />
 
-      {/* Custom Video Controls Overlay */}
+      {/* Controls Overlay */}
       {showControls && (
         <View style={styles.controlsOverlay} pointerEvents="box-none">
-          {/* Center Controls (Skip Back 10s, Play/Pause, Skip Forward 10s) */}
+          {/* Top bar */}
+          <View style={styles.topBar} pointerEvents="box-none">
+            <TouchableOpacity style={styles.exitBtn} onPress={handleExit}>
+              <ChevronLeft size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.topTitle} numberOfLines={1}>
+              {title}
+            </Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {/* Center playback controls */}
           <View style={styles.centerControls} pointerEvents="box-none">
             <TouchableOpacity style={styles.controlCircleSmall} onPress={() => handleSkip(-10)}>
               <RotateCcw size={22} color="#ffffff" />
@@ -442,7 +463,7 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
             </TouchableOpacity>
           </View>
 
-          {/* Bottom Bar: Timer, Seek Bar, Duration, Mute & Fullscreen */}
+          {/* Bottom bar with seek slider */}
           <View style={styles.bottomBar}>
             <Text style={styles.timerText}>{formatTime(position)}</Text>
 
@@ -456,52 +477,43 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
             <Text style={styles.timerText}>{formatTime(duration)}</Text>
 
             <TouchableOpacity style={styles.barIconBtn} onPress={handleMuteToggle}>
-              {isMuted ? <VolumeX size={18} color="#f43f5e" /> : <Volume2 size={18} color="#ffffff" />}
+              {isMuted ? (
+                <VolumeX size={20} color="#f43f5e" />
+              ) : (
+                <Volume2 size={20} color="#ffffff" />
+              )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.barIconBtn} onPress={handleFullscreen}>
-              <Maximize size={18} color="#ffffff" />
+            <TouchableOpacity style={styles.barIconBtn} onPress={handleExit}>
+              <Minimize size={20} color="#ffffff" />
             </TouchableOpacity>
           </View>
         </View>
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: "#000000",
-    position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
-  media: {
-    width: "100%",
-    height: "100%",
+  video: {
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
-  fallbackContainer: {
-    padding: 24,
+  fallback: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
   fallbackText: {
     color: "#94a3b8",
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  streamBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#4f46e5",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  streamBtnText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
   },
   loadingOverlay: {
     position: "absolute",
@@ -521,19 +533,42 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "space-between",
-    padding: 12,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  exitBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  topTitle: {
+    flex: 1,
+    color: "#f8fafc",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginHorizontal: 12,
   },
   centerControls: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 28,
+    gap: 32,
   },
   controlCircleSmall: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: "rgba(15, 23, 42, 0.75)",
     justifyContent: "center",
     alignItems: "center",
@@ -541,9 +576,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
   },
   controlCircleLarge: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: "#4f46e5",
     justifyContent: "center",
     alignItems: "center",
@@ -562,22 +597,24 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     backgroundColor: "rgba(15, 23, 42, 0.85)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    marginBottom: 12,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
   },
   timerText: {
     color: "#cbd5e1",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
-    minWidth: 38,
+    minWidth: 42,
   },
   barIconBtn: {
-    padding: 4,
+    padding: 6,
   },
 });

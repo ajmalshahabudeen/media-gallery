@@ -60,6 +60,15 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)/sign-in" />
         <Stack.Screen name="(auth)/sign-up" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="fullscreen-video"
+          options={{
+            headerShown: false,
+            animation: "fade",
+            gestureEnabled: false,
+            contentStyle: { backgroundColor: "#000000" },
+          }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

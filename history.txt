@@ -484,3 +484,13 @@ Status: Completed.
 7. Refactored `FilePreviewModal.tsx` to integrate all player viewers.
 8. Verified clean compilation with `bun run lint` (0 errors).
 Status: Completed.
+
+[2026-07-28] Request 80:
+1. Fixed video player duration not displaying by adding `setInterval`-based duration polling (every 250ms until `expoPlayer.duration > 0`) alongside event-based detection from `timeUpdate` and `statusChange` listeners.
+2. Fixed video player controls not responding to taps by replacing `TouchableWithoutFeedback` wrapper with `Pressable` + `pointerEvents="box-none"` pattern so touch events properly propagate to control buttons.
+3. Replaced static progress bar with a custom `PanResponder`-based `SeekBar` component (pure React Native, no native module needed) enabling drag-to-seek with visual thumb and progress fill.
+4. Created dedicated fullscreen video screen (`src/app/fullscreen-video.tsx`) with landscape orientation lock (`expo-screen-orientation`), hidden status bar, back button support, and full control overlay.
+5. Updated `_layout.tsx` to register `fullscreen-video` route with fade animation.
+6. Installed `expo-screen-orientation`. Removed `@react-native-community/slider` (native module incompatible with Expo Go).
+7. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.

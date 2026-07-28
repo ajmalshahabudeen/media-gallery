@@ -111,6 +111,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
             <VideoPlayerView
               uri={mediaUrl}
               onOpenExternal={handleOpenExternal}
+              title={file.name}
             />
           )}
 
