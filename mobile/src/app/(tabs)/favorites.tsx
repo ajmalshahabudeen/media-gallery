@@ -5,8 +5,8 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Star } from "lucide-react-native";
 import { useMobileStore, MediaFile } from "../../store/useMobileStore";
 import { MediaCard } from "../../components/preview/MediaCard";

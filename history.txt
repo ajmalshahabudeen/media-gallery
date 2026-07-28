@@ -369,12 +369,10 @@ Status: Completed.
 3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
 
-
-
-
-
-
-
+[2026-07-28] Request 64:
+1. Replaced deprecated React Native `SafeAreaView` imports with `react-native-safe-area-context` across `index.tsx`, `favorites.tsx`, `settings.tsx`, and `admin.tsx`.
+2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
 
 
 
