@@ -374,28 +374,26 @@ Status: Completed.
 2. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
 Status: Completed.
 
+[2026-07-28] Request 65:
+1. Converted mobile bottom tab navigation bar into a modern floating pill layout (`position: "absolute"`, `bottom: 20`, `left: 16`, `right: 16`, `borderRadius: 32`, dark slate elevation/shadows).
+2. Adjusted list content bottom padding (`paddingBottom: 100`) across all tab screens (`index.tsx`, `favorites.tsx`, `settings.tsx`, `admin.tsx`) to prevent floating tab bar overlap.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
 
+[2026-07-28] Request 65:
+1. Converted mobile bottom tab navigation bar into a modern floating pill layout (`position: "absolute"`, `bottom: 20`, `left: 16`, `right: 16`, `borderRadius: 32`, dark slate elevation & drop shadow).
+2. Updated `app-tabs.tsx` and updated list bottom padding (`paddingBottom: 100`) across all tab screens (`index.tsx`, `favorites.tsx`, `settings.tsx`, `admin.tsx`) so content scrolls smoothly above the floating bar.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
 
+[2026-07-28] Request 66:
+1. Updated floating tab navigation bar in `mobile/src/app/(tabs)/_layout.tsx` to an iOS translucent frosted glass design (`backgroundColor: "rgba(15, 23, 42, 0.82)"`, `borderColor: "rgba(255, 255, 255, 0.18)"`, `borderWidth: 1.5`, elevation & drop shadow).
+2. Increased side margins on X-axis (`left: 28`, `right: 28`).
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+[2026-07-28] Request 67:
+1. Installed `expo-blur` via Bun.
+2. Updated `mobile/src/app/(tabs)/_layout.tsx` to render `<BlurView tint="dark" intensity={80} />` in `tabBarBackground` for real native backdrop blur under the floating frosted glass tab bar.
+3. Verified clean TypeScript compilation (`bun run lint`) with 0 errors.
+Status: Completed.

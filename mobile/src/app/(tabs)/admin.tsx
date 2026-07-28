@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
   listPadding: {
     padding: 16,
-    paddingBottom: 30,
+    paddingBottom: 100,
   },
   userCard: {
     backgroundColor: "#1e293b",

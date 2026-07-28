@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 10,
-    paddingBottom: 24,
+    paddingBottom: 100,
   },
   emptyContainer: {
     alignItems: "center",
