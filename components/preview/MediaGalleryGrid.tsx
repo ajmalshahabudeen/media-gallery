@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { MediaFile, useMediaStore, GroupByMode, SortByField } from "@/store/useMediaStore";
 import { MediaCard } from "./MediaCard";
 import { FilePreviewDrawer } from "./FilePreviewDrawer";
@@ -28,6 +28,7 @@ import {
   ChevronDown,
   ChevronRight,
   FolderOpen,
+  X,
 } from "lucide-react";
 
 interface MediaGalleryGridProps {
@@ -63,6 +64,15 @@ export function MediaGalleryGrid({
 
   const [previewMedia, setPreviewMedia] = useState<MediaFile | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+
+  // Debounce search query to prevent unnecessary re-filters on fast typing
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const toggleGroupCollapse = (groupName: string) => {
     setCollapsedGroups((prev) => {
@@ -77,17 +87,24 @@ export function MediaGalleryGrid({
   };
 
   const filteredFiles = useMemo(() => {
+    const terms = debouncedSearchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
     return files.filter((file) => {
       const matchesSearch =
-        searchQuery === "" ||
-        file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        file.folder.toLowerCase().includes(searchQuery.toLowerCase());
+        terms.length === 0 ||
+        terms.every((term) => {
+          const nameMatch = file.name.toLowerCase().includes(term);
+          const folderMatch = file.folder.toLowerCase().includes(term);
+          const extMatch = file.extension ? file.extension.toLowerCase().includes(term) : false;
+          const typeMatch = file.type ? file.type.toLowerCase().includes(term) : false;
+          return nameMatch || folderMatch || extMatch || typeMatch;
+        });
       const matchesType = selectedType === "all" || file.type === selectedType;
       const matchesFolder = activeFolder === null || file.folder === activeFolder;
 
       return matchesSearch && matchesType && matchesFolder;
     });
-  }, [files, searchQuery, selectedType, activeFolder]);
+  }, [files, debouncedSearchQuery, selectedType, activeFolder]);
 
   const sortedFiles = useMemo(() => {
     return [...filteredFiles].sort((a, b) => {
@@ -219,11 +236,21 @@ export function MediaGalleryGrid({
           <div className="relative w-full xl:w-80">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
             <Input
-              placeholder="Search files..."
+              placeholder="Search files (e.g. 2024 mp4)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-8"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                title="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">

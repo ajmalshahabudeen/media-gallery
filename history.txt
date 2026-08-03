@@ -530,3 +530,16 @@ Status: Completed.
 4. Updated `mobile/README.md` with Docker containerized build documentation.
 5. Verified TypeScript compilation (`bun run lint`) with 0 errors and launched `bash ./scripts/build-android-offline.sh`.
 Status: Completed.
+
+[2026-08-03] Request 86:
+1. Analyzed search implementation in `MediaGalleryGrid.tsx` (lines 79-90 & 219-227).
+2. Explained client-side in-memory substring filtering, zero-latency performance, pros, and limitations.
+Status: Completed.
+
+[2026-08-03] Request 87:
+1. Implemented 150ms debounced search state (`debouncedSearchQuery`) in `components/preview/MediaGalleryGrid.tsx` to eliminate re-filter layout lag on rapid typing.
+2. Added multi-word space-separated term filtering (`terms.every(...)`) matching across `name`, `folder`, `extension`, and `type`.
+3. Added 1-click clear search `X` button and updated placeholder text in `MediaGalleryGrid.tsx`.
+4. Applied multi-word and multi-field search filtering to mobile app `mobile/src/components/MediaListRenderer.tsx`.
+5. Verified clean `bun run lint` (0 errors) and `bun run build`.
+Status: Completed.

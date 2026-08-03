@@ -45,12 +45,14 @@ export const MediaListRenderer: React.FC<Props> = ({
     if (selectedType !== "all" && file.type !== selectedType) {
       return false;
     }
-    if (searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase();
-      return (
-        file.name.toLowerCase().includes(q) ||
-        file.folder.toLowerCase().includes(q) ||
-        file.extension.toLowerCase().includes(q)
+    const terms = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (terms.length > 0) {
+      return terms.every(
+        (term) =>
+          file.name.toLowerCase().includes(term) ||
+          file.folder.toLowerCase().includes(term) ||
+          (file.extension && file.extension.toLowerCase().includes(term)) ||
+          (file.type && file.type.toLowerCase().includes(term))
       );
     }
     return true;
