@@ -2,14 +2,21 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Tabs } from "expo-router";
 import { BlurView } from "expo-blur";
-import { Image as ImageIcon, Star, Settings, ShieldAlert } from "lucide-react-native";
+import {
+  Image as ImageIcon,
+  Star,
+  Settings,
+  ShieldAlert,
+  Clapperboard,
+} from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 
 export default function TabsLayout() {
   const { user } = useMobileStore();
   const isAdmin = user?.role === "admin";
 
-  const sideMargin = isAdmin ? 44 : 64;
+  // Gallery + Reels + Favorites + Settings (+ Admin)
+  const sideMargin = isAdmin ? 28 : 44;
 
   return (
     <Tabs
@@ -30,11 +37,7 @@ export default function TabsLayout() {
               },
             ]}
           >
-            <BlurView
-              tint="dark"
-              intensity={80}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView tint="dark" intensity={80} style={StyleSheet.absoluteFill} />
           </View>
         ),
         tabBarStyle: {
@@ -77,6 +80,18 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={focused ? styles.activePill : styles.inactivePill}>
               <ImageIcon size={22} color={focused ? "#818cf8" : "#94a3b8"} />
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="reels"
+        options={{
+          title: "Reels",
+          tabBarIcon: ({ focused }) => (
+            <View style={focused ? styles.activePill : styles.inactivePill}>
+              <Clapperboard size={22} color={focused ? "#818cf8" : "#94a3b8"} />
             </View>
           ),
         }}
@@ -141,5 +156,3 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
-
-

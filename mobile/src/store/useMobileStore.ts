@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { apiFetch, getServerUrl, setServerUrl as saveServerUrl, setSessionToken, getSessionToken } from "../lib/api";
+import {
+  apiFetch,
+  getServerUrl,
+  setServerUrl as saveServerUrl,
+  setSessionToken,
+  getSessionToken,
+} from "../lib/api";
 
 export interface User {
   id: string;
@@ -171,12 +177,15 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   login: async (email, password) => {
     try {
+      // Drop any stale session so Better Auth doesn't require Origin via cookie path
+      await setSessionToken(null);
+
       const res = await apiFetch("/api/auth/sign-in/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data?.user) {
         if (data.token) {
           await setSessionToken(data.token);
@@ -187,7 +196,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         await get().scanMedia(false);
         return { success: true };
       }
-      return { success: false, error: data?.message || "Invalid credentials" };
+      const msg =
+        data?.message ||
+        data?.error ||
+        (!res.ok ? `Sign in failed (HTTP ${res.status})` : "Invalid credentials");
+      return { success: false, error: msg };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error. Please check server IP." };
     }
@@ -195,12 +208,14 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   register: async (name, email, password) => {
     try {
+      await setSessionToken(null);
+
       const res = await apiFetch("/api/auth/sign-up/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data?.user) {
         if (data.token) {
           await setSessionToken(data.token);
@@ -208,7 +223,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         set({ user: data.user, isAuthenticated: true, authChecked: true });
         return { success: true };
       }
-      return { success: false, error: data?.message || "Registration failed" };
+      const msg =
+        data?.message ||
+        data?.error ||
+        (!res.ok ? `Registration failed (HTTP ${res.status})` : "Registration failed");
+      return { success: false, error: msg };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error" };
     }

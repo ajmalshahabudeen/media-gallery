@@ -559,3 +559,11 @@ Status: Completed.
 3. Added Open (ArrowUpRight) action under like/sound on each reel to open `FilePreviewDrawer` full gallery video preview; pauses active reel while drawer is open.
 4. Verified with `bun run lint` and `bun run build`.
 Status: Completed.
+
+[2026-08-04] Request 90:
+1. Ported Instagram-style Reels feature from Next.js web app to Expo mobile (`mobile/`).
+2. Added tab route `src/app/(tabs)/reels.tsx` + Clapperboard tab icon in `_layout.tsx`.
+3. Built `components/preview/ReelItem.tsx` (expo-video active player + expo-av fallback, like/mute/open, double-tap ±10s / center like, progress bar).
+4. Built `components/preview/ReelsFeed.tsx`: vertical paging FlatList, All/Favorites + Shuffle chrome auto-hide, floating tab bar hide/show synced, `/api/media/reels` via apiFetch + Redis-backed random playlist, FilePreviewModal open-in-gallery.
+5. Updated typed routes and web app-tabs explore→reels. Verified `bun run lint` (tsc --noEmit) clean.
+Status: Completed.

@@ -12,6 +12,11 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  advanced: {
+    // Mobile / LAN clients often omit browser Origin. Origin is still injected in
+    // the auth route handler + mobile apiFetch; CSRF is disabled for non-browser clients.
+    disableCSRFCheck: true,
+  },
   databaseHooks: {
     user: {
       create: {
@@ -48,14 +53,18 @@ export const auth = betterAuth({
     "http://192.168.*.*:3000",
     "http://10.*.*.*:38479",
     "http://10.*.*.*:3000",
-    "http://172.16.*.*:38479",
-    "http://172.16.*.*:3000",
+    "http://172.*.*.*:38479",
+    "http://172.*.*.*:3000",
     "http://*.local:38479",
     "http://*.local:3000",
     "http://*:38479",
     "http://*:3000",
     "http://*",
     "https://*",
+    // Expo / React Native custom schemes
+    "exp://*",
+    "exps://*",
+    "servergallery://*",
   ],
   plugins: [admin()],
 });

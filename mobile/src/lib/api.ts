@@ -51,6 +51,10 @@ export async function setSessionToken(token: string | null): Promise<void> {
   }
 }
 
+/**
+ * Better Auth requires a non-null Origin on cookie-bearing / mutating auth calls.
+ * React Native fetch does not send Origin, so we inject the server URL as Origin/Referer.
+ */
 export async function apiFetch(
   endpoint: string,
   options: RequestInit = {}
@@ -58,16 +62,38 @@ export async function apiFetch(
   const baseUrl = await getServerUrl();
   const token = await getSessionToken();
 
-  const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+  const url = endpoint.startsWith("http")
+    ? endpoint
+    : `${baseUrl}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+
+  const isAuthEndpoint = /\/api\/auth\//.test(url);
+  // Sign-in / sign-up should not carry a stale session cookie — it forces origin checks
+  // and can surface MISSING_OR_NULL_ORIGIN even when logging in fresh.
+  const isAuthCredentialPost =
+    isAuthEndpoint &&
+    (url.includes("/sign-in") ||
+      url.includes("/sign-up") ||
+      url.includes("/sign-out"));
 
   const headers: Record<string, string> = {
-    "Accept": "application/json",
+    Accept: "application/json",
+    // Required by Better Auth origin middleware for mobile / non-browser clients
+    Origin: baseUrl,
+    Referer: `${baseUrl}/`,
     ...(options.headers as Record<string, string> || {}),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-    headers["Cookie"] = `better-auth.session_token=${token}`;
+  // Prefer caller-provided Origin if they set one, but never leave it empty/"null"
+  if (!headers.Origin || headers.Origin === "null") {
+    headers.Origin = baseUrl;
+  }
+  if (!headers.Referer || headers.Referer === "null") {
+    headers.Referer = `${baseUrl}/`;
+  }
+
+  if (token && !isAuthCredentialPost) {
+    headers.Authorization = `Bearer ${token}`;
+    headers.Cookie = `better-auth.session_token=${token}`;
   }
 
   const response = await fetch(url, {
@@ -87,25 +113,41 @@ export async function apiFetch(
   return response;
 }
 
-export async function pingServer(customUrl?: string): Promise<{ success: boolean; message: string; data?: any }> {
+export async function pingServer(
+  customUrl?: string
+): Promise<{ success: boolean; message: string; data?: any }> {
   try {
-    const baseUrl = customUrl ? customUrl.trim().replace(/\/+$/, "") : await getServerUrl();
+    const baseUrl = customUrl
+      ? customUrl.trim().replace(/\/+$/, "")
+      : await getServerUrl();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const res = await fetch(`${baseUrl}/api/server/ping`, {
       method: "GET",
       signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        Origin: baseUrl,
+        Referer: `${baseUrl}/`,
+      },
     });
     clearTimeout(timeoutId);
 
     if (res.ok) {
       const data = await res.json();
-      return { success: true, message: "Connected successfully to Media Gallery Server!", data };
+      return {
+        success: true,
+        message: "Connected successfully to Media Gallery Server!",
+        data,
+      };
     }
     return { success: false, message: `Server responded with HTTP ${res.status}` };
   } catch (err: any) {
-    return { success: false, message: err?.message || "Could not connect to server. Check IP and network." };
+    return {
+      success: false,
+      message: err?.message || "Could not connect to server. Check IP and network.",
+    };
   }
 }
 
@@ -115,4 +157,23 @@ export function buildMediaFileUrl(baseUrl: string, filePath: string): string {
 
 export function buildThumbnailUrl(baseUrl: string, filePath: string): string {
   return `${baseUrl.replace(/\/+$/, "")}/api/media/thumbnail?path=${encodeURIComponent(filePath)}`;
+}
+
+/** Parse Better Auth / API error JSON into a human message. */
+export async function readApiErrorMessage(
+  res: Response,
+  fallback = "Request failed"
+): Promise<string> {
+  try {
+    const data = await res.json();
+    return (
+      data?.message ||
+      data?.error ||
+      data?.code ||
+      (typeof data === "string" ? data : null) ||
+      `${fallback} (HTTP ${res.status})`
+    );
+  } catch {
+    return `${fallback} (HTTP ${res.status})`;
+  }
 }
