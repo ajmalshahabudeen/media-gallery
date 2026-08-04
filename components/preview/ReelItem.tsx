@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SyntheticEvent,
 } from "react";
-import { Heart, Loader2, Volume2, VolumeX, Play } from "lucide-react";
+import { Heart, Loader2, Volume2, VolumeX, Play, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MediaFile } from "@/store/useMediaStore";
 
@@ -22,6 +22,7 @@ interface ReelItemProps {
   isMuted: boolean;
   onToggleMute: () => void;
   onToggleFavorite: (reel: ReelItemData) => void;
+  onOpenInGallery: (reel: ReelItemData) => void;
 }
 
 export function ReelItem({
@@ -30,6 +31,7 @@ export function ReelItem({
   isMuted,
   onToggleMute,
   onToggleFavorite,
+  onOpenInGallery,
 }: ReelItemProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
@@ -98,7 +100,7 @@ export function ReelItem({
   }, []);
 
   const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
-    // Ignore if the target is a button (like / mute)
+    // Ignore if the target is a button (like / mute / open)
     const target = e.target as HTMLElement;
     if (target.closest("button")) return;
 
@@ -253,7 +255,7 @@ export function ReelItem({
         </div>
       )}
 
-      {/* Right action rail — like only (Instagram style) */}
+      {/* Right action rail — like, sound, open in gallery */}
       <div className="absolute right-3 bottom-28 z-30 flex flex-col items-center gap-5">
         <button
           type="button"
@@ -288,13 +290,34 @@ export function ReelItem({
             e.stopPropagation();
             onToggleMute();
           }}
-          className="rounded-full bg-black/25 backdrop-blur-sm p-3 border border-white/10 transition-transform active:scale-90"
+          className="flex flex-col items-center gap-1 group"
         >
-          {isMuted ? (
-            <VolumeX className="size-6 text-white" />
-          ) : (
-            <Volume2 className="size-6 text-white" />
-          )}
+          <div className="rounded-full bg-black/25 backdrop-blur-sm p-3 border border-white/10 transition-transform group-active:scale-90">
+            {isMuted ? (
+              <VolumeX className="size-6 text-white" />
+            ) : (
+              <Volume2 className="size-6 text-white" />
+            )}
+          </div>
+          <span className="text-[11px] font-semibold text-white drop-shadow-md">
+            {isMuted ? "Sound" : "Mute"}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          aria-label="Open in gallery preview"
+          title="Open full preview"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenInGallery(reel);
+          }}
+          className="flex flex-col items-center gap-1 group"
+        >
+          <div className="rounded-full bg-black/25 backdrop-blur-sm p-3 border border-white/10 transition-transform group-active:scale-90">
+            <ArrowUpRight className="size-6 text-white" />
+          </div>
+          <span className="text-[11px] font-semibold text-white drop-shadow-md">Open</span>
         </button>
       </div>
 

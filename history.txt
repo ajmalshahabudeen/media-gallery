@@ -552,3 +552,10 @@ Status: Completed.
 5. Added reels CSS (hidden scrollbar + heart pop animation) in `app/globals.css`.
 6. Verified with `bun run lint` and `bun run build`, then launched via `run.bat`.
 Status: Completed.
+
+[2026-08-04] Request 89:
+1. Added fullscreen toggle button (Maximize2/Minimize2) to dashboard top header in `DashboardLayoutClient.tsx`.
+2. Synced dashboard header hide/show with Reels scroll chrome via `reelsChromeVisible` in Zustand (`useMediaStore`) — same All/Favorites auto-hide logic.
+3. Added Open (ArrowUpRight) action under like/sound on each reel to open `FilePreviewDrawer` full gallery video preview; pauses active reel while drawer is open.
+4. Verified with `bun run lint` and `bun run build`.
+Status: Completed.

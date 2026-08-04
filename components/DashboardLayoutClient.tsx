@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/auth-client";
@@ -15,6 +16,8 @@ import {
   ScrollText,
   Star,
   Clapperboard,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -32,6 +35,8 @@ import {
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ThumbnailProgress } from "@/components/preview/ThumbnailProgress";
+import { useMediaStore } from "@/store/useMediaStore";
+import { cn } from "@/lib/utils";
 
 export function DashboardLayoutClient({
   children,
@@ -43,6 +48,9 @@ export function DashboardLayoutClient({
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
+  const reelsChromeVisible = useMediaStore((s) => s.reelsChromeVisible);
+  const setReelsChromeVisible = useMediaStore((s) => s.setReelsChromeVisible);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -51,8 +59,37 @@ export function DashboardLayoutClient({
   };
 
   const isAdmin = session?.user && (session.user as { role?: string }).role === "admin";
-
   const isReels = pathname === "/dashboard/reels";
+  const hideTopChrome = isReels && !reelsChromeVisible;
+
+  // Always restore dashboard header when leaving Reels
+  useEffect(() => {
+    if (!isReels) {
+      setReelsChromeVisible(true);
+    }
+  }, [isReels, setReelsChromeVisible]);
+
+  // Track browser fullscreen state
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    onFsChange();
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Fullscreen may be blocked by browser policy
+    }
+  }, []);
 
   const navItems = [
     {
@@ -185,9 +222,16 @@ export function DashboardLayoutClient({
 
         {/* Main Content Area */}
         <SidebarInset className="flex flex-1 flex-col h-screen overflow-hidden">
-          {/* Top Bar with Sidebar Trigger - Pinned on top */}
-          <header className="shrink-0 z-30 border-b bg-card/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-200">
-            <div className="flex items-center gap-3">
+          {/* Top Bar — auto-hides on Reels scroll (same logic as All/Favorites) */}
+          <header
+            className={cn(
+              "z-30 border-b bg-card/95 backdrop-blur-md px-4 flex items-center justify-between shadow-xs transition-all duration-300 ease-out overflow-hidden",
+              hideTopChrome
+                ? "max-h-0 py-0 opacity-0 border-transparent pointer-events-none shrink"
+                : "max-h-16 py-2.5 opacity-100 shrink-0"
+            )}
+          >
+            <div className="flex items-center gap-3 min-w-0">
               <SidebarTrigger className="hover:bg-muted" />
               <div className="flex items-center gap-2 md:hidden">
                 <ImageIcon className="size-5 text-primary" />
@@ -198,9 +242,24 @@ export function DashboardLayoutClient({
             {/* Thumbnail Generation Progress */}
             <ThumbnailProgress />
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <PwaInstallPrompt />
               <ModeToggle />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => void toggleFullscreen()}
+                className="size-8 shrink-0"
+                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
+              </Button>
               <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 Port 38479
               </span>

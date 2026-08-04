@@ -5,6 +5,7 @@ import { Clapperboard, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaStore, type MediaFile } from "@/store/useMediaStore";
 import { ReelItem, type ReelItemData } from "@/components/preview/ReelItem";
+import { FilePreviewDrawer } from "@/components/preview/FilePreviewDrawer";
 import { Button } from "@/components/ui/button";
 
 type ReelsFilter = "all" | "favorites";
@@ -17,7 +18,7 @@ interface ReelsResponse {
 }
 
 export function ReelsFeed() {
-  const { toggleFavorite, fetchFavorites, favorites } = useMediaStore();
+  const { toggleFavorite, fetchFavorites, favorites, setReelsChromeVisible } = useMediaStore();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<ReelsFilter>("all");
   const [videos, setVideos] = useState<ReelItemData[]>([]);
@@ -29,6 +30,7 @@ export function ReelsFeed() {
   const [isMuted, setIsMuted] = useState(true);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const lastScrollTop = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const favoritePaths = useRef(new Set<string>());
@@ -38,6 +40,18 @@ export function ReelsFeed() {
   useEffect(() => {
     filterRef.current = filter;
   }, [filter]);
+
+  // Mirror local chrome visibility into dashboard header
+  useEffect(() => {
+    setReelsChromeVisible(headerVisible);
+  }, [headerVisible, setReelsChromeVisible]);
+
+  // Restore chrome when unmounting reels page
+  useEffect(() => {
+    return () => {
+      setReelsChromeVisible(true);
+    };
+  }, [setReelsChromeVisible]);
 
   // Keep favorite flags in sync with store (async to avoid sync setState-in-effect lint)
   useEffect(() => {
@@ -175,7 +189,7 @@ export function ReelsFeed() {
     return () => window.clearTimeout(timer);
   }, [activeIndex, videos.length, hasMore, isLoadingMore, isLoading, loadReels]);
 
-  // Auto-hide header on scroll direction
+  // Auto-hide header chrome on scroll direction (All/Favorites + dashboard header)
   const handleScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -229,6 +243,21 @@ export function ReelsFeed() {
     } else if (filter === "favorites" && reel.isFavorite) {
       setVideos((prev) => prev.filter((v) => v.path !== reel.path));
     }
+  };
+
+  const handleOpenInGallery = (reel: ReelItemData) => {
+    // Pause active reel while drawer is open
+    setPreviewFile({
+      id: reel.id,
+      name: reel.name,
+      path: reel.path,
+      folder: reel.folder,
+      size: reel.size,
+      extension: reel.extension,
+      type: "video",
+      mimeType: reel.mimeType || "video/mp4",
+      modifiedAt: reel.modifiedAt,
+    });
   };
 
   const handleFilterChange = (next: ReelsFilter) => {
@@ -354,10 +383,11 @@ export function ReelsFeed() {
           >
             <ReelItem
               reel={reel}
-              isActive={index === activeIndex}
+              isActive={index === activeIndex && !previewFile}
               isMuted={isMuted}
               onToggleMute={() => setIsMuted((m) => !m)}
               onToggleFavorite={handleToggleFavorite}
+              onOpenInGallery={handleOpenInGallery}
             />
           </div>
         ))}
@@ -368,6 +398,9 @@ export function ReelsFeed() {
           </div>
         )}
       </div>
+
+      {/* Gallery full preview drawer */}
+      <FilePreviewDrawer file={previewFile} onClose={() => setPreviewFile(null)} />
     </div>
   );
 }

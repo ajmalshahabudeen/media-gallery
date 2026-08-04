@@ -57,6 +57,8 @@ interface MediaState {
   indexingProgress: IndexingProgressState;
 
   sidebarOpen: boolean;
+  /** Dashboard top chrome visibility while browsing Reels (mirrors All/Favorites bar). */
+  reelsChromeVisible: boolean;
   setSearchQuery: (query: string) => void;
   setSelectedType: (type: "all" | "image" | "video" | "audio") => void;
   setViewMode: (mode: ViewMode) => void;
@@ -65,6 +67,7 @@ interface MediaState {
   setSortOrder: (order: SortOrder) => void;
   setActiveFolder: (folder: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
+  setReelsChromeVisible: (visible: boolean) => void;
 
   fetchFolders: () => Promise<void>;
   fetchFavorites: () => Promise<void>;
@@ -103,6 +106,7 @@ export const useMediaStore = create<MediaState>()(
       },
 
       sidebarOpen: true,
+      reelsChromeVisible: true,
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSelectedType: (type) => set({ selectedType: type }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -111,6 +115,7 @@ export const useMediaStore = create<MediaState>()(
       setSortOrder: (order) => set({ sortOrder: order }),
       setActiveFolder: (folder) => set({ activeFolder: folder }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      setReelsChromeVisible: (visible) => set({ reelsChromeVisible: visible }),
 
       fetchFolders: async () => {
         set({ isLoading: true });
