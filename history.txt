@@ -567,3 +567,10 @@ Status: Completed.
 4. Built `components/preview/ReelsFeed.tsx`: vertical paging FlatList, All/Favorites + Shuffle chrome auto-hide, floating tab bar hide/show synced, `/api/media/reels` via apiFetch + Redis-backed random playlist, FilePreviewModal open-in-gallery.
 5. Updated typed routes and web app-tabs explore→reels. Verified `bun run lint` (tsc --noEmit) clean.
 Status: Completed.
+
+[2026-08-04] Request 91:
+1. Removed deprecated/disallowed top-level `"newArchEnabled": false` property from `mobile/app.json`.
+2. Explained why the Expo JSON schema validation warning occurred in Expo SDK 52+.
+3. Verified clean compilation with `bun run lint` (0 errors).
+Status: Completed.
+

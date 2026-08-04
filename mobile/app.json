@@ -2,15 +2,14 @@
   "expo": {
     "name": "Server Gallery",
     "slug": "server-gallery",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "servergallery",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "android": {
       "package": "com.mediagallery.mobile",
-      "versionCode": 2,
+      "versionCode": 3,
       "backgroundColor": "#0f172a",
       "userInterfaceStyle": "dark",
       "allowBackup": true,
@@ -56,10 +55,20 @@
         "expo-build-properties",
         {
           "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
             "usesCleartextTraffic": true,
             "enableMinifyInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false,
-            "networkInspector": false
+            "networkInspector": false,
+            "useLegacyPackaging": true,
+            "packagingOptions": {
+              "jniLibs": {
+                "useLegacyPackaging": true
+              }
+            }
           }
         }
       ],
