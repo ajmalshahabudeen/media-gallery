@@ -150,3 +150,39 @@
     @apply font-sans;
   }
 }
+
+/* Instagram-style Reels */
+.reels-scroller {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.reels-scroller::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+@keyframes reel-heart-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  30% {
+    transform: scale(0.95);
+  }
+  45% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35) translateY(-12px);
+  }
+}
+
+.animate-reel-heart {
+  animation: reel-heart-pop 0.7s ease-out forwards;
+}

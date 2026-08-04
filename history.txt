@@ -543,3 +543,12 @@ Status: Completed.
 4. Applied multi-word and multi-field search filtering to mobile app `mobile/src/components/MediaListRenderer.tsx`.
 5. Verified clean `bun run lint` (0 errors) and `bun run build`.
 Status: Completed.
+
+[2026-08-04] Request 88:
+1. Added Instagram-style Reels feature with vertical infinite swipe UI.
+2. Created `/api/media/reels` endpoint: filters videos from scan cache, Fisher-Yates random shuffle, Redis playlist cache (`reels_playlist_${userId}`, 30min TTL), supports `filter=all|favorites`, pagination, and `reshuffle=true`.
+3. Built `components/preview/ReelItem.tsx` and `ReelsFeed.tsx`: snap-scroll feed, autoplay active reel, top All/Favorites tabs that auto-hide on scroll, heart like button (favorites toggle), mute toggle, double-tap left/right for -10s/+10s seek, center double-tap like with heart burst, progress bar, Instagram-like gradients.
+4. Added `/dashboard/reels` page and sidebar **Reels** nav (`Clapperboard` icon) in `DashboardLayoutClient.tsx`; full-bleed main area (no padding) on reels route.
+5. Added reels CSS (hidden scrollbar + heart pop animation) in `app/globals.css`.
+6. Verified with `bun run lint` and `bun run build`, then launched via `run.bat`.
+Status: Completed.

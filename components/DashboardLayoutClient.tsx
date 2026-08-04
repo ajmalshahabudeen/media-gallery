@@ -14,6 +14,7 @@ import {
   Users,
   ScrollText,
   Star,
+  Clapperboard,
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -51,12 +52,20 @@ export function DashboardLayoutClient({
 
   const isAdmin = session?.user && (session.user as { role?: string }).role === "admin";
 
+  const isReels = pathname === "/dashboard/reels";
+
   const navItems = [
     {
       name: "Gallery",
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      name: "Reels",
+      href: "/dashboard/reels",
+      icon: Clapperboard,
+      active: isReels,
     },
     {
       name: "Favorites",
@@ -198,7 +207,15 @@ export function DashboardLayoutClient({
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+          <main
+            className={
+              isReels
+                ? "flex-1 overflow-hidden p-0 min-h-0"
+                : "flex-1 overflow-y-auto p-4 md:p-8"
+            }
+          >
+            {children}
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

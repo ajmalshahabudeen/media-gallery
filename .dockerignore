@@ -6,3 +6,16 @@ dist
 tmp
 .env*.local
 dev.db
+mobile
+mobile/
+**/android
+**/ios
+**/build
+**/.expo
+**/*.apk
+**/*.aab
+history.txt
+implementation_plan.md
+*.md
+!README.md
+.hermes

@@ -1,22 +1,50 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Server Gallery",
+    "slug": "server-gallery",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "servergallery",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "android": {
       "package": "com.mediagallery.mobile",
+      "versionCode": 2,
       "backgroundColor": "#0f172a",
+      "userInterfaceStyle": "dark",
+      "allowBackup": true,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.WAKE_LOCK"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "com.mediagallery.mobile",
+      "supportsTablet": true,
+      "userInterfaceStyle": "dark",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -25,25 +53,52 @@
     "plugins": [
       "expo-router",
       [
-        "expo-status-bar",
+        "expo-build-properties",
         {
-          "style": "light",
-          "backgroundColor": "#00000000",
-          "translucent": true
+          "android": {
+            "usesCleartextTraffic": true,
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "networkInspector": false
+          }
         }
       ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0f172a",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0f172a",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
-      ]
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "position": "relative",
+          "backgroundColor": "#0f172a",
+          "style": "light"
+        }
+      ],
+      "expo-image"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "expo-navigation-bar": {
+        "style": "light"
+      },
+      "eas": {
+        "projectId": "4e4dcde0-1a85-43e7-99c6-e496d083f0f6"
+      }
     }
   }
 }

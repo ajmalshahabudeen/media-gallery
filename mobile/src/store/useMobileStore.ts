@@ -126,22 +126,38 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   setActiveFolder: (folder) => set({ activeFolder: folder }),
 
   initApp: async () => {
-    const url = await getServerUrl();
-    set({ serverUrl: url });
-    await get().checkAuth();
+    try {
+      const url = await getServerUrl();
+      set({ serverUrl: url });
+      await get().checkAuth();
+    } catch {
+      // Never leave the UI stuck on the splash/loading gate.
+      set({ user: null, isAuthenticated: false, authChecked: true });
+    }
   },
 
   checkAuth: async () => {
     try {
       const token = await getSessionToken();
-      const res = await apiFetch("/api/auth/get-session");
+      // Fast path: no saved session → skip network so cold start always opens offline.
+      if (!token) {
+        set({ user: null, isAuthenticated: false, authChecked: true });
+        return false;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await apiFetch("/api/auth/get-session", { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         if (data?.session && data?.user) {
           set({ user: data.user, isAuthenticated: true, authChecked: true });
-          get().fetchFolders();
-          get().fetchFavorites();
-          get().scanMedia(false);
+          // Fire-and-forget library refresh (non-blocking for first paint)
+          void get().fetchFolders();
+          void get().fetchFavorites();
+          void get().scanMedia(false);
           return true;
         }
       }
