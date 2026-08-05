@@ -91,10 +91,10 @@ Output: `android/app/build/outputs/apk/release/app-release.apk`
 
 Current production-oriented settings:
 
-- `minSdkVersion` **24** (Android 7+)
-- `targetSdkVersion` / `compileSdkVersion` **36** (required by AndroidX 1.18+ libraries)
-- **New Architecture disabled** (`newArchEnabled: false`) for broader physical-device stability
-- **Legacy JNI packaging** enabled (helps some OEM devices extract native libs)
+- `minSdkVersion` **24** (Android 7.0+)
+- `targetSdkVersion` **34** (Android 14 standard for physical device runtime compatibility like Samsung Galaxy A52)
+- `compileSdkVersion` **36** (required by AndroidX 1.18+ libraries)
+- **Uncompressed JNI packaging** (`useLegacyPackaging: false`) so native `.so` libraries (`libhermes.so`, `libreactnative.so`) are 16KB/4KB page-aligned and loaded directly by Android 11+ without `UnsatisfiedLinkError` crashes
 - **Cleartext HTTP** enabled for LAN media servers
 - ABIs: `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64` (phones + emulators)
 

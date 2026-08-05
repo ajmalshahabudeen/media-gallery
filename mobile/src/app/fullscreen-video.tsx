@@ -26,28 +26,13 @@ import {
   ChevronLeft,
 } from "lucide-react-native";
 
+import { useVideoPlayer, VideoView } from "expo-video";
+
 let ScreenOrientation: any = null;
 try {
   ScreenOrientation = require("expo-screen-orientation");
 } catch {
   // not available
-}
-
-let ExpoVideoModule: any = null;
-try {
-  ExpoVideoModule = require("expo-video");
-} catch {
-  // expo-video missing
-}
-
-let ExpoAvVideo: any = null;
-let ExpoAvResizeMode: any = null;
-try {
-  const av = require("expo-av");
-  ExpoAvVideo = av.Video;
-  ExpoAvResizeMode = av.ResizeMode;
-} catch {
-  // expo-av missing
 }
 
 function formatTime(seconds: number): string {
@@ -183,18 +168,10 @@ export default function FullscreenVideoScreen() {
   const durationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const screenDims = Dimensions.get("screen");
 
-  // expo-video player
-  let expoPlayer: any = null;
-  if (ExpoVideoModule && typeof ExpoVideoModule.useVideoPlayer === "function") {
-    try {
-      expoPlayer = ExpoVideoModule.useVideoPlayer(uri, (player: any) => {
-        player.loop = false;
-        player.play();
-      });
-    } catch {
-      expoPlayer = null;
-    }
-  }
+  const expoPlayer = useVideoPlayer(uri, (player: any) => {
+    player.loop = false;
+    player.play();
+  });
 
   // Lock to landscape on mount, restore on unmount
   useEffect(() => {
@@ -275,8 +252,8 @@ export default function FullscreenVideoScreen() {
           }
         }
       });
-      const playingSub = expoPlayer.addListener("playingChange", (playing: boolean) => {
-        setIsPlaying(playing);
+      const playingSub = expoPlayer.addListener("playingChange", (event: any) => {
+        setIsPlaying(event.isPlaying);
       });
 
       return () => {
@@ -381,42 +358,12 @@ export default function FullscreenVideoScreen() {
       <StatusBar hidden />
 
       {/* Video Layer */}
-      {ExpoVideoModule?.VideoView && expoPlayer ? (
-        <ExpoVideoModule.VideoView
-          style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
-          player={expoPlayer}
-          allowsFullscreen={false}
-          showsTimecodes={false}
-          contentFit="contain"
-          nativeControls={false}
-        />
-      ) : ExpoAvVideo ? (
-        <ExpoAvVideo
-          ref={avVideoRef}
-          source={{ uri }}
-          style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
-          resizeMode={ExpoAvResizeMode ? ExpoAvResizeMode.CONTAIN : "contain"}
-          shouldPlay={isPlaying}
-          isMuted={isMuted}
-          useNativeControls={false}
-          onPlaybackStatusUpdate={(status: any) => {
-            if (status.isLoaded) {
-              setIsLoading(false);
-              if (!isSeeking) {
-                setPosition(status.positionMillis / 1000);
-              }
-              if (status.durationMillis && status.durationMillis > 0) {
-                setDuration(status.durationMillis / 1000);
-              }
-              setIsPlaying(status.isPlaying);
-            }
-          }}
-        />
-      ) : (
-        <View style={styles.fallback}>
-          <Text style={styles.fallbackText}>Video player not available</Text>
-        </View>
-      )}
+      <VideoView
+        style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
+        player={expoPlayer}
+        contentFit="contain"
+        nativeControls={false}
+      />
 
       {/* Loading Spinner */}
       {isLoading && (

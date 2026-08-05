@@ -1,13 +1,10 @@
 import React, { useEffect, useState, Component, type ReactNode } from "react";
-import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
+import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, StyleSheet, Platform, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import { useMobileStore } from "../store/useMobileStore";
-
-// Keep splash visible until auth bootstrap finishes (production-safe).
-SplashScreen.preventAutoHideAsync().catch(() => {});
 
 let SystemUI: { setBackgroundColorAsync?: (color: string) => Promise<void> } | null = null;
 try {
@@ -56,10 +53,7 @@ class RootErrorBoundary extends Component<
 }
 
 export default function RootLayout() {
-  const { initApp, isAuthenticated, authChecked } = useMobileStore();
-  const segments = useSegments();
-  const router = useRouter();
-  const navigationState = useRootNavigationState();
+  const { initApp, authChecked } = useMobileStore();
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
@@ -67,6 +61,12 @@ export default function RootLayout() {
 
     const bootstrap = async () => {
       try {
+        try {
+          await SplashScreen.preventAutoHideAsync();
+        } catch {
+          // Non-fatal if splash screen fails on OEM skins
+        }
+
         if (SystemUI?.setBackgroundColorAsync) {
           await SystemUI.setBackgroundColorAsync("#0f172a").catch(() => {});
         }
@@ -103,28 +103,7 @@ export default function RootLayout() {
     };
   }, [initApp]);
 
-  // Auth redirects only after navigator is mounted (prevents release crash-on-open).
-  useEffect(() => {
-    if (!bootstrapped || !authChecked) return;
-    if (!navigationState?.key) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-
-    try {
-      const root = String(segments[0] ?? "");
-      const atRootGate = root === "" || root === "index";
-
-      if (!isAuthenticated && !inAuthGroup) {
-        router.replace("/(auth)/sign-in");
-      } else if (isAuthenticated && (inAuthGroup || atRootGate)) {
-        router.replace("/(tabs)");
-      }
-    } catch (err) {
-      console.error("[auth-redirect]", err);
-    }
-  }, [bootstrapped, isAuthenticated, authChecked, segments, navigationState?.key, router]);
-
-  const showLoading = !bootstrapped || !authChecked || !navigationState?.key;
+  const showLoading = !bootstrapped || !authChecked;
 
   return (
     <RootErrorBoundary>

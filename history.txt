@@ -580,5 +580,53 @@ Status: Completed.
 3. Updated `mobile/README.md` compatibility documentation.
 4. Executed `bun run lint` (`tsc --noEmit`) clean with 0 errors.
 Status: Completed.
+[2026-08-05] Request 93:
+1. Resolved Samsung Galaxy A52 APK launch crash after installation.
+2. Configured `targetSdkVersion: 34` (Android 14 standard) in `mobile/app.json` and `mobile/android/gradle.properties` while keeping `compileSdkVersion: 36` for AndroidX 1.18+ library compilation.
+3. Changed `useLegacyPackaging` to `false` so native `.so` libraries (`libhermes.so`, `libreactnative.so`) are 16KB/4KB page-aligned and loaded uncompressed without `UnsatisfiedLinkError` crashes on Android 11+ Samsung One UI.
+4. Removed EAS OTA `updates` and `runtimeVersion` config blocks from `mobile/app.json` so standalone release APKs boot their embedded JavaScript bundle cleanly.
+5. Cleaned up duplicate string entries in `permissions` and `blockedPermissions`.
+6. Executed `bun run lint` (`tsc --noEmit`) clean (0 errors) and ran `bun run android:prebuild` (`expo prebuild --platform android --clean`) successfully.
+Status: Completed.
 
+[2026-08-05] Request 94:
+1. Diagnosed split-second startup crash on Samsung A52 and LG G8x physical devices.
+2. Discovered `expo prebuild` was overwriting `gradle.properties` with `newArchEnabled=true`. React Native New Architecture (Fabric) crashed when initializing legacy native view managers (`expo-av`, `expo-screen-orientation`).
+3. Fixed NDK version mismatch: hardcoded NDK 29 path was generating incompatible C++ binaries for Android 10 (LG G8x) and 11-14 (Samsung A52). Updated to official NDK `26.3.11579264`.
+4. Created post-prebuild script `mobile/scripts/fix-gradle-props.js` and updated `mobile/package.json` scripts (`android:prebuild` and `android:apk`) to automatically set `newArchEnabled=false` and `android.ndkPath` after every prebuild.
+5. Moved top-level `SplashScreen.preventAutoHideAsync()` into component scope inside `_layout.tsx` to prevent module-level Android activity null crashes.
+6. Executed `bun run lint` (0 errors) and ran `bun run android:prebuild` cleanly.
+Status: Completed.
 
+[2026-08-05] Request 95:
+1. Identified why EAS Cloud builds (`eas build --platform android --profile preview`) were still generating broken APKs: EAS Cloud ignores local `android/` directory and local post-prebuild scripts, running `expo prebuild` fresh in the cloud (which defaulted to `newArchEnabled=true` on EAS servers).
+2. Created official Expo Config Plugin `mobile/plugins/with-custom-gradle-props.js` using `@expo/config-plugins` `withGradleProperties`.
+3. Registered plugin in `mobile/app.json` (`./plugins/with-custom-gradle-props`) so `expo prebuild` automatically injects `newArchEnabled=false`, `expo.useLegacyPackaging=false`, and `android.targetSdkVersion=34` on EAS Cloud build runners.
+4. Added `react-native-worklets/plugin` to `mobile/babel.config.js` for Reanimated v4 JS bundle compilation during EAS cloud bundling.
+5. Executed `bun run lint` (`tsc --noEmit`) clean (0 errors) and verified prebuild.
+[2026-08-05] Request 96:
+1. Diagnosed Metro bundler duplicate Babel plugin error during `eas build`: `react-native-reanimated` 4.x internally re-exports `react-native-worklets/plugin`, so listing both in `babel.config.js` threw `Duplicate plugin/preset detected`.
+2. Removed `"react-native-worklets/plugin"` from `mobile/babel.config.js`, leaving only `"react-native-reanimated/plugin"`.
+3. Executed `bun run lint` (0 errors) and ran prebuild successfully.
+Status: Completed.
+
+[2026-08-05] Request 97:
+1. Researched Expo Router release APK initial load crashes online.
+2. Discovered imperative navigation race condition: `useEffect` in `mobile/src/app/_layout.tsx` and `useEffect` in `mobile/src/app/index.tsx` were simultaneously calling `router.replace(...)` at initial boot, causing a Hermes runtime navigation state exception in Release builds.
+3. Converted `mobile/src/app/index.tsx` to the official Expo Router declarative `<Redirect />` pattern (`<Redirect href="/(tabs)" />` / `<Redirect href="/(auth)/sign-in" />`) and removed imperative auth redirect `useEffect` from `_layout.tsx`.
+4. Verified clean compilation (`bun run lint`) with 0 errors.
+Status: Completed.
+
+[2026-08-05] Request 98:
+1. Diagnosed 2 critical EAS Build build profile & native autolinking issues:
+   a) `eas.json` had `"NODE_ENV": "production"` set in `preview` profile env, causing npm/yarn/bun on EAS Cloud runners to install ONLY production dependencies and strip essential dev/build tools. Removed `"NODE_ENV": "production"` from `preview` profile.
+   b) `expo-updates` was installed in `package.json`. Because `updates` config was removed from `app.json`, `expo-updates` native package threw a fatal native Java `NullPointerException: EXPO_UPDATE_URL is null` in `MainApplication.kt` during `Application.onCreate()` on cold startup. Uninstalled unused `expo-updates` (`bun remove expo-updates`).
+2. Executed `bun run lint` (0 errors) and ran `bun run android:prebuild` cleanly.
+Status: Completed.
+
+[2026-08-05] Request 99:
+1. Diagnosed native crash caused by deprecated `expo-av` module in Expo SDK 57: dynamic `require("expo-av")` calls in `VideoPlayerView.tsx`, `AudioPlayerView.tsx`, `ReelItem.tsx`, and `fullscreen-video.tsx` were throwing native C++ initialization errors on Android.
+2. Uninstalled deprecated `expo-av` package (`bun remove expo-av`).
+3. Refactored `AudioPlayerView.tsx`, `VideoPlayerView.tsx`, `ReelItem.tsx`, and `fullscreen-video.tsx` to use `expo-video` (`useVideoPlayer` / `VideoView`) unconditionally with top-level imports.
+4. Executed `bun run lint` (`tsc --noEmit`) clean (0 errors) and ran `bun run android:prebuild` cleanly.
+Status: Completed.

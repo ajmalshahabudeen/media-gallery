@@ -1,31 +1,28 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { Redirect } from "expo-router";
 import { useMobileStore } from "../store/useMobileStore";
 
 /**
  * Entry redirect gate.
- * Production APKs crash if navigation fires before the root navigator is ready,
- * so heavy lifting stays in root _layout; this screen only bounces once ready.
+ * Uses declarative <Redirect /> to prevent imperative navigation race condition crashes on release APKs.
  */
 export default function IndexGate() {
-  const router = useRouter();
   const { authChecked, isAuthenticated } = useMobileStore();
 
-  useEffect(() => {
-    if (!authChecked) return;
-    if (isAuthenticated) {
-      router.replace("/(tabs)");
-    } else {
-      router.replace("/(auth)/sign-in");
-    }
-  }, [authChecked, isAuthenticated, router]);
+  if (!authChecked) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    );
+  }
 
-  return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#6366f1" />
-    </View>
-  );
+  if (isAuthenticated) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  return <Redirect href="/(auth)/sign-in" />;
 }
 
 const styles = StyleSheet.create({

@@ -22,27 +22,9 @@ import {
   VolumeX,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-// Safely require expo-video and expo-av
-let ExpoVideoModule: any = null;
-let ExpoAvVideo: any = null;
-let ExpoAvResizeMode: any = null;
-
-try {
-  ExpoVideoModule = require("expo-video");
-} catch {
-  // expo-video missing or unlinked
-}
-
-try {
-  const av = require("expo-av");
-  ExpoAvVideo = av.Video;
-  ExpoAvResizeMode = av.ResizeMode;
-} catch {
-  // expo-av missing
-}
 
 interface Props {
   uri: string;
@@ -187,18 +169,10 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
   const avVideoRef = useRef<any>(null);
   const durationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  let expoPlayer: any = null;
-
-  if (ExpoVideoModule && typeof ExpoVideoModule.useVideoPlayer === "function") {
-    try {
-      expoPlayer = ExpoVideoModule.useVideoPlayer(uri, (player: any) => {
-        player.loop = false;
-        player.play();
-      });
-    } catch {
-      expoPlayer = null;
-    }
-  }
+  const expoPlayer = useVideoPlayer(uri, (player: any) => {
+    player.loop = false;
+    player.play();
+  });
 
   // Poll for duration since events may not report it reliably
   useEffect(() => {
@@ -256,8 +230,8 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
           }
         }
       });
-      const playingSub = expoPlayer.addListener("playingChange", (playing: boolean) => {
-        setIsPlaying(playing);
+      const playingSub = expoPlayer.addListener("playingChange", (event: any) => {
+        setIsPlaying(event.isPlaying);
       });
 
       return () => {
@@ -365,48 +339,12 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, posterUri, onOpenExterna
   return (
     <View style={[styles.container, { width: SCREEN_WIDTH, height: playerHeight }]}>
       {/* Video Render Layer */}
-      {ExpoVideoModule?.VideoView && expoPlayer ? (
-        <ExpoVideoModule.VideoView
-          style={styles.media}
-          player={expoPlayer}
-          allowsFullscreen={false}
-          showsTimecodes={false}
-          contentFit="contain"
-          nativeControls={false}
-        />
-      ) : ExpoAvVideo ? (
-        <ExpoAvVideo
-          ref={avVideoRef}
-          source={{ uri }}
-          style={styles.media}
-          resizeMode={ExpoAvResizeMode ? ExpoAvResizeMode.CONTAIN : "contain"}
-          shouldPlay={isPlaying}
-          isMuted={isMuted}
-          useNativeControls={false}
-          onPlaybackStatusUpdate={(status: any) => {
-            if (status.isLoaded) {
-              setIsLoading(false);
-              if (!isSeeking) {
-                setPosition(status.positionMillis / 1000);
-              }
-              if (status.durationMillis && status.durationMillis > 0) {
-                setDuration(status.durationMillis / 1000);
-              }
-              setIsPlaying(status.isPlaying);
-            }
-          }}
-        />
-      ) : (
-        <View style={styles.fallbackContainer}>
-          <Text style={styles.fallbackText}>Native Video Player Not Available</Text>
-          {onOpenExternal && (
-            <TouchableOpacity style={styles.streamBtn} onPress={onOpenExternal}>
-              <Play size={18} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.streamBtnText}>Play Stream Externally</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <VideoView
+        style={styles.media}
+        player={expoPlayer}
+        contentFit="contain"
+        nativeControls={false}
+      />
 
       {/* Loading Spinner */}
       {isLoading && (

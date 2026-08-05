@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Linking,
-  ActivityIndicator,
 } from "react-native";
 import {
   Play,
@@ -16,15 +15,8 @@ import {
   Volume2,
   VolumeX,
   ExternalLink,
-  Zap,
 } from "lucide-react-native";
-
-let ExpoAudio: any = null;
-try {
-  ExpoAudio = require("expo-av").Audio;
-} catch {
-  // Expo audio missing
-}
+import { useVideoPlayer } from "expo-video";
 
 interface Props {
   uri: string;
@@ -41,117 +33,90 @@ function formatTime(seconds: number): string {
 
 export const AudioPlayerView: React.FC<Props> = ({ uri, title, fileSizeText }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const soundRef = useRef<any>(null);
+  const player = useVideoPlayer(uri, (p) => {
+    p.loop = false;
+  });
 
   const rates = [0.75, 1.0, 1.25, 1.5, 2.0];
 
   useEffect(() => {
+    if (!player) return;
+
+    const subscription = player.addListener("statusChange", () => {
+      setIsPlaying(player.playing);
+    });
+
+    const timeSub = player.addListener("timeUpdate", (event: any) => {
+      setPosition(event.currentTime);
+      if (player.duration > 0) {
+        setDuration(player.duration);
+      }
+    });
+
     return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
+      subscription.remove();
+      timeSub.remove();
     };
-  }, []);
+  }, [player]);
 
-  const handleTogglePlay = async () => {
-    if (!ExpoAudio) {
-      Linking.openURL(uri);
-      return;
-    }
-
-    try {
-      if (soundRef.current) {
-        if (isPlaying) {
-          await soundRef.current.pauseAsync();
-          setIsPlaying(false);
-        } else {
-          await soundRef.current.playAsync();
-          setIsPlaying(true);
-        }
-      } else {
-        setIsLoading(true);
-        const { sound } = await ExpoAudio.Sound.createAsync(
-          { uri },
-          { shouldPlay: true, rate: playbackRate, isMuted }
-        );
-        soundRef.current = sound;
-        setIsPlaying(true);
-        setIsLoading(false);
-
-        sound.setOnPlaybackStatusUpdate((status: any) => {
-          if (status.isLoaded) {
-            setPosition(status.positionMillis / 1000);
-            setDuration(status.durationMillis / 1000);
-            setIsPlaying(status.isPlaying);
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-            }
-          }
-        });
-      }
-    } catch {
-      setIsLoading(false);
-      Linking.openURL(uri);
+  const handleTogglePlay = () => {
+    if (!player) return;
+    if (isPlaying) {
+      player.pause();
+    } else {
+      player.play();
     }
   };
 
-  const handleSkip = async (seconds: number) => {
-    if (soundRef.current) {
-      const status = await soundRef.current.getStatusAsync();
-      if (status.isLoaded) {
-        const newPos = Math.max(0, Math.min(status.durationMillis, status.positionMillis + seconds * 1000));
-        await soundRef.current.setPositionAsync(newPos);
-      }
-    }
+  const handleSeekDelta = (delta: number) => {
+    if (!player) return;
+    player.seekBy(delta);
   };
 
-  const handleCycleRate = async () => {
-    const nextIdx = (rates.indexOf(playbackRate) + 1) % rates.length;
-    const nextRate = rates[nextIdx];
+  const handleCycleRate = () => {
+    if (!player) return;
+    const currentIndex = rates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % rates.length;
+    const nextRate = rates[nextIndex];
     setPlaybackRate(nextRate);
-    if (soundRef.current) {
-      await soundRef.current.setRateAsync(nextRate, true);
-    }
+    player.playbackRate = nextRate;
   };
 
-  const handleToggleMute = async () => {
+  const handleToggleMute = () => {
+    if (!player) return;
     const nextMute = !isMuted;
     setIsMuted(nextMute);
-    if (soundRef.current) {
-      await soundRef.current.setIsMutedAsync(nextMute);
-    }
+    player.muted = nextMute;
   };
+
+  const progressPercent = duration > 0 ? `${Math.min(100, (position / duration) * 100)}%` : "0%";
 
   return (
     <View style={styles.container}>
-      {/* Album Artwork Disc */}
-      <View style={styles.discContainer}>
-        <View style={[styles.discCircle, isPlaying && styles.discCirclePlaying]}>
-          <Music size={54} color={isPlaying ? "#c084fc" : "#a855f7"} />
+      {/* Vinyl Disc Container */}
+      <View style={styles.artworkContainer}>
+        <View style={styles.disc}>
+          <View style={styles.discInner}>
+            <Music size={28} color="#818cf8" />
+          </View>
         </View>
       </View>
 
       {/* Metadata */}
-      <Text style={styles.titleText} numberOfLines={2}>
+      <Text style={styles.title} numberOfLines={1}>
         {title}
       </Text>
-      <Text style={styles.sizeText}>{fileSizeText}</Text>
+      <Text style={styles.subtext}>{fileSizeText}</Text>
 
-      {/* Seek Progress Bar */}
+      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBarBg}>
-          <View
-            style={[
-              styles.progressBarFill,
-              { width: `${duration > 0 ? (position / duration) * 100 : 0}%` },
-            ]}
-          />
+          <View style={[styles.progressBarFill, { width: progressPercent as any }]} />
         </View>
         <View style={styles.timeRow}>
           <Text style={styles.timeText}>{formatTime(position)}</Text>
@@ -159,176 +124,169 @@ export const AudioPlayerView: React.FC<Props> = ({ uri, title, fileSizeText }) =
         </View>
       </View>
 
-      {/* Main Playback Controls */}
+      {/* Controls */}
       <View style={styles.controlsRow}>
-        <TouchableOpacity style={styles.skipBtn} onPress={() => handleSkip(-10)}>
-          <RotateCcw size={22} color="#cbd5e1" />
-          <Text style={styles.skipText}>-10s</Text>
+        <TouchableOpacity style={styles.secondaryBtn} onPress={handleToggleMute}>
+          {isMuted ? <VolumeX size={20} color="#f43f5e" /> : <Volume2 size={20} color="#94a3b8" />}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.playBtn} onPress={handleTogglePlay} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : isPlaying ? (
-            <Pause size={30} color="#ffffff" fill="#ffffff" />
+        <TouchableOpacity style={styles.seekBtn} onPress={() => handleSeekDelta(-10)}>
+          <RotateCcw size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.playBtn} onPress={handleTogglePlay}>
+          {isPlaying ? (
+            <Pause size={28} color="#ffffff" />
           ) : (
-            <Play size={30} color="#ffffff" fill="#ffffff" style={{ marginLeft: 3 }} />
+            <Play size={28} color="#ffffff" style={{ marginLeft: 3 }} />
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.skipBtn} onPress={() => handleSkip(10)}>
-          <RotateCw size={22} color="#cbd5e1" />
-          <Text style={styles.skipText}>+10s</Text>
+        <TouchableOpacity style={styles.seekBtn} onPress={() => handleSeekDelta(10)}>
+          <RotateCw size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryBtn} onPress={handleCycleRate}>
+          <Text style={styles.rateText}>{playbackRate}x</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Secondary Controls (Speed & Mute) */}
-      <View style={styles.subRow}>
-        <TouchableOpacity style={styles.subChip} onPress={handleCycleRate}>
-          <Zap size={14} color="#a855f7" />
-          <Text style={styles.subChipText}>{playbackRate}x Speed</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.subChip} onPress={handleToggleMute}>
-          {isMuted ? (
-            <VolumeX size={14} color="#f43f5e" />
-          ) : (
-            <Volume2 size={14} color="#818cf8" />
-          )}
-          <Text style={styles.subChipText}>{isMuted ? "Muted" : "Sound On"}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.subChip} onPress={() => Linking.openURL(uri)}>
-          <ExternalLink size={14} color="#94a3b8" />
-          <Text style={styles.subChipText}>Stream URL</Text>
-        </TouchableOpacity>
-      </View>
+      {/* External Player Backup */}
+      <TouchableOpacity style={styles.externalBtn} onPress={() => Linking.openURL(uri)}>
+        <ExternalLink size={14} color="#818cf8" />
+        <Text style={styles.externalBtnText}>Open in External Media Player</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    padding: 24,
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    width: "100%",
+    backgroundColor: "#0f172a",
+    borderRadius: 16,
   },
-  discContainer: {
-    marginVertical: 16,
+  artworkContainer: {
+    marginVertical: 20,
     alignItems: "center",
-    justifyContent: "center",
   },
-  discCircle: {
+  disc: {
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "#2e1065",
+    backgroundColor: "#1e293b",
+    borderColor: "#334155",
+    borderWidth: 3,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#7e22ce",
-    elevation: 10,
-    shadowColor: "#a855f7",
-    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
+    shadowRadius: 8,
   },
-  discCirclePlaying: {
-    borderColor: "#c084fc",
-    shadowColor: "#c084fc",
-    shadowOpacity: 0.5,
+  discInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#1e1b4b",
+    borderColor: "#4338ca",
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  titleText: {
+  title: {
     color: "#f8fafc",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 4,
+    width: "100%",
   },
-  sizeText: {
+  subtext: {
     color: "#94a3b8",
-    fontSize: 12,
-    marginBottom: 20,
+    fontSize: 13,
+    marginTop: 4,
   },
   progressContainer: {
     width: "100%",
-    marginBottom: 20,
+    marginTop: 24,
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#334155",
     borderRadius: 3,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#a855f7",
+    backgroundColor: "#818cf8",
     borderRadius: 3,
   },
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 6,
+    marginTop: 8,
   },
   timeText: {
     color: "#64748b",
-    fontSize: 11,
-    fontVariant: ["tabular-nums"],
+    fontSize: 12,
   },
   controlsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 24,
-    marginBottom: 24,
-  },
-  skipBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 10,
-    backgroundColor: "#1e293b",
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  skipText: {
-    color: "#94a3b8",
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 2,
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 24,
+    paddingHorizontal: 8,
   },
   playBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: "#7e22ce",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#6366f1",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 8,
-    shadowColor: "#a855f7",
+    elevation: 4,
+    shadowColor: "#6366f1",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 10,
+    shadowRadius: 8,
   },
-  subRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
+  seekBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#1e293b",
     justifyContent: "center",
+    alignItems: "center",
   },
-  subChip: {
+  secondaryBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  rateText: {
+    color: "#818cf8",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  externalBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    marginTop: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: "#1e293b",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 20,
     borderColor: "#334155",
+    borderWidth: 1,
   },
-  subChipText: {
-    color: "#cbd5e1",
+  externalBtnText: {
+    color: "#818cf8",
     fontSize: 12,
     fontWeight: "600",
   },

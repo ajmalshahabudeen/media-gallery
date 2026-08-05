@@ -16,6 +16,7 @@ import {
   Play,
   ArrowUpRight,
 } from "lucide-react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import type { MediaFile } from "../../store/useMobileStore";
 import { buildMediaFileUrl } from "../../lib/api";
 
@@ -32,23 +33,6 @@ interface Props {
   onToggleMute: () => void;
   onToggleFavorite: (reel: ReelItemData) => void;
   onOpenInGallery: (reel: ReelItemData) => void;
-}
-
-let ExpoVideoModule: any = null;
-try {
-  ExpoVideoModule = require("expo-video");
-} catch {
-  ExpoVideoModule = null;
-}
-
-let ExpoAvVideo: any = null;
-let ExpoAvResizeMode: any = null;
-try {
-  const av = require("expo-av");
-  ExpoAvVideo = av.Video;
-  ExpoAvResizeMode = av.ResizeMode;
-} catch {
-  // ignore
 }
 
 function formatTime(seconds: number): string {
@@ -78,7 +62,7 @@ function ActiveExpoVideo({
   onBufferingChange: (buffering: boolean) => void;
   playerRef: React.MutableRefObject<any>;
 }) {
-  const player = ExpoVideoModule.useVideoPlayer(uri, (p: any) => {
+  const player = useVideoPlayer(uri, (p: any) => {
     p.loop = true;
     p.muted = isMuted;
     p.play();
@@ -147,12 +131,11 @@ function ActiveExpoVideo({
   }, [player, onProgress, onPlayingChange, onBufferingChange]);
 
   return (
-    <ExpoVideoModule.VideoView
+    <VideoView
       style={StyleSheet.absoluteFill}
       player={player}
       contentFit="contain"
       nativeControls={false}
-      allowsFullscreen={false}
     />
   );
 }
@@ -178,44 +161,10 @@ export const ReelItem: React.FC<Props> = ({
   const heartScale = useRef(new Animated.Value(0)).current;
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
 
-  const useExpoVideo = !!(
-    isActive &&
-    ExpoVideoModule?.useVideoPlayer &&
-    ExpoVideoModule?.VideoView
-  );
-  const useAv = !useExpoVideo && !!ExpoAvVideo;
-
   const onProgress = useCallback((current: number, dur: number) => {
     setCurrentTime(current);
     if (dur > 0) setDuration(dur);
   }, []);
-
-  // AV play/pause for active state
-  useEffect(() => {
-    if (!useAv || !avRef.current) return;
-    (async () => {
-      try {
-        if (isActive) {
-          await avRef.current.setIsMutedAsync?.(isMuted);
-          await avRef.current.playAsync?.();
-        } else {
-          await avRef.current.pauseAsync?.();
-          const status = await avRef.current.getStatusAsync?.();
-          if (status?.isLoaded && status.positionMillis > 1000) {
-            await avRef.current.setPositionAsync?.(0);
-          }
-          setIsPlaying(false);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-  }, [isActive, isMuted, useAv]);
-
-  useEffect(() => {
-    if (!useAv || !avRef.current) return;
-    avRef.current.setIsMutedAsync?.(isMuted).catch(() => {});
-  }, [isMuted, useAv]);
 
   // Reset progress when leaving
   useEffect(() => {
@@ -338,7 +287,7 @@ export const ReelItem: React.FC<Props> = ({
   return (
     <View style={[styles.slide, { height }]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={handlePress}>
-        {useExpoVideo ? (
+        {isActive ? (
           <ActiveExpoVideo
             uri={uri}
             isMuted={isMuted}
@@ -346,29 +295,6 @@ export const ReelItem: React.FC<Props> = ({
             onPlayingChange={setIsPlaying}
             onBufferingChange={setIsBuffering}
             playerRef={expoPlayerRef}
-          />
-        ) : useAv && isActive ? (
-          <ExpoAvVideo
-            ref={avRef}
-            style={StyleSheet.absoluteFill}
-            source={{ uri }}
-            resizeMode={ExpoAvResizeMode?.CONTAIN || "contain"}
-            shouldPlay
-            isLooping
-            isMuted={isMuted}
-            useNativeControls={false}
-            onPlaybackStatusUpdate={(status: any) => {
-              if (!status?.isLoaded) {
-                setIsBuffering(true);
-                return;
-              }
-              setIsBuffering(!!status.isBuffering);
-              setIsPlaying(!!status.isPlaying);
-              onProgress(
-                (status.positionMillis || 0) / 1000,
-                (status.durationMillis || 0) / 1000
-              );
-            }}
           />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.placeholder]} />

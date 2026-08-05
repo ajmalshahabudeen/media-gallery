@@ -24,17 +24,9 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.WAKE_LOCK",
-        "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.WAKE_LOCK"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -58,25 +50,22 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "./plugins/with-custom-gradle-props",
       "expo-router",
       [
         "expo-build-properties",
         {
           "android": {
+            "newArchEnabled": false,
             "minSdkVersion": 24,
             "compileSdkVersion": 36,
-            "targetSdkVersion": 36,
+            "targetSdkVersion": 34,
             "buildToolsVersion": "36.0.0",
             "usesCleartextTraffic": true,
             "enableMinifyInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false,
             "networkInspector": false,
-            "useLegacyPackaging": true,
-            "packagingOptions": {
-              "jniLibs": {
-                "useLegacyPackaging": true
-              }
-            }
+            "useLegacyPackaging": false
           }
         }
       ],
@@ -116,12 +105,6 @@
       "eas": {
         "projectId": "4e4dcde0-1a85-43e7-99c6-e496d083f0f6"
       }
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/4e4dcde0-1a85-43e7-99c6-e496d083f0f6"
     }
   }
 }
