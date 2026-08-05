@@ -574,3 +574,11 @@ Status: Completed.
 3. Verified clean compilation with `bun run lint` (0 errors).
 Status: Completed.
 
+[2026-08-05] Request 92:
+1. Resolved Android Gradle build failure (`:app:checkReleaseAarMetadata`) where `androidx.core:core:1.18.0` and `androidx.core:core-ktx:1.18.0` required `compileSdk` >= 36.
+2. Updated `compileSdkVersion`, `targetSdkVersion`, and `buildToolsVersion` to version `36` (`36.0.0`) in `mobile/app.json` (`expo-build-properties` plugin) and `mobile/android/gradle.properties`.
+3. Updated `mobile/README.md` compatibility documentation.
+4. Executed `bun run lint` (`tsc --noEmit`) clean with 0 errors.
+Status: Completed.
+
+

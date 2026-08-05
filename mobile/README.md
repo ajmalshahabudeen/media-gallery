@@ -92,7 +92,7 @@ Output: `android/app/build/outputs/apk/release/app-release.apk`
 Current production-oriented settings:
 
 - `minSdkVersion` **24** (Android 7+)
-- `targetSdkVersion` / `compileSdkVersion` **35** (stable for phones; not forced to 36)
+- `targetSdkVersion` / `compileSdkVersion` **36** (required by AndroidX 1.18+ libraries)
 - **New Architecture disabled** (`newArchEnabled: false`) for broader physical-device stability
 - **Legacy JNI packaging** enabled (helps some OEM devices extract native libs)
 - **Cleartext HTTP** enabled for LAN media servers
