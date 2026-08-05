@@ -214,19 +214,15 @@ def resolve_target_path(target_path):
     if drive_match:
         drive_letter = drive_match.group(1).lower()
         subpath = drive_match.group(2).replace('\\', '/').strip('/')
-        candidate_paths = [
-            os.path.join(f"/host_drives/{drive_letter}", subpath),
-            os.path.join("/host_media", subpath),
-            os.path.join(f"/mnt/{drive_letter}", subpath),
-            os.path.join(f"/{drive_letter}", subpath),
-            "/host_media"
-        ]
-        for candidate in candidate_paths:
-            if candidate and os.path.exists(candidate):
-                return candidate
-
-    if os.path.exists("/host_media"):
-        return "/host_media"
+        if subpath:
+            candidate_paths = [
+                os.path.join("/host_media", subpath),
+                os.path.join("/host_media", drive_letter, subpath),
+                os.path.join(f"/host_drives/{drive_letter}", subpath),
+            ]
+            for candidate in candidate_paths:
+                if candidate and os.path.exists(candidate):
+                    return candidate
 
     return target_path
 
@@ -335,6 +331,8 @@ def process_file_task(raw_file_path, redis_client):
     try:
         file_path = resolve_target_path(raw_file_path)
         if not file_path or not os.path.exists(file_path):
+            sys.stderr.write(f"[PreviewGenerator] Skip missing file: {raw_file_path}\n")
+            sys.stderr.flush()
             return
 
         ext = os.path.splitext(file_path)[1].lower()
@@ -353,12 +351,16 @@ def process_file_task(raw_file_path, redis_client):
                 
             if thumb_bytes:
                 redis_client.set_bytes(thumb_key, thumb_bytes, ex=2592000)
+                sys.stderr.write(f"[PreviewGenerator] Generated thumbnail for: {os.path.basename(file_path)}\n")
+                sys.stderr.flush()
 
         # 2. Process Hover Sneak Peek if video and not already cached
         if ext in VIDEO_EXTENSIONS and not redis_client.exists(hover_key):
             hover_bytes = generate_video_hover_preview(file_path)
             if hover_bytes:
                 redis_client.set_bytes(hover_key, hover_bytes, ex=2592000)
+                sys.stderr.write(f"[PreviewGenerator] Generated hover preview for: {os.path.basename(file_path)}\n")
+                sys.stderr.flush()
     finally:
         redis_client.incr("preview_completed_count")
 

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+export PYTHONUNBUFFERED=1
+
 echo "==> Ensuring SQLite database volume directory exists..."
 mkdir -p /app/prisma_db
 

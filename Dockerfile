@@ -13,6 +13,7 @@ COPY prisma.config.ts ./
 # Environment variables required for build & prisma generate
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
+ENV PYTHONUNBUFFERED 1
 ENV DATABASE_URL "file:/app/prisma_db/dev.db"
 ENV BETTER_AUTH_URL "http://localhost:38479"
 

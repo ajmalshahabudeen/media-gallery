@@ -44,6 +44,7 @@ interface MediaState {
   folders: MediaFolderItem[];
   files: MediaFile[];
   favorites: MediaFile[];
+  unmountedFolders: { path: string; error: string }[];
   activeFolder: string | null;
   selectedType: "all" | "image" | "video" | "audio";
   viewMode: ViewMode;
@@ -72,7 +73,7 @@ interface MediaState {
   fetchFolders: () => Promise<void>;
   fetchFavorites: () => Promise<void>;
   toggleFavorite: (file: MediaFile) => Promise<boolean>;
-  addFolder: (path: string, name?: string) => Promise<boolean>;
+  addFolder: (path: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   removeFolder: (id: string) => Promise<boolean>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
@@ -87,6 +88,7 @@ export const useMediaStore = create<MediaState>()(
       folders: [],
       files: [],
       favorites: [],
+      unmountedFolders: [],
       activeFolder: null,
       selectedType: "all",
       viewMode: "detailed-cards",
@@ -113,6 +115,7 @@ export const useMediaStore = create<MediaState>()(
           folders: [],
           files: [],
           favorites: [],
+          unmountedFolders: [],
           activeFolder: null,
           scannedAt: null,
         }),
@@ -177,14 +180,18 @@ export const useMediaStore = create<MediaState>()(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ path, name }),
           });
+          const data = await res.json().catch(() => ({}));
           if (res.ok) {
             await get().fetchFolders();
             await get().scanMedia(true);
-            return true;
+            return { success: true };
           }
-          return false;
+          return {
+            success: false,
+            error: data?.error || `Failed to add folder (HTTP ${res.status})`,
+          };
         } catch {
-          return false;
+          return { success: false, error: "Network error adding folder" };
         }
       },
 
@@ -232,6 +239,7 @@ export const useMediaStore = create<MediaState>()(
             const data = await res.json();
             set({
               files: data.files || [],
+              unmountedFolders: data.unmountedFolders || [],
               scannedAt: data.scannedAt || new Date().toISOString(),
             });
           }

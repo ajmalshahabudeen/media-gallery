@@ -32,11 +32,6 @@ services:
     volumes:
       - db_data:/app/prisma_db
       - ${HOST_MEDIA_PATH:-./}:/host_media:ro
-      - C:\:/host_drives/c:ro
-      - D:\:/host_drives/d:ro
-      - E:\:/host_drives/e:ro
-      - F:\:/host_drives/f:ro
-      - ${HOST_EXTRA_DRIVE:-./}:/host_drives/extra:ro
     depends_on:
       redis:
         condition: service_healthy

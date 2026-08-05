@@ -630,3 +630,34 @@ Status: Completed.
 3. Refactored `AudioPlayerView.tsx`, `VideoPlayerView.tsx`, `ReelItem.tsx`, and `fullscreen-video.tsx` to use `expo-video` (`useVideoPlayer` / `VideoView`) unconditionally with top-level imports.
 4. Executed `bun run lint` (`tsc --noEmit`) clean (0 errors) and ran `bun run android:prebuild` cleanly.
 Status: Completed.
+
+[2026-08-05] Request 100:
+1. Diagnosed Docker Compose error (`mkdir /run/desktop/mnt/host/f: file exists`): caused by hardcoded host drive volume mounts (`C:\`, `D:\`, `E:\`, `F:\`, `${HOST_EXTRA_DRIVE}`) in `docker-compose.yml` attempting to create bind mount sources for nonexistent or locked drive letters on container bootup.
+2. Removed static host drive mounts (`C:\`, `D:\`, `E:\`, `F:\`, `${HOST_EXTRA_DRIVE}`) from `docker-compose.yml`, leaving only internal named volumes and safely defaulted `${HOST_MEDIA_PATH:-./}:/host_media:ro`.
+3. Updated `scripts/scanner.py` and `scripts/preview_generator.py` so external volume or path errors do not crash container deployment; returned structured error objects (`unmounted: true`) when host paths are not found inside container.
+4. Updated `/api/media/scan/route.ts`, Zustand store (`useMediaStore.ts`), and UI components (`IndexingProgressBanner.tsx`) to track and display in-app warning banners for unmounted/missing external media volumes.
+5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+Status: Completed.
+
+[2026-08-05] Request 101:
+1. Fixed infinite loading spinner when adding non-existent directory: added server path existence validation in `app/api/media/folders/route.ts` returning 400 error message immediately instead of hanging.
+2. Fixed indexing progress state lockup: updated `scripts/scanner.py` to invoke `emit_progress` and complete Redis progress state even when target path is missing or unmounted.
+3. Updated `useMediaStore.ts` and `app/dashboard/settings/page.tsx` (as well as mobile app store & settings) so `addFolder` returns `{ success, error }` and displays exact server validation errors in red alert banners without staying stuck on "Adding Folder...".
+4. Enabled real-time Python stdout/stderr logging in Docker logs: set `ENV PYTHONUNBUFFERED=1` in `Dockerfile`, `export PYTHONUNBUFFERED=1` in `docker-entrypoint.sh`, forwarded Python subprocess streams to `console.log`/`console.error` in `app/api/media/scan/route.ts`, and added timestamped logs to `scripts/scanner.py` and `scripts/preview_generator.py`.
+5. Added `fs` and `path` module imports in `app/api/media/folders/route.ts`.
+6. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+[2026-08-05] Request 102:
+1. Resolved TypeScript error `Property 'success' does not exist on type 'boolean'` in `mobile/src/app/(tabs)/settings.tsx`: updated interface definition `addFolder` in `mobile/src/store/useMobileStore.ts` to `(path: string, name?: string) => Promise<{ success: boolean; error?: string }>`.
+2. Ran `tsc --noEmit` on mobile app (`bun run lint` in `mobile/`): 0 errors.
+3. Ran `bun run lint` and `bun run build` on web app: compiled successfully in 15.9s (0 errors).
+[2026-08-05] Request 103:
+1. Fixed false `/host_media` fallback in `scripts/scanner.py` and `scripts/preview_generator.py`: eliminated `if os.path.exists("/host_media"): return "/host_media"` which caused non-existent paths (e.g. `F:/1`) to silently map to `./` (project root) and index `node_modules` and server files.
+2. Added `IGNORED_DIRS` pruning in `scripts/scanner.py` (`node_modules`, `.git`, `.next`, `prisma`, etc.) in `os.walk` to guarantee project directories are never scanned.
+3. Fixed candidate path validation in `app/api/media/folders/route.ts` so non-existent subpaths are rejected cleanly with HTTP 400 without falling back to `/host_media`.
+4. Sanitized cached and live scan results in `app/api/media/scan/route.ts` to automatically strip any `node_modules` or project files.
+5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+Status: Completed.
+
+
+
+

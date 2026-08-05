@@ -88,7 +88,15 @@ def get_media_type(ext):
         return 'audio'
     return 'other'
 
+IGNORED_DIRS = {
+    'node_modules', '.git', '.next', '.prisma', 'prisma', 'build', 'dist',
+    '.expo', 'android', 'ios', 'venv', '__pycache__', '.gemini', 'caddy_data',
+    'db_data', 'redis_data', '.idea', '.vscode'
+}
+
 def resolve_target_path(target_path):
+    if not target_path:
+        return target_path
     if os.path.exists(target_path):
         return target_path
 
@@ -96,19 +104,15 @@ def resolve_target_path(target_path):
     if drive_match:
         drive_letter = drive_match.group(1).lower()
         subpath = drive_match.group(2).replace('\\', '/').strip('/')
-        candidate_paths = [
-            os.path.join(f"/host_drives/{drive_letter}", subpath),
-            os.path.join("/host_media", subpath),
-            os.path.join(f"/mnt/{drive_letter}", subpath),
-            os.path.join(f"/{drive_letter}", subpath),
-            "/host_media"
-        ]
-        for candidate in candidate_paths:
-            if candidate and os.path.exists(candidate):
-                return candidate
-
-    if os.path.exists("/host_media"):
-        return "/host_media"
+        if subpath:
+            candidate_paths = [
+                os.path.join("/host_media", subpath),
+                os.path.join("/host_media", drive_letter, subpath),
+                os.path.join(f"/host_drives/{drive_letter}", subpath),
+            ]
+            for candidate in candidate_paths:
+                if candidate and os.path.exists(candidate):
+                    return candidate
 
     return target_path
 
@@ -167,19 +171,34 @@ def scan_single_subfolder(args):
     return files_batch, list(folders_batch), current_rel
 
 def scan_directory_multiprocess(raw_target_path):
+    redis_client = RedisClient()
+    sys.stderr.write(f"[Python Scanner] Starting media scan for: '{raw_target_path}'\n")
+    sys.stderr.flush()
+
     target_path = resolve_target_path(raw_target_path)
     if not os.path.exists(target_path):
+        err_msg = f"External volume or path not found on server: {raw_target_path}"
+        sys.stderr.write(f"[Python Scanner] ERROR: {err_msg} (Resolved: '{target_path}')\n")
+        sys.stderr.flush()
+        # Emit progress so indexing completes cleanly in UI and Redis
+        emit_progress(0, 0, f"Path not found: {raw_target_path}", "", redis_client)
         return {
-            "error": f"Path does not exist: {raw_target_path} (Resolved: {target_path})",
-            "files": [],
-            "folders": []
+            "error": err_msg,
+            "unmounted": True,
+            "targetPath": raw_target_path,
+            "resolvedPath": target_path,
+            "totalFiles": 0,
+            "folders": [],
+            "files": []
         }
 
-    redis_client = RedisClient()
+    sys.stderr.write(f"[Python Scanner] Resolved target path to: '{target_path}'\n")
+    sys.stderr.flush()
 
-    # Collect subfolders for multiprocessing execution
+    # Collect subfolders for multiprocessing execution, ignoring node_modules and project/system dirs
     subfolders_to_scan = [target_path]
     for root, dirs, _ in os.walk(target_path):
+        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith('.')]
         for d in dirs:
             full_d = os.path.join(root, d)
             subfolders_to_scan.append(full_d)
@@ -226,6 +245,9 @@ def scan_directory_multiprocess(raw_target_path):
     # Final progress emission
     final_latest = all_files[-1]["name"] if all_files else ""
     emit_progress(len(all_files), len(all_folders_set), "Completed", final_latest, redis_client)
+
+    sys.stderr.write(f"[Python Scanner] Completed scan for '{raw_target_path}': Found {len(all_files)} media files.\n")
+    sys.stderr.flush()
 
     scan_result = {
         "targetPath": raw_target_path,

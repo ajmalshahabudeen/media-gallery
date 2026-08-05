@@ -88,8 +88,8 @@ export default function SettingsPage() {
 
   const onAddFolder = async (data: AddFolderFormData) => {
     setFormMessage(null);
-    const success = await addFolder(data.folderPath.trim(), data.folderName.trim());
-    if (success) {
+    const result = await addFolder(data.folderPath.trim(), data.folderName.trim());
+    if (result.success) {
       setFormMessage({
         type: "success",
         text: "Media library folder added and indexing started!",
@@ -98,7 +98,7 @@ export default function SettingsPage() {
     } else {
       setFormMessage({
         type: "error",
-        text: "Failed to add folder. Please check path format.",
+        text: result.error || "Failed to add folder. Please check path format.",
       });
     }
   };

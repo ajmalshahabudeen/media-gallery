@@ -45,14 +45,14 @@ export default function SettingsScreen() {
       return;
     }
     setAdding(true);
-    const success = await addFolder(folderInput.trim());
+    const res = await addFolder(folderInput.trim());
     setAdding(false);
 
-    if (success) {
+    if (res.success) {
       setFolderInput("");
       Alert.alert("Success", "Media folder added!");
     } else {
-      Alert.alert("Error", "Could not add folder. Check server permissions.");
+      Alert.alert("Error", res.error || "Could not add folder. Check server permissions.");
     }
   };
 

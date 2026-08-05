@@ -24,9 +24,33 @@ export async function GET(request: NextRequest) {
   const cacheKey = `media_scan_result_${userId}`;
 
   if (!force) {
-    const cached = await getCache<unknown>(cacheKey);
+    const cached = await getCache<{ files?: { path?: string }[]; folders?: string[] }>(cacheKey);
     if (cached) {
-      return NextResponse.json({ ...(cached as object), fromCache: true });
+      const sanitizedFiles = (cached.files || []).filter((f) => {
+        const p = f.path ? f.path.replace(/\\/g, "/") : "";
+        return (
+          !p.includes("/node_modules/") &&
+          !p.includes("/.git/") &&
+          !p.includes("/.next/") &&
+          !p.includes("/prisma/") &&
+          !p.includes("/caddy_data/") &&
+          !p.includes("/db_data/")
+        );
+      });
+      const sanitizedFolders = (cached.folders || []).filter(
+        (f) =>
+          !f.includes("node_modules") &&
+          !f.includes(".git") &&
+          !f.includes(".next") &&
+          !f.includes("prisma")
+      );
+      return NextResponse.json({
+        ...cached,
+        files: sanitizedFiles,
+        folders: sanitizedFolders,
+        totalFiles: sanitizedFiles.length,
+        fromCache: true,
+      });
     }
   }
 
@@ -72,21 +96,45 @@ async function performScan(userId: string, cacheKey: string) {
     const scriptPath = path.join(process.cwd(), "scripts", "scanner.py");
     const allFiles: unknown[] = [];
     const allFoldersSet = new Set<string>();
+    const unmountedFolders: { path: string; error: string }[] = [];
 
     for (const targetPath of folderPaths) {
-      await runScannerForPath(scriptPath, targetPath, allFiles, allFoldersSet);
+      await runScannerForPath(scriptPath, targetPath, allFiles, allFoldersSet, unmountedFolders);
     }
+
+    const filteredFiles = (allFiles as { path?: string }[]).filter((f) => {
+      const p = f.path ? f.path.replace(/\\/g, "/") : "";
+      return (
+        !p.includes("/node_modules/") &&
+        !p.includes("/.git/") &&
+        !p.includes("/.next/") &&
+        !p.includes("/prisma/") &&
+        !p.includes("/caddy_data/") &&
+        !p.includes("/db_data/")
+      );
+    });
+
+    const filteredFolders = Array.from(allFoldersSet)
+      .filter(
+        (f) =>
+          !f.includes("node_modules") &&
+          !f.includes(".git") &&
+          !f.includes(".next") &&
+          !f.includes("prisma")
+      )
+      .sort();
 
     const scanData = {
       scannedFolders: folderPaths,
-      totalFiles: allFiles.length,
-      folders: Array.from(allFoldersSet).sort(),
-      files: allFiles,
+      unmountedFolders,
+      totalFiles: filteredFiles.length,
+      folders: filteredFolders,
+      files: filteredFiles,
       scannedAt: new Date().toISOString(),
     };
 
     await setCache(cacheKey, scanData, 3600);
-    await completeIndexingProgress(allFiles.length);
+    await completeIndexingProgress(filteredFiles.length);
 
     return NextResponse.json({ ...scanData, fromCache: false });
   } catch {
@@ -99,15 +147,19 @@ function runScannerForPath(
   scriptPath: string,
   targetPath: string,
   allFiles: unknown[],
-  allFoldersSet: Set<string>
+  allFoldersSet: Set<string>,
+  unmountedFolders: { path: string; error: string }[]
 ): Promise<void> {
   return new Promise((resolve) => {
+    console.log(`[ServerScan] Spawning Python indexer for target: '${targetPath}'`);
     const pyProcess = spawn("python", [scriptPath, targetPath]);
     let stdoutData = "";
 
     pyProcess.stderr.on("data", (data: Buffer) => {
-      const lines = data.toString().split("\n");
+      const text = data.toString();
+      const lines = text.split("\n");
       for (const line of lines) {
+        if (!line.trim()) continue;
         if (line.startsWith("PROGRESS:")) {
           try {
             const rawJson = line.replace("PROGRESS:", "").trim();
@@ -121,18 +173,28 @@ function runScannerForPath(
           } catch {
             // Ignore parse errors on progress lines
           }
+        } else {
+          console.error(`[Python Scanner] ${line}`);
         }
       }
     });
 
     pyProcess.stdout.on("data", (data: Buffer) => {
-      stdoutData += data.toString();
+      const text = data.toString();
+      stdoutData += text;
     });
 
-    pyProcess.on("close", () => {
+    pyProcess.on("close", (code) => {
+      console.log(`[ServerScan] Python indexer exited with code ${code} for path: '${targetPath}'`);
       try {
         if (stdoutData) {
           const result = JSON.parse(stdoutData);
+          if (result.unmounted || result.error) {
+            unmountedFolders.push({
+              path: targetPath,
+              error: result.error || `Volume not mounted for ${targetPath}`,
+            });
+          }
           if (result.files && Array.isArray(result.files)) {
             allFiles.push(...result.files);
           }
@@ -146,7 +208,12 @@ function runScannerForPath(
       resolve();
     });
 
-    pyProcess.on("error", () => {
+    pyProcess.on("error", (err) => {
+      console.error(`[ServerScan] Failed to spawn Python process for '${targetPath}':`, err);
+      unmountedFolders.push({
+        path: targetPath,
+        error: `Failed to execute scanner for ${targetPath}: ${err.message}`,
+      });
       resolve();
     });
   });

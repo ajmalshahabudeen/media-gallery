@@ -81,7 +81,7 @@ interface MobileState {
   fetchFolders: () => Promise<void>;
   fetchFavorites: () => Promise<void>;
   toggleFavorite: (file: MediaFile) => Promise<boolean>;
-  addFolder: (path: string, name?: string) => Promise<boolean>;
+  addFolder: (path: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   removeFolder: (id: string) => Promise<boolean>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
@@ -291,14 +291,18 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path, name }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         await get().fetchFolders();
         await get().scanMedia(true);
-        return true;
+        return { success: true };
       }
-      return false;
+      return {
+        success: false,
+        error: data?.error || `Failed to add folder (HTTP ${res.status})`,
+      };
     } catch {
-      return false;
+      return { success: false, error: "Network error adding folder" };
     }
   },
 
