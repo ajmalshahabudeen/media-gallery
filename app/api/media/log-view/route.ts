@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { auth } from "@/auth";
+import { getUserSession } from "@/lib/auth-utils";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getUserSession(request);
     const headerList = await headers();
-    const session = await auth.api.getSession({
-      headers: headerList,
-    });
 
     const body = await request.json();
     const { name, path, type } = body;

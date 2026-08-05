@@ -151,12 +151,22 @@ export async function pingServer(
   }
 }
 
-export function buildMediaFileUrl(baseUrl: string, filePath: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/api/media/file?path=${encodeURIComponent(filePath)}`;
+export function buildMediaFileUrl(baseUrl: string, filePath: string, token?: string | null): string {
+  const t = token !== undefined ? token : cachedSessionToken;
+  let url = `${baseUrl.replace(/\/+$/, "")}/api/media/file?path=${encodeURIComponent(filePath)}`;
+  if (t) {
+    url += `&token=${encodeURIComponent(t)}`;
+  }
+  return url;
 }
 
-export function buildThumbnailUrl(baseUrl: string, filePath: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/api/media/thumbnail?path=${encodeURIComponent(filePath)}`;
+export function buildThumbnailUrl(baseUrl: string, filePath: string, token?: string | null): string {
+  const t = token !== undefined ? token : cachedSessionToken;
+  let url = `${baseUrl.replace(/\/+$/, "")}/api/media/thumbnail?path=${encodeURIComponent(filePath)}`;
+  if (t) {
+    url += `&token=${encodeURIComponent(t)}`;
+  }
+  return url;
 }
 
 /** Parse Better Auth / API error JSON into a human message. */

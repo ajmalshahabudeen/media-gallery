@@ -53,6 +53,7 @@ export function DashboardLayoutClient({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleSignOut = async () => {
+    useMediaStore.getState().resetState();
     await authClient.signOut();
     router.push("/sign-in");
     router.refresh();

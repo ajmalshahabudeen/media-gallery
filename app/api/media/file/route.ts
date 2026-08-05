@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { getUserSession, isPathAuthorized } from "@/lib/auth-utils";
 
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
@@ -78,6 +79,11 @@ export async function HEAD(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getUserSession(request);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const filePathParam = searchParams.get("path");
 
@@ -86,6 +92,12 @@ export async function GET(request: NextRequest) {
   }
 
   const normalizedPath = path.normalize(filePathParam);
+
+  const isAdmin = (session.user as { role?: string }).role === "admin";
+  const authorized = await isPathAuthorized(normalizedPath, session.user.id, isAdmin);
+  if (!authorized) {
+    return NextResponse.json({ error: "Access denied to this file" }, { status: 403 });
+  }
 
   if (!fs.existsSync(normalizedPath)) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/auth";
+import { getUserSession } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/media/favorites - List user's favorite media items
-export async function GET() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+export async function GET(request: NextRequest) {
+  const session = await getUserSession(request);
 
-  const userId = session?.user?.id || "global";
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
 
   try {
     const favorites = await prisma.favoriteMedia.findMany({
@@ -25,11 +26,13 @@ export async function GET() {
 
 // POST /api/media/favorites - Toggle favorite status for a media item
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getUserSession(request);
 
-  const userId = session?.user?.id || "global";
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
 
   try {
     const body = await request.json();

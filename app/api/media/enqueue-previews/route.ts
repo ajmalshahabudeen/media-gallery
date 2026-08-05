@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/auth";
+import { getUserSession, isPathAuthorized } from "@/lib/auth-utils";
 import { getStringCache, setCache } from "@/lib/redis";
 import { redisClient } from "@/lib/redis";
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getUserSession(request);
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +14,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const files: { path: string; type: string }[] = body.files || [];
 
-    const mediaFiles = files.filter((f) => f.type === "image" || f.type === "video");
+    const isAdmin = (session.user as { role?: string }).role === "admin";
+    const mediaFiles: { path: string; type: string }[] = [];
+
+    for (const file of files) {
+      if (file.type === "image" || file.type === "video") {
+        if (await isPathAuthorized(file.path, session.user.id, isAdmin)) {
+          mediaFiles.push(file);
+        }
+      }
+    }
 
     if (mediaFiles.length > 0 && redisClient && redisClient.status === "ready") {
       const existingTotalStr = await getStringCache("preview_total_count");

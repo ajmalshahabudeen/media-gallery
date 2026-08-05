@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/auth";
+import { getUserSession } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { getCache, setCache } from "@/lib/redis";
 
@@ -39,11 +38,13 @@ function isVideoFile(file: {
 
 // GET /api/media/reels?filter=all|favorites&limit=40&offset=0&reshuffle=true
 export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const session = await getUserSession(request);
 
-  const userId = session?.user?.id || "global";
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
   const { searchParams } = new URL(request.url);
   const filter = searchParams.get("filter") === "favorites" ? "favorites" : "all";
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "40", 10) || 40, 1), 100);

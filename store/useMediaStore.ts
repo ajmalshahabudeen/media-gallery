@@ -76,6 +76,7 @@ interface MediaState {
   removeFolder: (id: string) => Promise<boolean>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
+  resetState: () => void;
 }
 
 let progressInterval: ReturnType<typeof setInterval> | null = null;
@@ -107,6 +108,14 @@ export const useMediaStore = create<MediaState>()(
 
       sidebarOpen: true,
       reelsChromeVisible: true,
+      resetState: () =>
+        set({
+          folders: [],
+          files: [],
+          favorites: [],
+          activeFolder: null,
+          scannedAt: null,
+        }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSelectedType: (type) => set({ selectedType: type }),
       setViewMode: (mode) => set({ viewMode: mode }),
