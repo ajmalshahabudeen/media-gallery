@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
-  Dimensions,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
 } from "react-native";
 import {
   Heart,
@@ -34,6 +35,10 @@ interface Props {
   onToggleFavorite: (reel: ReelItemData) => void;
   onOpenInGallery: (reel: ReelItemData) => void;
 }
+
+const DOUBLE_TAP_MS = 300;
+const ZONE_LEFT = 0.35;
+const ZONE_RIGHT = 0.65;
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -136,6 +141,8 @@ function ActiveExpoVideo({
       player={player}
       contentFit="contain"
       nativeControls={false}
+      // Let the gesture overlay own all taps (VideoView otherwise eats them)
+      pointerEvents="none"
     />
   );
 }
@@ -153,6 +160,7 @@ export const ReelItem: React.FC<Props> = ({
   const uri = buildMediaFileUrl(serverUrl, reel.path);
   const avRef = useRef<any>(null);
   const expoPlayerRef = useRef<any>(null);
+  const slideWidthRef = useRef(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -160,6 +168,7 @@ export const ReelItem: React.FC<Props> = ({
   const [showSkipHint, setShowSkipHint] = useState<"back" | "fwd" | null>(null);
   const heartScale = useRef(new Animated.Value(0)).current;
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onProgress = useCallback((current: number, dur: number) => {
     setCurrentTime(current);
@@ -172,8 +181,19 @@ export const ReelItem: React.FC<Props> = ({
       setCurrentTime(0);
       setIsPlaying(false);
       setIsBuffering(false);
+      lastTapRef.current = null;
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
     }
   }, [isActive]);
+
+  useEffect(() => {
+    return () => {
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    };
+  }, []);
 
   const burstHeart = useCallback(() => {
     heartScale.setValue(0.3);
@@ -202,9 +222,15 @@ export const ReelItem: React.FC<Props> = ({
         try {
           const d = p.duration || 0;
           const cur = p.currentTime || 0;
-          p.currentTime =
+          const next =
             d > 0 ? Math.max(0, Math.min(d, cur + delta)) : Math.max(0, cur + delta);
-          onProgress(p.currentTime || 0, d || 0);
+          // Prefer seekBy when available; fall back to absolute currentTime
+          if (typeof p.seekBy === "function") {
+            p.seekBy(delta);
+          } else {
+            p.currentTime = next;
+          }
+          onProgress(typeof p.currentTime === "number" ? p.currentTime : next, d || 0);
           return;
         } catch {
           // fall through
@@ -251,15 +277,34 @@ export const ReelItem: React.FC<Props> = ({
     }
   }, []);
 
-  const handlePress = (evt: any) => {
-    const x = evt?.nativeEvent?.locationX ?? 0;
-    const width = Dimensions.get("window").width;
+  const handleLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0) slideWidthRef.current = w;
+  };
+
+  /**
+   * Web-parity gestures:
+   * - single tap → play/pause
+   * - double-tap left 35% → −10s
+   * - double-tap right 35% → +10s
+   * - double-tap center → like + heart burst
+   */
+  const handlePress = (evt: GestureResponderEvent) => {
+    const x = evt.nativeEvent.locationX ?? 0;
+    const width = slideWidthRef.current || 1;
     const now = Date.now();
     const last = lastTapRef.current;
 
-    if (last && now - last.time < 280) {
+    if (last && now - last.time < DOUBLE_TAP_MS) {
+      if (singleTapTimer.current) {
+        clearTimeout(singleTapTimer.current);
+        singleTapTimer.current = null;
+      }
       lastTapRef.current = null;
-      const zone = x < width * 0.35 ? "left" : x > width * 0.65 ? "right" : "center";
+
+      const zone =
+        x < width * ZONE_LEFT ? "left" : x > width * ZONE_RIGHT ? "right" : "center";
+
       if (zone === "left") {
         void seekBy(-10);
         return;
@@ -268,79 +313,88 @@ export const ReelItem: React.FC<Props> = ({
         void seekBy(10);
         return;
       }
+      // Center double-tap → like (Instagram style)
       if (!reel.isFavorite) onToggleFavorite(reel);
       burstHeart();
       return;
     }
 
     lastTapRef.current = { time: now, x };
-    setTimeout(() => {
+    if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    singleTapTimer.current = setTimeout(() => {
       if (lastTapRef.current && lastTapRef.current.time === now) {
         lastTapRef.current = null;
         void togglePlay();
       }
-    }, 280);
+      singleTapTimer.current = null;
+    }, DOUBLE_TAP_MS);
   };
 
   const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
 
   return (
-    <View style={[styles.slide, { height }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={handlePress}>
-        {isActive ? (
-          <ActiveExpoVideo
-            uri={uri}
-            isMuted={isMuted}
-            onProgress={onProgress}
-            onPlayingChange={setIsPlaying}
-            onBufferingChange={setIsBuffering}
-            playerRef={expoPlayerRef}
-          />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.placeholder]} />
-        )}
+    <View style={[styles.slide, { height }]} onLayout={handleLayout}>
+      {/* Video layer (non-interactive) */}
+      {isActive ? (
+        <ActiveExpoVideo
+          uri={uri}
+          isMuted={isMuted}
+          onProgress={onProgress}
+          onPlayingChange={setIsPlaying}
+          onBufferingChange={setIsBuffering}
+          playerRef={expoPlayerRef}
+        />
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.placeholder]} />
+      )}
 
-        <View pointerEvents="none" style={styles.topGradient} />
-        <View pointerEvents="none" style={styles.bottomGradient} />
+      <View pointerEvents="none" style={styles.topGradient} />
+      <View pointerEvents="none" style={styles.bottomGradient} />
 
-        {isBuffering && isActive ? (
-          <View style={styles.centerOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#ffffff" />
+      {isBuffering && isActive ? (
+        <View style={styles.centerOverlay} pointerEvents="none">
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      ) : null}
+
+      {!isPlaying && !isBuffering && isActive ? (
+        <View style={styles.centerOverlay} pointerEvents="none">
+          <View style={styles.playBadge}>
+            <Play size={40} color="#fff" fill="#fff" />
           </View>
-        ) : null}
+        </View>
+      ) : null}
 
-        {!isPlaying && !isBuffering && isActive ? (
-          <View style={styles.centerOverlay} pointerEvents="none">
-            <View style={styles.playBadge}>
-              <Play size={40} color="#fff" fill="#fff" />
-            </View>
-          </View>
-        ) : null}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.heartBurst,
+          { transform: [{ scale: heartScale }], opacity: heartScale },
+        ]}
+      >
+        <Heart size={110} color="#fff" fill="#fff" />
+      </Animated.View>
 
-        <Animated.View
-          pointerEvents="none"
+      {showSkipHint ? (
+        <View
           style={[
-            styles.heartBurst,
-            { transform: [{ scale: heartScale }], opacity: heartScale },
+            styles.skipHint,
+            showSkipHint === "back" ? { left: 24 } : { right: 24 },
           ]}
+          pointerEvents="none"
         >
-          <Heart size={110} color="#fff" fill="#fff" />
-        </Animated.View>
+          <Text style={styles.skipHintText}>
+            {showSkipHint === "back" ? "−10s" : "+10s"}
+          </Text>
+        </View>
+      ) : null}
 
-        {showSkipHint ? (
-          <View
-            style={[
-              styles.skipHint,
-              showSkipHint === "back" ? { left: 24 } : { right: 24 },
-            ]}
-            pointerEvents="none"
-          >
-            <Text style={styles.skipHintText}>
-              {showSkipHint === "back" ? "−10s" : "+10s"}
-            </Text>
-          </View>
-        ) : null}
-      </Pressable>
+      {/* Full-bleed gesture surface ABOVE video so double-tap always works */}
+      <Pressable
+        style={styles.gestureLayer}
+        onPress={handlePress}
+        // Don't steal vertical FlatList swipes — Pressable only claims taps
+      />
 
       <View style={styles.actionRail} pointerEvents="box-none">
         <TouchableOpacity
@@ -396,7 +450,7 @@ export const ReelItem: React.FC<Props> = ({
         ) : null}
       </View>
 
-      <View style={styles.progressTrack}>
+      <View style={styles.progressTrack} pointerEvents="none">
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
     </View>
@@ -412,6 +466,14 @@ const styles = StyleSheet.create({
   placeholder: {
     backgroundColor: "#000",
   },
+  gestureLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
   topGradient: {
     position: "absolute",
     top: 0,
@@ -419,6 +481,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 120,
     backgroundColor: "rgba(0,0,0,0.35)",
+    zIndex: 5,
   },
   bottomGradient: {
     position: "absolute",
@@ -427,11 +490,17 @@ const styles = StyleSheet.create({
     right: 0,
     height: 180,
     backgroundColor: "rgba(0,0,0,0.45)",
+    zIndex: 5,
   },
   centerOverlay: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 6,
   },
   playBadge: {
     width: 84,
@@ -444,9 +513,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heartBurst: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 12,
   },
   skipHint: {
     position: "absolute",
@@ -457,6 +531,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
+    zIndex: 12,
   },
   skipHintText: {
     color: "#fff",

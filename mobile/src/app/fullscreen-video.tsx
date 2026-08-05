@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Pressable,
   Dimensions,
   ActivityIndicator,
   StatusBar,
@@ -35,6 +34,12 @@ try {
   // not available
 }
 
+const DOUBLE_TAP_MS = 300;
+const ZONE_LEFT = 0.35;
+const ZONE_RIGHT = 0.65;
+const SCRUB_DX_THRESHOLD = 14;
+const SCRUB_AXIS_RATIO = 1.15;
+
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return "00:00";
   const h = Math.floor(seconds / 3600);
@@ -44,6 +49,21 @@ function formatTime(seconds: number): string {
     return `${h}:${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
   }
   return `${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+}
+
+function formatSignedSeconds(delta: number): string {
+  const sign = delta >= 0 ? "+" : "−";
+  const abs = Math.abs(delta);
+  if (abs >= 3600) {
+    const h = Math.floor(abs / 3600);
+    const m = Math.floor((abs % 3600) / 60);
+    const s = Math.floor(abs % 60);
+    return `${sign}${h}:${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
+  }
+  const m = Math.floor(abs / 60);
+  const s = Math.floor(abs % 60);
+  if (m > 0) return `${sign}${m}:${s < 10 ? "0" : ""}${s}`;
+  return `${sign}${s}s`;
 }
 
 /* ---------- Custom Seek Bar Component ---------- */
@@ -72,13 +92,13 @@ const SeekBar: React.FC<SeekBarProps> = ({ position, duration, onSeekStart, onSe
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         onSeekStart();
         const locationX = evt.nativeEvent.locationX;
-        const ratio = Math.max(0, Math.min(1, locationX / barWidth.current));
+        const ratio = Math.max(0, Math.min(1, locationX / Math.max(1, barWidth.current)));
         seekingValue.current = ratio * duration;
         setDisplayProgress(ratio);
       },
-      onPanResponderMove: (evt: GestureResponderEvent, _gestureState: PanResponderGestureState) => {
+      onPanResponderMove: (evt: GestureResponderEvent) => {
         const locationX = evt.nativeEvent.locationX;
-        const ratio = Math.max(0, Math.min(1, locationX / barWidth.current));
+        const ratio = Math.max(0, Math.min(1, locationX / Math.max(1, barWidth.current)));
         seekingValue.current = ratio * duration;
         setDisplayProgress(ratio);
       },
@@ -162,16 +182,43 @@ export default function FullscreenVideoScreen() {
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [showSkipHint, setShowSkipHint] = useState<"back" | "fwd" | null>(null);
+  const [scrubOverlay, setScrubOverlay] = useState<{
+    delta: number;
+    target: number;
+  } | null>(null);
 
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const avVideoRef = useRef<any>(null);
   const durationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const skipHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const screenDims = Dimensions.get("screen");
+
+  const positionRef = useRef(0);
+  const durationRef = useRef(0);
+  const isSeekingRef = useRef(false);
+  const containerWidthRef = useRef(screenDims.width);
+  const lastTapRef = useRef<{ time: number; x: number } | null>(null);
+  const scrubActiveRef = useRef(false);
+  const scrubStartPosRef = useRef(0);
+  const scrubTargetRef = useRef(0);
+  const grantXRef = useRef(0);
 
   const expoPlayer = useVideoPlayer(uri, (player: any) => {
     player.loop = false;
     player.play();
   });
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+  useEffect(() => {
+    durationRef.current = duration;
+  }, [duration]);
+  useEffect(() => {
+    isSeekingRef.current = isSeeking;
+  }, [isSeeking]);
 
   // Lock to landscape on mount, restore on unmount
   useEffect(() => {
@@ -189,6 +236,17 @@ export default function FullscreenVideoScreen() {
     };
   }, []);
 
+  const handleExit = useCallback(() => {
+    if (expoPlayer) {
+      try {
+        expoPlayer.pause();
+      } catch {
+        // ignore
+      }
+    }
+    router.back();
+  }, [expoPlayer, router]);
+
   // Hardware back button exits fullscreen
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -196,9 +254,9 @@ export default function FullscreenVideoScreen() {
       return true;
     });
     return () => backHandler.remove();
-  }, []);
+  }, [handleExit]);
 
-  // Poll for duration since events may not report it reliably
+  // Poll for duration
   useEffect(() => {
     if (expoPlayer) {
       durationPollRef.current = setInterval(() => {
@@ -229,7 +287,7 @@ export default function FullscreenVideoScreen() {
   useEffect(() => {
     if (expoPlayer) {
       const timeSub = expoPlayer.addListener("timeUpdate", (event: any) => {
-        if (!isSeeking) {
+        if (!isSeekingRef.current) {
           setPosition(event.currentTime || 0);
         }
         const d = event.duration || expoPlayer.duration;
@@ -262,7 +320,7 @@ export default function FullscreenVideoScreen() {
         playingSub?.remove();
       };
     }
-  }, [expoPlayer, isSeeking]);
+  }, [expoPlayer]);
 
   // Auto-hide controls
   useEffect(() => {
@@ -271,6 +329,13 @@ export default function FullscreenVideoScreen() {
       if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
     };
   }, [showControls, isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (skipHintTimer.current) clearTimeout(skipHintTimer.current);
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+    };
+  }, []);
 
   const resetHideTimer = useCallback(() => {
     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
@@ -281,11 +346,32 @@ export default function FullscreenVideoScreen() {
     }
   }, [isPlaying, showControls]);
 
-  const toggleControls = () => {
-    setShowControls((prev) => !prev);
-  };
+  const flashSkipHint = useCallback((dir: "back" | "fwd") => {
+    setShowSkipHint(dir);
+    if (skipHintTimer.current) clearTimeout(skipHintTimer.current);
+    skipHintTimer.current = setTimeout(() => setShowSkipHint(null), 600);
+  }, []);
 
-  const handlePlayPause = () => {
+  const seekAbsolute = useCallback(
+    (value: number) => {
+      const d = durationRef.current;
+      const next = d > 0 ? Math.max(0, Math.min(d, value)) : Math.max(0, value);
+      if (expoPlayer) {
+        try {
+          expoPlayer.currentTime = next;
+        } catch {
+          // ignore
+        }
+      } else if (avVideoRef.current) {
+        avVideoRef.current.setPositionAsync?.(next * 1000);
+      }
+      setPosition(next);
+      positionRef.current = next;
+    },
+    [expoPlayer]
+  );
+
+  const handlePlayPause = useCallback(() => {
     if (expoPlayer) {
       if (expoPlayer.playing) {
         expoPlayer.pause();
@@ -302,24 +388,45 @@ export default function FullscreenVideoScreen() {
       }
     }
     resetHideTimer();
-  };
+  }, [expoPlayer, isPlaying, resetHideTimer]);
 
-  const handleSkip = (seconds: number) => {
-    if (expoPlayer) {
-      expoPlayer.seekBy(seconds);
-    } else if (avVideoRef.current) {
-      avVideoRef.current.getStatusAsync().then((status: any) => {
-        if (status.isLoaded) {
-          const newPos = Math.max(
-            0,
-            Math.min(status.durationMillis, status.positionMillis + seconds * 1000)
-          );
-          avVideoRef.current.setPositionAsync(newPos);
+  const handleSkip = useCallback(
+    (seconds: number) => {
+      if (expoPlayer) {
+        try {
+          if (typeof expoPlayer.seekBy === "function") {
+            expoPlayer.seekBy(seconds);
+          } else {
+            const d = expoPlayer.duration || durationRef.current || 0;
+            const cur = expoPlayer.currentTime || positionRef.current || 0;
+            expoPlayer.currentTime =
+              d > 0 ? Math.max(0, Math.min(d, cur + seconds)) : Math.max(0, cur + seconds);
+          }
+          const cur = expoPlayer.currentTime;
+          if (typeof cur === "number") {
+            setPosition(cur);
+            positionRef.current = cur;
+          }
+        } catch {
+          // ignore
         }
-      });
-    }
-    resetHideTimer();
-  };
+      } else if (avVideoRef.current) {
+        avVideoRef.current.getStatusAsync().then((status: any) => {
+          if (status.isLoaded) {
+            const newPos = Math.max(
+              0,
+              Math.min(status.durationMillis, status.positionMillis + seconds * 1000)
+            );
+            avVideoRef.current.setPositionAsync(newPos);
+            setPosition(newPos / 1000);
+          }
+        });
+      }
+      flashSkipHint(seconds < 0 ? "back" : "fwd");
+      resetHideTimer();
+    },
+    [expoPlayer, flashSkipHint, resetHideTimer]
+  );
 
   const handleMuteToggle = () => {
     const next = !isMuted;
@@ -333,28 +440,145 @@ export default function FullscreenVideoScreen() {
 
   const handleSeekStart = () => {
     setIsSeeking(true);
+    isSeekingRef.current = true;
   };
 
   const handleSeekComplete = (value: number) => {
-    if (expoPlayer) {
-      expoPlayer.currentTime = value;
-    } else if (avVideoRef.current) {
-      avVideoRef.current.setPositionAsync(value * 1000);
-    }
-    setPosition(value);
+    seekAbsolute(value);
     setIsSeeking(false);
+    isSeekingRef.current = false;
     resetHideTimer();
   };
 
-  const handleExit = () => {
-    if (expoPlayer) {
-      expoPlayer.pause();
-    }
-    router.back();
-  };
+  const handleSurfaceTap = useCallback(
+    (x: number) => {
+      const width = containerWidthRef.current || 1;
+      const now = Date.now();
+      const last = lastTapRef.current;
+
+      if (last && now - last.time < DOUBLE_TAP_MS) {
+        if (singleTapTimer.current) {
+          clearTimeout(singleTapTimer.current);
+          singleTapTimer.current = null;
+        }
+        lastTapRef.current = null;
+        const zone =
+          x < width * ZONE_LEFT ? "left" : x > width * ZONE_RIGHT ? "right" : "center";
+        if (zone === "left") {
+          handleSkip(-10);
+          return;
+        }
+        if (zone === "right") {
+          handleSkip(10);
+          return;
+        }
+        handlePlayPause();
+        return;
+      }
+
+      lastTapRef.current = { time: now, x };
+      if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+      singleTapTimer.current = setTimeout(() => {
+        if (lastTapRef.current && lastTapRef.current.time === now) {
+          lastTapRef.current = null;
+          setShowControls((prev) => !prev);
+        }
+        singleTapTimer.current = null;
+      }, DOUBLE_TAP_MS);
+    },
+    [handlePlayPause, handleSkip]
+  );
+
+  const seekAbsoluteRef = useRef(seekAbsolute);
+  const handleSurfaceTapRef = useRef(handleSurfaceTap);
+  const resetHideTimerRef = useRef(resetHideTimer);
+  useEffect(() => {
+    seekAbsoluteRef.current = seekAbsolute;
+    handleSurfaceTapRef.current = handleSurfaceTap;
+    resetHideTimerRef.current = resetHideTimer;
+  }, [seekAbsolute, handleSurfaceTap, resetHideTimer]);
+
+  const stablePan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, g: PanResponderGestureState) => {
+        return (
+          Math.abs(g.dx) > SCRUB_DX_THRESHOLD &&
+          Math.abs(g.dx) > Math.abs(g.dy) * SCRUB_AXIS_RATIO
+        );
+      },
+      onPanResponderTerminationRequest: () => !scrubActiveRef.current,
+      onPanResponderGrant: (e: GestureResponderEvent) => {
+        scrubActiveRef.current = false;
+        scrubStartPosRef.current = positionRef.current;
+        scrubTargetRef.current = positionRef.current;
+        grantXRef.current = e.nativeEvent.locationX ?? 0;
+      },
+      onPanResponderMove: (_e, g: PanResponderGestureState) => {
+        const horizontal =
+          Math.abs(g.dx) > SCRUB_DX_THRESHOLD &&
+          Math.abs(g.dx) > Math.abs(g.dy) * SCRUB_AXIS_RATIO;
+        if (!horizontal && !scrubActiveRef.current) return;
+
+        const width = Math.max(1, containerWidthRef.current);
+        const d = durationRef.current;
+        const windowSec = d > 0 ? d : 30;
+        const delta = (g.dx / width) * windowSec;
+        const target =
+          d > 0
+            ? Math.max(0, Math.min(d, scrubStartPosRef.current + delta))
+            : Math.max(0, scrubStartPosRef.current + delta);
+
+        if (!scrubActiveRef.current) {
+          scrubActiveRef.current = true;
+          if (singleTapTimer.current) {
+            clearTimeout(singleTapTimer.current);
+            singleTapTimer.current = null;
+          }
+          lastTapRef.current = null;
+          setIsSeeking(true);
+          isSeekingRef.current = true;
+          // Keep controls as-is — mounting overlay mid-gesture can cancel the pan
+        }
+
+        scrubTargetRef.current = target;
+        setPosition(target);
+        setScrubOverlay({ delta: target - scrubStartPosRef.current, target });
+      },
+      onPanResponderRelease: (e: GestureResponderEvent) => {
+        if (scrubActiveRef.current) {
+          const target = scrubTargetRef.current;
+          scrubActiveRef.current = false;
+          setScrubOverlay(null);
+          seekAbsoluteRef.current(target);
+          setIsSeeking(false);
+          isSeekingRef.current = false;
+          resetHideTimerRef.current();
+          return;
+        }
+        const x = e.nativeEvent.locationX ?? grantXRef.current;
+        handleSurfaceTapRef.current(x);
+      },
+      onPanResponderTerminate: () => {
+        if (scrubActiveRef.current) {
+          scrubActiveRef.current = false;
+          setScrubOverlay(null);
+          seekAbsoluteRef.current(scrubTargetRef.current);
+          setIsSeeking(false);
+          isSeekingRef.current = false;
+        }
+      },
+    })
+  ).current;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={(e) => {
+        const w = e.nativeEvent.layout.width;
+        if (w > 0) containerWidthRef.current = w;
+      }}
+    >
       <StatusBar hidden />
 
       {/* Video Layer */}
@@ -363,17 +587,42 @@ export default function FullscreenVideoScreen() {
         player={expoPlayer}
         contentFit="contain"
         nativeControls={false}
+        pointerEvents="none"
       />
 
       {/* Loading Spinner */}
       {isLoading && (
-        <View style={styles.loadingOverlay}>
+        <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#818cf8" />
         </View>
       )}
 
-      {/* Touch target to toggle controls */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={toggleControls} />
+      {/* Gesture surface: double-tap ±10s, drag L/R scrub (VLC) */}
+      <View style={styles.gestureLayer} {...stablePan.panHandlers} />
+
+      {showSkipHint ? (
+        <View
+          style={[
+            styles.skipHint,
+            showSkipHint === "back" ? { left: 32 } : { right: 32 },
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.skipHintText}>
+            {showSkipHint === "back" ? "−10s" : "+10s"}
+          </Text>
+        </View>
+      ) : null}
+
+      {scrubOverlay ? (
+        <View style={styles.scrubHud} pointerEvents="none">
+          <Text style={styles.scrubDelta}>{formatSignedSeconds(scrubOverlay.delta)}</Text>
+          <Text style={styles.scrubTarget}>
+            {formatTime(scrubOverlay.target)}
+            {duration > 0 ? ` / ${formatTime(duration)}` : ""}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Controls Overlay */}
       {showControls && (
@@ -453,14 +702,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
   },
-  fallback: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fallbackText: {
-    color: "#94a3b8",
-    fontSize: 16,
+  gestureLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 5,
   },
   loadingOverlay: {
     position: "absolute",
@@ -471,6 +719,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.4)",
+    zIndex: 4,
+  },
+  skipHint: {
+    position: "absolute",
+    top: "42%",
+    zIndex: 30,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  skipHintText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  scrubHud: {
+    position: "absolute",
+    top: "36%",
+    alignSelf: "center",
+    zIndex: 30,
+    backgroundColor: "rgba(15, 23, 42, 0.88)",
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(129, 140, 248, 0.45)",
+    alignItems: "center",
+    minWidth: 140,
+  },
+  scrubDelta: {
+    color: "#c7d2fe",
+    fontSize: 26,
+    fontWeight: "800",
+    fontVariant: ["tabular-nums"],
+  },
+  scrubTarget: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
+    fontVariant: ["tabular-nums"],
   },
   controlsOverlay: {
     position: "absolute",
@@ -480,6 +772,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.45)",
     justifyContent: "space-between",
+    zIndex: 20,
   },
   topBar: {
     flexDirection: "row",
