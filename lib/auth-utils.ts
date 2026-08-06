@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { headers } from "next/headers";
-import path from "path";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeCanonicalPath } from "@/lib/utils";
 
 export async function getUserSession(request?: NextRequest) {
   const reqHeaders = new Headers(await headers());
@@ -40,23 +40,15 @@ export async function isPathAuthorized(
 
   if (userFolders.length === 0) return false;
 
-  const normalizedTarget = path.normalize(filePath).toLowerCase();
+  const canonicalTarget = normalizeCanonicalPath(filePath);
 
   for (const folder of userFolders) {
-    const normalizedFolder = path.normalize(folder.path).toLowerCase();
+    const canonicalFolder = normalizeCanonicalPath(folder.path);
     if (
-      normalizedTarget === normalizedFolder ||
-      normalizedTarget.startsWith(
-        normalizedFolder.endsWith(path.sep) ? normalizedFolder : normalizedFolder + path.sep
+      canonicalTarget === canonicalFolder ||
+      canonicalTarget.startsWith(
+        canonicalFolder.endsWith("/") ? canonicalFolder : canonicalFolder + "/"
       )
-    ) {
-      return true;
-    }
-    const targetForward = normalizedTarget.replace(/\\/g, "/");
-    const folderForward = normalizedFolder.replace(/\\/g, "/");
-    if (
-      targetForward === folderForward ||
-      targetForward.startsWith(folderForward.endsWith("/") ? folderForward : folderForward + "/")
     ) {
       return true;
     }

@@ -656,7 +656,33 @@ Status: Completed.
 3. Fixed candidate path validation in `app/api/media/folders/route.ts` so non-existent subpaths are rejected cleanly with HTTP 400 without falling back to `/host_media`.
 4. Sanitized cached and live scan results in `app/api/media/scan/route.ts` to automatically strip any `node_modules` or project files.
 5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+[2026-08-06] Request 104:
+1. Implemented Docker-to-PC host drive bridge: added Docker Desktop WSL2 automatic host mount resolution (`/run/desktop/mnt/host/<drive_letter>` and `/mnt/<drive_letter>`) in `lib/server-utils.ts`, `lib/auth-utils.ts`, `scripts/scanner.py`, and `scripts/preview_generator.py`.
+2. Created `resolveServerPath` in `lib/server-utils.ts` (server-only module) and `normalizeCanonicalPath` in `lib/utils.ts` to bridge Windows drive paths (e.g. `C:\`, `C:\Users\...`, `F:\1`, `F:\videos`) seamlessly to Linux container host paths without requiring static `docker-compose.yml` mounts that crash on boot.
+3. Updated `/api/media/folders/route.ts` and `/api/media/file/route.ts` to use `resolveServerPath` for folder validation and file streaming.
+4. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+[2026-08-06] Request 105:
+1. Updated `docker-compose.yml` to mount host drive `C:\` by default (`${HOST_DRIVE_C:-C:\}:/host_drives/c:ro`) so any path on drive `C:\` (e.g. `C:\1`, `C:\Users\...`) is instantly accessible in Docker without configuration.
+2. Added configurable host drive environment variables (`HOST_DRIVE_D`, `HOST_DRIVE_E`, `HOST_DRIVE_F`) defaulting safely to `./` so external drives (e.g. `F:\1`) can be enabled in `.env` without causing Docker bootup failures when drives are disconnected.
+3. Updated `lib/server-utils.ts`, `scripts/scanner.py`, and `scripts/preview_generator.py` to prioritize `/host_drives/<letter>` candidate paths.
+4. Added UI guidance in `app/dashboard/settings/page.tsx` and comments in `.env`.
+5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully with 0 errors).
+[2026-08-06] Request 106:
+1. Removed static drive letter mounts (`HOST_DRIVE_C`, `HOST_DRIVE_D`, `HOST_DRIVE_E`, `HOST_DRIVE_F`) from `docker-compose.yml` so Docker containers build cleanly without assigning host drives during container creation.
+2. Implemented dynamic on-demand drive bridging in `scripts/scanner.py`, `scripts/preview_generator.py`, and `lib/server-utils.ts`: whenever any Windows path (e.g. `F:\1`, `C:\Users\...`, `D:\Videos`) is entered in Settings, the Python & Node.js server dynamically checks `/run/desktop/mnt/host/<letter>` and `/mnt/<letter>` in both lowercase and uppercase on-demand.
+3. Updated UI text in `app/dashboard/settings/page.tsx`.
+4. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 16.0s with 0 errors).
+[2026-08-06] Request 107:
+1. Diagnosed Docker Desktop container isolation limitation: verified via `docker exec media_gallery_app ls -la /run/desktop/mnt/host` that Docker Desktop does NOT automatically pass host drives into isolated container filesystems unless declared under `volumes:` in `docker-compose.yml`.
+2. Mounted active host drives `C:\` (`/host_drives/c`) and `F:\` (`/host_drives/f`) in `docker-compose.yml` (`C:\:/host_drives/c:ro`, `F:\:/host_drives/f:ro`).
+3. Empirically verified container access with `docker exec media_gallery_app ls -la /host_drives/f`, confirming folder `1` (`/host_drives/f/1`) is now 100% accessible to Node.js and Python.
+4. Updated `lib/server-utils.ts`, `scripts/scanner.py`, and `scripts/preview_generator.py` to prioritize `/host_drives/${dl}` at index 0.
+5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 3.4s with 0 errors).
 Status: Completed.
+
+
+
+
 
 
 

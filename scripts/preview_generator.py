@@ -207,24 +207,36 @@ import re
 def resolve_target_path(target_path):
     if not target_path:
         return target_path
-    if os.path.exists(target_path):
-        return target_path
 
-    drive_match = re.match(r'^([a-zA-Z]):[/\\]?(.*)', target_path)
+    norm_path = target_path.replace('\\', '/').strip()
+    if os.path.exists(norm_path):
+        return norm_path
+
+    drive_match = re.match(r'^([a-zA-Z]):[/\\]?(.*)', norm_path)
     if drive_match:
-        drive_letter = drive_match.group(1).lower()
-        subpath = drive_match.group(2).replace('\\', '/').strip('/')
-        if subpath:
-            candidate_paths = [
-                os.path.join("/host_media", subpath),
-                os.path.join("/host_media", drive_letter, subpath),
-                os.path.join(f"/host_drives/{drive_letter}", subpath),
-            ]
-            for candidate in candidate_paths:
-                if candidate and os.path.exists(candidate):
-                    return candidate
+        dl_lower = drive_match.group(1).lower()
+        dl_upper = drive_match.group(1).upper()
+        subpath = drive_match.group(2).strip('/')
 
-    return target_path
+        candidates = []
+        for dl in (dl_lower, dl_upper):
+            bases = [
+                f"/host_drives/{dl}",
+                f"/run/desktop/mnt/host/{dl}",
+                f"/mnt/{dl}",
+                f"/host_media/{dl}",
+            ]
+            for base in bases:
+                candidates.append(os.path.join(base, subpath) if subpath else base)
+
+        if subpath:
+            candidates.append(os.path.join("/host_media", subpath))
+
+        for candidate in candidates:
+            if candidate and os.path.exists(candidate):
+                return candidate
+
+    return norm_path
 
 def normalize_file_path(path_str):
     """Normalize Windows/Linux paths to a unified forward-slash representation for consistent MD5 hashing."""

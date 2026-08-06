@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getUserSession, isPathAuthorized } from "@/lib/auth-utils";
+import { resolveServerPath } from "@/lib/server-utils";
 
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
@@ -91,26 +92,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing file path parameter" }, { status: 400 });
   }
 
-  const normalizedPath = path.normalize(filePathParam);
+  const resolvedPath = resolveServerPath(filePathParam);
 
   const isAdmin = (session.user as { role?: string }).role === "admin";
-  const authorized = await isPathAuthorized(normalizedPath, session.user.id, isAdmin);
+  const authorized = await isPathAuthorized(filePathParam, session.user.id, isAdmin);
   if (!authorized) {
     return NextResponse.json({ error: "Access denied to this file" }, { status: 403 });
   }
 
-  if (!fs.existsSync(normalizedPath)) {
+  if (!fs.existsSync(resolvedPath)) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
   try {
-    const stat = fs.statSync(normalizedPath);
+    const stat = fs.statSync(resolvedPath);
     if (stat.isDirectory()) {
       return NextResponse.json({ error: "Specified path is a directory" }, { status: 400 });
     }
 
     const fileSize = stat.size;
-    const contentType = getMimeType(normalizedPath);
+    const contentType = getMimeType(resolvedPath);
     const range = request.headers.get("range");
 
     if (range) {
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
       }
 
       const chunksize = end - start + 1;
-      const fileStream = fs.createReadStream(normalizedPath, { start, end });
+      const fileStream = fs.createReadStream(resolvedPath, { start, end });
       const stream = new ReadableStream({
         start(controller) {
           fileStream.on("data", (chunk: Buffer) => controller.enqueue(chunk));
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const fileStream = fs.createReadStream(normalizedPath);
+    const fileStream = fs.createReadStream(resolvedPath);
     const stream = new ReadableStream({
       start(controller) {
         fileStream.on("data", (chunk: Buffer) => controller.enqueue(chunk));

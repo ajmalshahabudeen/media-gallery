@@ -185,11 +185,11 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="rounded border p-3 bg-muted/20 text-xs flex flex-col gap-1 text-muted-foreground">
+            <div className="rounded border p-3 bg-muted/20 text-xs flex flex-col gap-1.5 text-muted-foreground">
               <span className="font-semibold text-foreground">Supported Path Formats:</span>
-              <span>• Windows: <code className="text-primary font-mono">C:\Users\Name\Pictures</code> or <code className="text-primary font-mono">D:\Media</code></span>
-              <span>• Linux / macOS: <code className="text-primary font-mono">/home/user/Videos</code> or <code className="text-primary font-mono">/media/drive</code></span>
-              <span>• Docker Volume: <code className="text-primary font-mono">/host_media</code></span>
+              <span>• <strong>Windows Local / External Drives:</strong> <code className="text-primary font-mono">C:\Users\Name\Pictures</code>, <code className="text-primary font-mono">F:\1</code>, <code className="text-primary font-mono">D:\Videos</code> (dynamically bridged on-demand).</span>
+              <span>• <strong>Linux / macOS:</strong> <code className="text-primary font-mono">/home/user/Videos</code> or <code className="text-primary font-mono">/media/drive</code></span>
+              <span>• <strong>Docker Mount:</strong> <code className="text-primary font-mono">/host_media</code></span>
             </div>
 
             <Button type="submit" disabled={isSubmitting} className="w-fit gap-2">
