@@ -31,9 +31,9 @@ function formatFileSize(bytes: number): string {
 }
 
 export const MediaCard: React.FC<Props> = ({ file, onPress, viewMode = "grid" }) => {
-  const { serverUrl, favorites, toggleFavorite } = useMobileStore();
+  const { serverUrl, sessionToken, favorites, toggleFavorite } = useMobileStore();
   const isFavorite = favorites.some((f) => f.path === file.path);
-  const thumbnailUrl = buildThumbnailUrl(serverUrl, file.path);
+  const thumbnailUrl = buildThumbnailUrl(serverUrl, file.path, sessionToken);
 
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();

@@ -18,7 +18,7 @@ import {
   ArrowUpRight,
 } from "lucide-react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
-import type { MediaFile } from "../../store/useMobileStore";
+import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { buildMediaFileUrl } from "../../lib/api";
 
 export interface ReelItemData extends MediaFile {
@@ -75,10 +75,18 @@ function ActiveExpoVideo({
 
   useEffect(() => {
     playerRef.current = player;
+    if (player && uri) {
+      try {
+        player.replace(uri);
+        player.play();
+      } catch {
+        // ignore
+      }
+    }
     return () => {
       if (playerRef.current === player) playerRef.current = null;
     };
-  }, [player, playerRef]);
+  }, [player, playerRef, uri]);
 
   useEffect(() => {
     try {
@@ -157,7 +165,8 @@ export const ReelItem: React.FC<Props> = ({
   onToggleFavorite,
   onOpenInGallery,
 }) => {
-  const uri = buildMediaFileUrl(serverUrl, reel.path);
+  const { sessionToken } = useMobileStore();
+  const uri = buildMediaFileUrl(serverUrl, reel.path, sessionToken);
   const avRef = useRef<any>(null);
   const expoPlayerRef = useRef<any>(null);
   const slideWidthRef = useRef(0);

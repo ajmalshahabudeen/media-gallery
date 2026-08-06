@@ -44,6 +44,7 @@ export interface IndexingProgressState {
 
 interface MobileState {
   serverUrl: string;
+  sessionToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
   authChecked: boolean;
@@ -92,6 +93,7 @@ let progressInterval: ReturnType<typeof setInterval> | null = null;
 
 export const useMobileStore = create<MobileState>((set, get) => ({
   serverUrl: "http://192.168.1.101:38479",
+  sessionToken: null,
   user: null,
   isAuthenticated: false,
   authChecked: false,
@@ -134,20 +136,22 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   initApp: async () => {
     try {
       const url = await getServerUrl();
-      set({ serverUrl: url });
+      const token = await getSessionToken();
+      set({ serverUrl: url, sessionToken: token });
       await get().checkAuth();
     } catch {
       // Never leave the UI stuck on the splash/loading gate.
-      set({ user: null, isAuthenticated: false, authChecked: true });
+      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
     }
   },
 
   checkAuth: async () => {
     try {
       const token = await getSessionToken();
+      set({ sessionToken: token });
       // Fast path: no saved session → skip network so cold start always opens offline.
       if (!token) {
-        set({ user: null, isAuthenticated: false, authChecked: true });
+        set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
         return false;
       }
 
@@ -159,7 +163,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         if (data?.session && data?.user) {
-          set({ user: data.user, isAuthenticated: true, authChecked: true });
+          const authToken = data.session.token || token;
+          if (authToken) {
+            await setSessionToken(authToken);
+          }
+          set({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
           // Fire-and-forget library refresh (non-blocking for first paint)
           void get().fetchFolders();
           void get().fetchFavorites();
@@ -167,10 +175,10 @@ export const useMobileStore = create<MobileState>((set, get) => ({
           return true;
         }
       }
-      set({ user: null, isAuthenticated: false, authChecked: true });
+      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
       return false;
     } catch {
-      set({ user: null, isAuthenticated: false, authChecked: true });
+      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
       return false;
     }
   },
@@ -187,10 +195,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.user) {
-        if (data.token) {
-          await setSessionToken(data.token);
+        const authToken = data.token || data.session?.token;
+        if (authToken) {
+          await setSessionToken(authToken);
         }
-        set({ user: data.user, isAuthenticated: true, authChecked: true });
+        set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
         await get().fetchFolders();
         await get().fetchFavorites();
         await get().scanMedia(false);
@@ -217,10 +226,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.user) {
-        if (data.token) {
-          await setSessionToken(data.token);
+        const authToken = data.token || data.session?.token;
+        if (authToken) {
+          await setSessionToken(authToken);
         }
-        set({ user: data.user, isAuthenticated: true, authChecked: true });
+        set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
         return { success: true };
       }
       const msg =
@@ -240,7 +250,15 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       // ignore
     }
     await setSessionToken(null);
-    set({ user: null, isAuthenticated: false, files: [], folders: [], favorites: [] });
+    set({
+      user: null,
+      sessionToken: null,
+      isAuthenticated: false,
+      authChecked: true,
+      folders: [],
+      files: [],
+      favorites: [],
+    });
   },
 
   fetchFolders: async () => {

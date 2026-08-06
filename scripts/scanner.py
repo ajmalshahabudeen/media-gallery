@@ -5,6 +5,7 @@ import json
 import re
 import socket
 import mimetypes
+import gc
 from pathlib import Path
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -221,8 +222,8 @@ def scan_directory_multiprocess(raw_target_path):
     all_folders_set = set()
     last_emit_count = 0
 
-    # Determine CPU core worker count
-    max_workers = min(os.cpu_count() or 4, 16)
+    # Determine worker count (capped at max 4 to minimize RAM consumption inside Docker)
+    max_workers = min(os.cpu_count() or 2, 4)
 
     media_tasks = []
 
@@ -243,12 +244,16 @@ def scan_directory_multiprocess(raw_target_path):
                     if f["type"] in ("image", "video"):
                         media_tasks.append(f)
 
-                if len(all_files) - last_emit_count >= 15 or len(all_files) == 1:
-                    latest_name = files_batch[-1]["name"] if files_batch else ""
-                    emit_progress(len(all_files), len(all_folders_set), current_rel, latest_name, redis_client)
+                # Periodically update indexing progress in Redis
+                if len(all_files) - last_emit_count >= 50 or len(all_files) == last_emit_count:
+                    emit_progress(len(all_files), len(all_folders_set), current_rel, files_batch[-1]["name"] if files_batch else "", redis_client)
                     last_emit_count = len(all_files)
             except Exception:
-                continue
+                pass
+
+    # Final progress emission & garbage collection
+    emit_progress(len(all_files), len(all_folders_set), "Completed", "", redis_client)
+    gc.collect()
 
     if media_tasks:
         redis_client.set("preview_total_count", len(media_tasks))
@@ -256,9 +261,6 @@ def scan_directory_multiprocess(raw_target_path):
         for f in media_tasks:
             redis_client.lpush("media_preview_tasks", json.dumps({"path": f["path"], "type": f["type"]}))
 
-    # Final progress emission
-    final_latest = all_files[-1]["name"] if all_files else ""
-    emit_progress(len(all_files), len(all_folders_set), "Completed", final_latest, redis_client)
 
     sys.stderr.write(f"[Python Scanner] Completed scan for '{raw_target_path}': Found {len(all_files)} media files.\n")
     sys.stderr.flush()

@@ -20,10 +20,12 @@ import {
   Shield,
   Folder,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { useMobileStore } from "../../store/useMobileStore";
 import { ServerConfigModal } from "../../components/ServerConfigModal";
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const {
     user,
     serverUrl,
@@ -79,7 +81,10 @@ export default function SettingsScreen() {
       {
         text: "Sign Out",
         style: "destructive",
-        onPress: () => logout(),
+        onPress: async () => {
+          await logout();
+          router.replace("/(auth)/sign-in");
+        },
       },
     ]);
   };

@@ -213,6 +213,17 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, title }) => {
   });
 
   useEffect(() => {
+    if (expoPlayer && uri) {
+      try {
+        expoPlayer.replace(uri);
+        expoPlayer.play();
+      } catch {
+        // ignore
+      }
+    }
+  }, [expoPlayer, uri]);
+
+  useEffect(() => {
     positionRef.current = position;
   }, [position]);
 

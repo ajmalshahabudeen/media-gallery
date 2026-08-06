@@ -40,10 +40,10 @@ function formatFileSize(bytes: number): string {
 }
 
 export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
-  const { serverUrl, favorites, toggleFavorite, logMediaView } = useMobileStore();
+  const { serverUrl, sessionToken, favorites, toggleFavorite, logMediaView } = useMobileStore();
 
   const isFavorite = file ? favorites.some((f) => f.path === file.path) : false;
-  const mediaUrl = file ? buildMediaFileUrl(serverUrl, file.path) : "";
+  const mediaUrl = file ? buildMediaFileUrl(serverUrl, file.path, sessionToken) : "";
 
   useEffect(() => {
     if (file) {

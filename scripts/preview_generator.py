@@ -8,6 +8,7 @@ import hashlib
 import shutil
 import subprocess
 import io
+import gc
 from pathlib import Path
 
 # Try importing Pillow for pure Python image processing
@@ -405,6 +406,8 @@ def worker_loop(daemon=True):
                 time.sleep(0.05)
             else:
                 idle_count += 1
+                if idle_count % 5 == 0:
+                    gc.collect()
                 if not daemon and idle_count > 10:
                     break
                 # Sleep when queue is empty

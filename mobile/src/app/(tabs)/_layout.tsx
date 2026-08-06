@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { BlurView } from "expo-blur";
 import {
   Image as ImageIcon,
@@ -12,7 +12,12 @@ import {
 import { useMobileStore } from "../../store/useMobileStore";
 
 export default function TabsLayout() {
-  const { user } = useMobileStore();
+  const { user, authChecked, isAuthenticated } = useMobileStore();
+
+  if (authChecked && !isAuthenticated) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
   const isAdmin = user?.role === "admin";
 
   // Gallery + Reels + Favorites + Settings (+ Admin)

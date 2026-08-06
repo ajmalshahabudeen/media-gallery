@@ -678,7 +678,36 @@ Status: Completed.
 3. Empirically verified container access with `docker exec media_gallery_app ls -la /host_drives/f`, confirming folder `1` (`/host_drives/f/1`) is now 100% accessible to Node.js and Python.
 4. Updated `lib/server-utils.ts`, `scripts/scanner.py`, and `scripts/preview_generator.py` to prioritize `/host_drives/${dl}` at index 0.
 5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 3.4s with 0 errors).
+[2026-08-06] Request 108:
+1. Diagnosed high Docker RAM usage across Node.js app, Redis cache, and Python multiprocessing workers.
+2. Added container memory limits in `docker-compose.yml`: `deploy.resources.limits.memory` set to `1024M` for `web`, `256M` for `redis`, and `128M` for `caddy`.
+3. Set `NODE_OPTIONS=--max-old-space-size=512` in `docker-compose.yml` to cap Next.js V8 heap ceiling at 512MB.
+4. Capped Redis memory at 256MB with LRU key eviction (`command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru`).
+5. Capped Python scanner `max_workers` from 16 processes down to max 4 processes in `scripts/scanner.py`, and added explicit `gc.collect()` garbage collection in `scripts/scanner.py` and `scripts/preview_generator.py`.
+6. Verified live container RAM via `docker stats --no-stream`: reduced total RAM across all 3 containers to **~141 MiB total** (`media_gallery_app`: 121.7 MiB, `media_gallery_caddy`: 15.8 MiB, `media_gallery_redis`: 3.5 MiB).
+7. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 16.0s with 0 errors).
+[2026-08-06] Request 109:
+1. Diagnosed mobile Expo app video playback issue: native video players (ExoPlayer on Android, AVPlayer on iOS) bypass browser cookie sessions and issue HTTP 206 range requests for `/api/media/file` with `?token=...` query parameters or Bearer headers.
+2. Added direct Prisma database `Session` lookup fallback in `lib/auth-utils.ts` (`getUserSession`): when `auth.api.getSession` returns `null` for HTTP streaming requests, `getUserSession` queries the SQLite database directly by token, validating active user sessions.
+3. Updated mobile Zustand state in `mobile/src/store/useMobileStore.ts`: stored `sessionToken` in `MobileState` and populated it in `initApp()`, `checkAuth()`, `login()`, `register()`, and `logout()`.
+4. Updated `mobile/src/components/preview/FilePreviewModal.tsx`, `mobile/src/components/preview/ReelItem.tsx`, and `mobile/src/components/preview/MediaCard.tsx` to pass `sessionToken` to `buildMediaFileUrl` and `buildThumbnailUrl`.
+5. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 16.2s with 0 errors).
+6. Restarted Docker containers (`docker compose up -d`).
+[2026-08-06] Request 110:
+1. Fixed sign out navigation in mobile Expo app: updated `mobile/src/app/(tabs)/settings.tsx` to use `useRouter()` and execute `await logout()` followed by `router.replace("/(auth)/sign-in")`.
+2. Updated `mobile/src/app/(tabs)/_layout.tsx` to include an auth redirect gate (`if (authChecked && !isAuthenticated) return <Redirect href="/(auth)/sign-in" />`) ensuring tab routes immediately unmount and redirect when signed out.
+3. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 3.6s with 0 errors).
+[2026-08-06] Request 111:
+1. Diagnosed video loading stall in mobile Expo app:
+   a) Server uncaught exception: `TypeError: Invalid state: Controller is already closed` in `app/api/media/file/route.ts`. When native video players (ExoPlayer/AVPlayer) aborted or closed HTTP range connections mid-stream, Node `fs.ReadStream` continued firing `data` events into closed Web Stream controllers, crashing media HTTP response streams. Added `cancel()` handler, `try-catch` around `controller.enqueue()`, and `isClosed` safeguards in `app/api/media/file/route.ts`.
+   b) `expo-video` source updates: added `useEffect` to invoke `player.replace(uri)` and `player.play()` when `uri` updates in `VideoPlayerView.tsx`, `ReelItem.tsx`, and `fullscreen-video.tsx`.
+2. Executed `bun run lint` (0 errors) and `bun run build` (compiled successfully in 16.2s with 0 errors).
+3. Restarted Docker containers (`docker compose up -d`).
 Status: Completed.
+
+
+
+
 
 
 
