@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,13 +14,7 @@ import { Link, useRouter } from "expo-router";
 import { Lock, Mail, Server, Image as ImageIcon, User as UserIcon, X } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 import { ServerConfigModal } from "../../components/ServerConfigModal";
-import {
-  clearSavedLogin,
-  getSavedLogin,
-  markAutoLoginAttempted,
-  wasAutoLoginAttempted,
-  type SavedLogin,
-} from "../../lib/saved-login";
+import { clearSavedLogin, getSavedLogin, type SavedLogin } from "../../lib/saved-login";
 import { Palette } from "../../constants/palette";
 
 export default function SignInScreen() {
@@ -32,7 +26,6 @@ export default function SignInScreen() {
   const [showConfig, setShowConfig] = useState(false);
   const [saved, setSaved] = useState<SavedLogin | null>(null);
   const [useSavedCard, setUseSavedCard] = useState(false);
-  const autoTried = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,21 +35,11 @@ export default function SignInScreen() {
       setSaved(stored);
       setUseSavedCard(true);
       setEmail(stored.email);
-      if (autoTried.current || wasAutoLoginAttempted()) return;
-      autoTried.current = true;
-      markAutoLoginAttempted();
-      setLoading(true);
-      const result = await login(stored.email, stored.password);
-      if (cancelled) return;
-      setLoading(false);
-      if (result.success) {
-        router.replace("/(tabs)" as any);
-      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [login, router]);
+  }, []);
 
   const handleSignIn = async (creds?: { email: string; password: string }) => {
     const nextEmail = (creds?.email ?? email).trim();

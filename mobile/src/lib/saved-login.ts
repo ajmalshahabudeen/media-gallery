@@ -9,16 +9,6 @@ export interface SavedLogin {
 const STORAGE_KEY = "media_gallery_saved_login_v1";
 const OBFUSCATE_KEY = "sg-login-v1";
 
-let autoLoginAttempted = false;
-
-export function markAutoLoginAttempted(): void {
-  autoLoginAttempted = true;
-}
-
-export function wasAutoLoginAttempted(): boolean {
-  return autoLoginAttempted;
-}
-
 function getSecureStore(): {
   getItemAsync: (key: string) => Promise<string | null>;
   setItemAsync: (key: string, value: string) => Promise<void>;
