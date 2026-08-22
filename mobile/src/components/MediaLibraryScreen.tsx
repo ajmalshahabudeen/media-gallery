@@ -46,7 +46,7 @@ export function MediaLibraryScreen({
   const { chromeVisible, onScroll } = useScrollChrome();
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(200);
+  const headerHeight = useSharedValue(200);
   const chrome = useSharedValue(1);
 
   useEffect(() => {
@@ -58,13 +58,13 @@ export function MediaLibraryScreen({
 
   const headerAnim = useAnimatedStyle(() => ({
     transform: [
-      { translateY: interpolate(chrome.value, [0, 1], [-headerHeight, 0]) },
+      { translateY: interpolate(chrome.value, [0, 1], [-headerHeight.value, 0]) },
     ],
     opacity: chrome.value,
   }));
 
   const bodyAnim = useAnimatedStyle(() => ({
-    paddingTop: interpolate(chrome.value, [0, 1], [0, headerHeight]),
+    paddingTop: interpolate(chrome.value, [0, 1], [0, headerHeight.value]),
   }));
 
   const canUpload = showUpload && folders.length > 0;
@@ -79,8 +79,8 @@ export function MediaLibraryScreen({
         style={[styles.chrome, headerAnim]}
         onLayout={(event) => {
           const next = event.nativeEvent.layout.height;
-          if (next > 0 && Math.abs(next - headerHeight) > 1) {
-            setHeaderHeight(next);
+          if (next > 0) {
+            headerHeight.value = next;
           }
         }}
       >

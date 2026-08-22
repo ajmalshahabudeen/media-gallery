@@ -83,14 +83,11 @@ function YoutubeSeekBar({ progress, seeking, onSeekStart, onSeekAt, onSeekEnd }:
     borderRadius: interpolate(expand.value, [0, 1], [1.25, 2.5]),
   }));
 
-  const fillStyle = useAnimatedStyle(() => ({
-    width: `${Math.max(0, Math.min(100, progress * 100))}%` as any,
-  }));
-
-  const thumbStyle = useAnimatedStyle(() => ({
-    left: `${Math.max(0, Math.min(100, progress * 100))}%` as any,
+  const thumbScaleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: interpolate(expand.value, [0, 1], [1, 1.35]) }],
   }));
+
+  const pct = `${Math.max(0, Math.min(100, progress * 100))}%` as const;
 
   return (
     <View
@@ -115,9 +112,9 @@ function YoutubeSeekBar({ progress, seeking, onSeekStart, onSeekAt, onSeekEnd }:
       onResponderTerminate={() => onSeekEnd(lastRatio.current)}
     >
       <Animated.View style={[styles.seekTrack, trackStyle]}>
-        <Animated.View style={[styles.seekFill, fillStyle]} />
+        <View style={[styles.seekFill, { width: pct }]} />
       </Animated.View>
-      <Animated.View style={[styles.seekThumb, thumbStyle]} />
+      <Animated.View style={[styles.seekThumb, { left: pct }, thumbScaleStyle]} />
     </View>
   );
 }

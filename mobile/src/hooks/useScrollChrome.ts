@@ -7,20 +7,28 @@ import {
   HIDDEN_TAB_BAR_STYLE,
 } from "../components/tab-bar-style";
 
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+try {
+  if (
+    Platform.OS === "android" &&
+    typeof UIManager?.setLayoutAnimationEnabledExperimental === "function"
+  ) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+} catch {
+  // Non-fatal on New Architecture / Fabric where LayoutAnimation is built-in
 }
 
 function animateChrome() {
-  LayoutAnimation.configureNext({
-    duration: 220,
-    update: { type: LayoutAnimation.Types.easeInEaseOut },
-    create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-    delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-  });
+  try {
+    LayoutAnimation.configureNext({
+      duration: 220,
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
+  } catch {
+    // Non-fatal if layout animation is unavailable
+  }
 }
 
 export function useScrollChrome() {

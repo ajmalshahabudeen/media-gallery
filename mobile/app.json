@@ -25,8 +25,7 @@
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_WIFI_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.WAKE_LOCK",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.WAKE_LOCK"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -58,7 +57,7 @@
         "expo-build-properties",
         {
           "android": {
-            "newArchEnabled": false,
+            "newArchEnabled": true,
             "minSdkVersion": 24,
             "compileSdkVersion": 36,
             "targetSdkVersion": 34,

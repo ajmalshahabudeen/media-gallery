@@ -6,8 +6,8 @@ const gradlePropsPath = path.join(__dirname, '..', 'android', 'gradle.properties
 if (fs.existsSync(gradlePropsPath)) {
   let content = fs.readFileSync(gradlePropsPath, 'utf8');
 
-  // Disable New Architecture for legacy module compatibility on physical devices
-  content = content.replace(/newArchEnabled=true/g, 'newArchEnabled=false');
+  // Ensure New Architecture is enabled for Reanimated 4 and React Native 0.86
+  content = content.replace(/newArchEnabled=false/g, 'newArchEnabled=true');
 
   // Ensure NDK 26.3 path is present if NDK is installed
   const ndkPath = 'C:\\Users\\anees\\AppData\\Local\\Android\\Sdk\\ndk\\26.3.11579264';
@@ -16,7 +16,7 @@ if (fs.existsSync(gradlePropsPath)) {
   }
 
   fs.writeFileSync(gradlePropsPath, content, 'utf8');
-  console.log('✓ Successfully patched android/gradle.properties (newArchEnabled=false, NDK 26.3)');
+  console.log('✓ Successfully patched android/gradle.properties (newArchEnabled=true, NDK 26.3)');
 } else {
   console.warn('⚠️ android/gradle.properties not found');
 }

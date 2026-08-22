@@ -739,10 +739,25 @@ Status: Completed.
 1. Preview watch pane: compact size/folder/date chips (no remaining-height stretch). YouTube-style Up next list (max 20 remaining videos). Thumbnails load only when the row is on screen (viewability), same idea as gallery lists.
 Status: Completed.
 
-
-
-
-
+[2026-08-22] Request 118:
+1. Investigated production standalone release APK crash-on-open after `eas build --platform android --profile preview`.
+2. Analyzed the last 10 git commits (`74fcfba`, `9a9ece2`, `8ee0ced`, `bfc2a19`, `790248a`, `0f7c4cf`, `a594a2d`, `e8f0150`, `8c1c463`, `3e5aa3f`) and inspected the EAS Gradle release assemble log.
+3. Identified primary root causes:
+   - Native C++ Fabric / JNI mismatch: `newArchEnabled=false` was forced while `react-native-reanimated@4.5.1` and `react-native-worklets@0.10.1` require Fabric New Architecture.
+   - Route name conflict in root Stack: `<Stack.Screen name="(auth)/sign-in" />` in `_layout.tsx` violated Expo Router route grouping conventions in production Hermes mode.
+   - `SplashScreen.preventAutoHideAsync()` in `useEffect` caused native activity lifecycle detachments before JavaScript finished mounting.
+   - Custom `screenLayout` in `(tabs)/_layout.tsx` intercepted tab navigator mounting before navigation state was ready.
+   - Worklet prop capturing in `YoutubeSeekBar` and `MediaLibraryScreen` triggered UI thread serialization warnings.
+4. Implemented fixes:
+   - Enabled `newArchEnabled=true` in `mobile/plugins/with-custom-gradle-props.js`, `mobile/scripts/fix-gradle-props.js`, and `mobile/app.json`.
+   - Created `mobile/src/app/(auth)/_layout.tsx` and registered `<Stack.Screen name="(auth)" />` in root `_layout.tsx`.
+   - Moved `SplashScreen.preventAutoHideAsync().catch(() => {})` to module level in `_layout.tsx` and wrapped the entire layout tree in `RootErrorBoundary`.
+   - Removed `screenLayout` from `mobile/src/app/(tabs)/_layout.tsx`.
+   - Converted `headerHeight` to `useSharedValue` in `MediaLibraryScreen.tsx` and decoupled `YoutubeSeekBar` progress rendering.
+   - Removed `"channel": "preview"` from `mobile/eas.json` to prevent EAS Updates channel validation warnings on standalone APK builds.
+   - Fixed major Expo SDK 57 native module mismatch: upgraded `expo-image-picker` from incompatible legacy `17.0.11` to `~57.0.12` and aligned all core Expo packages (`expo@~57.0.15`, `expo-build-properties@~57.0.13`, `expo-constants@~57.0.13`, `expo-image@~57.0.3`, `expo-linking@~57.0.7`, `expo-router@~57.0.15`, `expo-splash-screen@~57.0.7`) using `bun x expo install --fix`.
+5. Verified clean `bun run lint` on both `mobile/` (`tsc --noEmit`) and root workspace (`eslint .`) with 0 errors.
+Status: Completed.
 
 
 

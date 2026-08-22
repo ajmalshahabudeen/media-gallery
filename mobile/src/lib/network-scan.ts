@@ -51,9 +51,17 @@ async function getDeviceIpv4(): Promise<string | null> {
 }
 
 async function pingQuick(url: string, timeoutMs: number): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timer: any = null;
   try {
+    const controller = new AbortController();
+    timer = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {
+        // ignore
+      }
+    }, timeoutMs);
+
     const base = normalizeBase(url);
     const res = await fetch(`${base}/api/server/ping`, {
       method: "GET",
@@ -63,14 +71,16 @@ async function pingQuick(url: string, timeoutMs: number): Promise<boolean> {
         Origin: base,
         Referer: `${base}/`,
       },
-    });
-    if (!res.ok) return false;
+    }).catch(() => null);
+
+    if (timer) clearTimeout(timer);
+    if (!res || !res.ok) return false;
     const data = (await res.json().catch(() => null)) as { app?: string; status?: string } | null;
     return data?.app === "Server Gallery" || data?.status === "online";
   } catch {
     return false;
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -101,8 +111,12 @@ async function firstHit(
   const run = async () => {
     while (index < urls.length && !found && Date.now() < deadline) {
       const url = urls[index++];
-      const ok = await worker(url);
-      if (ok && !found) found = url;
+      try {
+        const ok = await worker(url);
+        if (ok && !found) found = url;
+      } catch {
+        // ignore individual request failures
+      }
     }
   };
 
@@ -174,7 +188,7 @@ async function discoverServerUrlOnce(options?: { budgetMs?: number }): Promise<D
   const found = await firstHit(
     candidates,
     (url) => pingQuick(url, 450),
-    32,
+    8,
     Date.now() + remaining
   );
 

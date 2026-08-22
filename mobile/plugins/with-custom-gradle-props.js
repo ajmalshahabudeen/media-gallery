@@ -14,11 +14,11 @@ module.exports = function withCustomGradleProps(config) {
         item.key !== "android.targetSdkVersion"
     );
 
-    // 1. Force New Architecture OFF (enables legacy Expo module compatibility like expo-av)
+    // 1. Enable New Architecture (required for React Native 0.86 and react-native-reanimated 4.x)
     config.modResults.push({
       type: "property",
       key: "newArchEnabled",
-      value: "false",
+      value: "true",
     });
 
     // 2. Force uncompressed, page-aligned JNI libraries for Android 11+ (Samsung A52 & LG G8x)

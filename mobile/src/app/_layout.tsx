@@ -6,6 +6,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import { useMobileStore } from "../store/useMobileStore";
 
+// Prevent native splash screen from hiding before JS is ready
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 let SystemUI: { setBackgroundColorAsync?: (color: string) => Promise<void> } | null = null;
 try {
   SystemUI = require("expo-system-ui");
@@ -52,7 +55,7 @@ class RootErrorBoundary extends Component<
   }
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   const { initApp, authChecked } = useMobileStore();
   const [bootstrapped, setBootstrapped] = useState(false);
 
@@ -61,12 +64,6 @@ export default function RootLayout() {
 
     const bootstrap = async () => {
       try {
-        try {
-          await SplashScreen.preventAutoHideAsync();
-        } catch {
-          // Non-fatal if splash screen fails on OEM skins
-        }
-
         if (SystemUI?.setBackgroundColorAsync) {
           await SystemUI.setBackgroundColorAsync("#000000").catch(() => {});
         }
@@ -106,38 +103,43 @@ export default function RootLayout() {
   const showLoading = !bootstrapped || !authChecked;
 
   return (
-    <RootErrorBoundary>
-      <GestureHandlerRootView style={styles.root}>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
+    <GestureHandlerRootView style={styles.root}>
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#000000" },
+          animation: "fade",
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="fullscreen-video"
+          options={{
             headerShown: false,
-            contentStyle: { backgroundColor: "#000000" },
             animation: "fade",
+            gestureEnabled: false,
+            contentStyle: { backgroundColor: "#000000" },
           }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)/sign-in" />
-          <Stack.Screen name="(auth)/sign-up" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="fullscreen-video"
-            options={{
-              headerShown: false,
-              animation: "fade",
-              gestureEnabled: false,
-              contentStyle: { backgroundColor: "#000000" },
-            }}
-          />
-        </Stack>
+        />
+      </Stack>
 
-        {showLoading ? (
-          <View style={styles.loadingOverlay} pointerEvents="auto">
-            <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.loadingLabel}>Starting Server Gallery…</Text>
-          </View>
-        ) : null}
-      </GestureHandlerRootView>
+      {showLoading ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.loadingLabel}>Starting Server Gallery…</Text>
+        </View>
+      ) : null}
+    </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <RootErrorBoundary>
+      <RootLayoutInner />
     </RootErrorBoundary>
   );
 }

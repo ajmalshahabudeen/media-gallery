@@ -177,8 +177,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       } catch {
         // ignore
       }
-      const discovered = await discoverServerUrl({ budgetMs: 9000 });
-      set({ serverUrl: discovered.url, sessionToken: token, galleryLayout });
+      set({ sessionToken: token, galleryLayout });
       await get().checkAuth();
     } catch {
       // Never leave the UI stuck on the splash/loading gate.

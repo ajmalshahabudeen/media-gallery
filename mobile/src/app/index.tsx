@@ -25,7 +25,7 @@ export default function IndexGate() {
     const bootstrap = async () => {
       try {
         setStatus("Looking for Server Gallery on your Wi-Fi…");
-        const discovered = await discoverServerUrl({ budgetMs: 9000 });
+        const discovered = await discoverServerUrl({ budgetMs: 4500 });
         if (cancelled) return;
 
         if (discovered.source === "scan") {

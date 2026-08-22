@@ -11,7 +11,6 @@ import {
 } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 import { FLOATING_TAB_BAR_STYLE } from "../../components/tab-bar-style";
-import { SwipeableTabScreen } from "../../components/SwipeableTabScreen";
 
 function TabIcon({
   focused,
@@ -43,7 +42,6 @@ export default function TabsLayout() {
   return (
     <Tabs
       detachInactiveScreens={false}
-      screenLayout={({ children }) => <SwipeableTabScreen>{children}</SwipeableTabScreen>}
       screenOptions={{
         headerShown: false,
         freezeOnBlur: false,

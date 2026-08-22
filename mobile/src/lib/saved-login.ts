@@ -30,20 +30,26 @@ function xorCodec(input: string): string {
 }
 
 function toBase64(value: string): string {
-  try {
-    if (typeof btoa === "function") {
-      return btoa(unescape(encodeURIComponent(value)));
-    }
-  } catch {
-    // fall through
-  }
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const bytes = unescape(encodeURIComponent(value));
+  const bytes: number[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    if (c < 128) {
+      bytes.push(c);
+    } else if (c < 2048) {
+      bytes.push((c >> 6) | 192);
+      bytes.push((c & 63) | 128);
+    } else {
+      bytes.push((c >> 12) | 224);
+      bytes.push(((c >> 6) & 63) | 128);
+      bytes.push((c & 63) | 128);
+    }
+  }
   let result = "";
   for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes.charCodeAt(i);
-    const b = i + 1 < bytes.length ? bytes.charCodeAt(i + 1) : NaN;
-    const c = i + 2 < bytes.length ? bytes.charCodeAt(i + 2) : NaN;
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : NaN;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : NaN;
     const bitmap = (a << 16) | ((Number.isNaN(b) ? 0 : b) << 8) | (Number.isNaN(c) ? 0 : c);
     result += chars.charAt((bitmap >> 18) & 63);
     result += chars.charAt((bitmap >> 12) & 63);
@@ -55,29 +61,39 @@ function toBase64(value: string): string {
 
 function fromBase64(value: string): string {
   try {
-    if (typeof atob === "function") {
-      return decodeURIComponent(escape(atob(value)));
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const clean = value.replace(/[^A-Za-z0-9+/=]/g, "");
+    const bytes: number[] = [];
+    for (let i = 0; i < clean.length; i += 4) {
+      const e1 = chars.indexOf(clean.charAt(i));
+      const e2 = chars.indexOf(clean.charAt(i + 1));
+      const e3 = chars.indexOf(clean.charAt(i + 2));
+      const e4 = chars.indexOf(clean.charAt(i + 3));
+      const bitmap = (e1 << 18) | (e2 << 12) | ((e3 & 63) << 6) | (e4 & 63);
+      bytes.push((bitmap >> 16) & 255);
+      if (e3 !== -1 && clean.charAt(i + 2) !== "=") bytes.push((bitmap >> 8) & 255);
+      if (e4 !== -1 && clean.charAt(i + 3) !== "=") bytes.push(bitmap & 255);
     }
-  } catch {
-    // fall through
-  }
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const clean = value.replace(/[^A-Za-z0-9+/=]/g, "");
-  let result = "";
-  for (let i = 0; i < clean.length; i += 4) {
-    const e1 = chars.indexOf(clean.charAt(i));
-    const e2 = chars.indexOf(clean.charAt(i + 1));
-    const e3 = chars.indexOf(clean.charAt(i + 2));
-    const e4 = chars.indexOf(clean.charAt(i + 3));
-    const bitmap = (e1 << 18) | (e2 << 12) | ((e3 & 63) << 6) | (e4 & 63);
-    result += String.fromCharCode((bitmap >> 16) & 255);
-    if (e3 !== -1 && clean.charAt(i + 2) !== "=") result += String.fromCharCode((bitmap >> 8) & 255);
-    if (e4 !== -1 && clean.charAt(i + 3) !== "=") result += String.fromCharCode(bitmap & 255);
-  }
-  try {
-    return decodeURIComponent(escape(result));
-  } catch {
+    let result = "";
+    let i = 0;
+    while (i < bytes.length) {
+      const c = bytes[i++];
+      if (c > 127) {
+        if (c > 191 && c < 224) {
+          const c2 = bytes[i++];
+          result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+        } else {
+          const c2 = bytes[i++];
+          const c3 = bytes[i++];
+          result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+        }
+      } else {
+        result += String.fromCharCode(c);
+      }
+    }
     return result;
+  } catch {
+    return "";
   }
 }
 
