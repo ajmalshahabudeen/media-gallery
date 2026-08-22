@@ -9,7 +9,7 @@ import {
   RefreshControl,
   Dimensions,
 } from "react-native";
-import { Heart, Play, Image as ImageIcon } from "lucide-react-native";
+import { Play, Image as ImageIcon } from "lucide-react-native";
 import { MediaFile, useMobileStore } from "../store/useMobileStore";
 import { buildThumbnailUrl } from "../lib/api";
 
@@ -20,90 +20,46 @@ interface Props {
   onRefresh?: () => void;
 }
 
+const COLS = 3;
+const GAP = 1;
 const SCREEN_WIDTH = Dimensions.get("window").width;
+const CELL = (SCREEN_WIDTH - GAP * (COLS - 1)) / COLS;
 
-function formatRelative(iso: string): string {
-  const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return "";
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString();
-}
-
-function folderLabel(file: MediaFile): string {
-  if (!file.folder || file.folder === "/" || file.folder === ".") return "Library";
-  const parts = file.folder.replace(/\\/g, "/").split("/").filter(Boolean);
-  return parts[parts.length - 1] || "Library";
-}
-
-function FeedPost({
+function GridCell({
   file,
+  index,
   onOpen,
 }: {
   file: MediaFile;
+  index: number;
   onOpen: () => void;
 }) {
-  const { serverUrl, sessionToken, favorites, toggleFavorite } = useMobileStore();
-  const liked = favorites.some((f) => f.path === file.path);
+  const { serverUrl, sessionToken } = useMobileStore();
   const thumb = buildThumbnailUrl(serverUrl, file.path, sessionToken);
-  const initial = (folderLabel(file)[0] || "M").toUpperCase();
+  const isEndOfRow = (index + 1) % COLS === 0;
 
   return (
-    <View style={styles.post}>
-      <View style={styles.postHeader}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onOpen}
+      style={[
+        styles.cell,
+        { marginRight: isEndOfRow ? 0 : GAP, marginBottom: GAP },
+      ]}
+    >
+      {file.type === "image" || file.type === "video" ? (
+        <Image source={{ uri: thumb }} style={styles.thumb} resizeMode="cover" />
+      ) : (
+        <View style={[styles.thumb, styles.fallback]}>
+          <ImageIcon size={22} color="#64748b" />
         </View>
-        <View style={styles.headerMeta}>
-          <Text style={styles.folderName} numberOfLines={1}>
-            {folderLabel(file)}
-          </Text>
-          <Text style={styles.timeLabel}>{formatRelative(file.modifiedAt)}</Text>
+      )}
+      {file.type === "video" && (
+        <View style={styles.videoMark}>
+          <Play size={11} color="#fff" fill="#fff" />
         </View>
-      </View>
-
-      <TouchableOpacity activeOpacity={0.92} onPress={onOpen}>
-        <View style={styles.mediaWrap}>
-          {file.type === "image" || file.type === "video" ? (
-            <Image source={{ uri: thumb }} style={styles.media} resizeMode="cover" />
-          ) : (
-            <View style={[styles.media, styles.mediaFallback]}>
-              <ImageIcon size={36} color="#64748b" />
-            </View>
-          )}
-          {file.type === "video" && (
-            <View style={styles.playBadge}>
-              <Play size={18} color="#fff" fill="#fff" />
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-
-      <View style={styles.actions}>
-        <TouchableOpacity
-          onPress={() => toggleFavorite(file)}
-          hitSlop={10}
-          style={styles.likeBtn}
-        >
-          <Heart
-            size={26}
-            color={liked ? "#fb7185" : "#f8fafc"}
-            fill={liked ? "#fb7185" : "transparent"}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.caption} numberOfLines={2}>
-        <Text style={styles.captionFolder}>{folderLabel(file)} </Text>
-        {file.name}
-      </Text>
-    </View>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -140,7 +96,9 @@ export function InstagramFeed({
     <FlatList
       data={posts}
       keyExtractor={(item) => item.path}
+      numColumns={COLS}
       contentContainerStyle={styles.list}
+      showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -151,15 +109,15 @@ export function InstagramFeed({
           />
         ) : undefined
       }
-      renderItem={({ item }) => (
-        <FeedPost file={item} onOpen={() => onSelectFile(item)} />
+      renderItem={({ item, index }) => (
+        <GridCell file={item} index={index} onOpen={() => onSelectFile(item)} />
       )}
       ListEmptyComponent={
         <View style={styles.empty}>
           <ImageIcon size={48} color="#334155" />
-          <Text style={styles.emptyTitle}>No posts yet</Text>
+          <Text style={styles.emptyTitle}>No photos or videos</Text>
           <Text style={styles.emptySub}>
-            Photos and videos from your library will appear here like an Instagram feed.
+            Your library will show here as a tight square grid, like an Instagram profile.
           </Text>
         </View>
       }
@@ -169,96 +127,29 @@ export function InstagramFeed({
 
 const styles = StyleSheet.create({
   list: {
-    paddingBottom: 120,
+    paddingBottom: 110,
+    paddingHorizontal: 0,
   },
-  post: {
-    backgroundColor: "#0f172a",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(148,163,184,0.18)",
-    paddingBottom: 14,
-    marginBottom: 6,
-  },
-  postHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#1e1b4b",
-    borderWidth: 1.5,
-    borderColor: "#6366f1",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: "#c7d2fe",
-    fontWeight: "800",
-    fontSize: 13,
-  },
-  headerMeta: {
-    flex: 1,
-  },
-  folderName: {
-    color: "#f8fafc",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  timeLabel: {
-    color: "#64748b",
-    fontSize: 11,
-    marginTop: 1,
-  },
-  mediaWrap: {
-    width: SCREEN_WIDTH,
-    aspectRatio: 4 / 5,
+  cell: {
+    width: CELL,
+    height: CELL,
     backgroundColor: "#020617",
-    justifyContent: "center",
-    alignItems: "center",
   },
-  media: {
+  thumb: {
     width: "100%",
     height: "100%",
   },
-  mediaFallback: {
-    justifyContent: "center",
+  fallback: {
     alignItems: "center",
+    justifyContent: "center",
   },
-  playBadge: {
+  videoMark: {
     position: "absolute",
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actions: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  likeBtn: {
-    padding: 2,
-  },
-  caption: {
-    paddingHorizontal: 14,
-    paddingTop: 6,
-    color: "#cbd5e1",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  captionFolder: {
-    color: "#f8fafc",
-    fontWeight: "700",
+    top: 6,
+    right: 6,
   },
   empty: {
+    width: SCREEN_WIDTH,
     alignItems: "center",
     paddingVertical: 70,
     paddingHorizontal: 32,

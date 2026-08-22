@@ -713,6 +713,13 @@ Status: Completed.
 5. Redesigned mobile floating tab bar as a glass dock with white active orb + labels (`floating-tab-bar.tsx` via `app-tabs.tsx`). Reels chrome hide now uses `tabBarHidden` store flag.
 Status: Completed.
 
+[2026-08-22] Request 113:
+1. Production APK crash-on-open: removed custom `tabBar` renderer (likely Hermes/release crash) and restored Expo Router default tabs. `expo-image-picker` is now dynamically imported so a missing native module cannot kill cold start.
+2. Instagram home layout is now a flush 3-column square grid (1px gaps, no padding/captions) matching Instagram profile/search, not the main feed.
+3. Reels iOS warning: `VideoPlayer.replace` → `replaceAsync` in `ReelItem.tsx`, `VideoPlayerView.tsx`, and `fullscreen-video.tsx`.
+4. Tab bar: icons only (no labels); selected tab uses a circular white orb (borderRadius 20), not a square.
+Status: Completed.
+
 
 
 

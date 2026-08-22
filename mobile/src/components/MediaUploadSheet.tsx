@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { FolderPlus, ImagePlus, Upload, X, Folder } from "lucide-react-native";
 import { useMobileStore } from "../store/useMobileStore";
 
@@ -26,7 +25,7 @@ interface PickedAsset {
   type: string;
 }
 
-function guessName(asset: ImagePicker.ImagePickerAsset, index: number): string {
+function guessName(asset: { fileName?: string | null; uri: string; mimeType?: string | null }, index: number): string {
   if (asset.fileName) return asset.fileName;
   const uriName = asset.uri.split("/").pop() || "";
   if (uriName.includes(".")) return decodeURIComponent(uriName.split("?")[0]);
@@ -34,7 +33,7 @@ function guessName(asset: ImagePicker.ImagePickerAsset, index: number): string {
   return `upload-${Date.now()}-${index}.${ext}`;
 }
 
-function guessType(asset: ImagePicker.ImagePickerAsset, name: string): string {
+function guessType(asset: { mimeType?: string | null; type?: string | null }, name: string): string {
   if (asset.mimeType) return asset.mimeType;
   const lower = name.toLowerCase();
   if (lower.endsWith(".png")) return "image/png";
@@ -91,6 +90,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
   const pickMedia = async () => {
     setPicking(true);
     try {
+      const ImagePicker = await import("expo-image-picker");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images", "videos"],
         allowsMultipleSelection: true,

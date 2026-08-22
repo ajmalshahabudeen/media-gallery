@@ -24,7 +24,8 @@
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
@@ -109,7 +110,7 @@
         "style": "light"
       },
       "eas": {
-        "projectId": "4e4dcde0-1a85-43e7-99c6-e496d083f0f6"
+        "projectId": "e8841a22-e3b9-4fe9-8184-d0f535b4c35e"
       }
     }
   }

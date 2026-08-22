@@ -212,12 +212,19 @@ export default function FullscreenVideoScreen() {
 
   useEffect(() => {
     if (expoPlayer && uri) {
-      try {
-        expoPlayer.replace(uri);
-        expoPlayer.play();
-      } catch {
-        // ignore
-      }
+      const swap = async () => {
+        try {
+          if (typeof expoPlayer.replaceAsync === "function") {
+            await expoPlayer.replaceAsync(uri);
+          } else {
+            expoPlayer.replace(uri);
+          }
+          expoPlayer.play();
+        } catch {
+          // ignore
+        }
+      };
+      void swap();
     }
   }, [expoPlayer, uri]);
 

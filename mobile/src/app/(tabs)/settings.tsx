@@ -148,7 +148,7 @@ export default function SettingsScreen() {
             <Text style={styles.cardTitle}>Home layout</Text>
           </View>
           <Text style={styles.cardSub}>
-            Switch the gallery screen between the classic grid and an Instagram-style feed.
+            Switch the gallery between the classic cards view and a tight Instagram-style square grid.
           </Text>
           <View style={styles.layoutRow}>
             <TouchableOpacity
@@ -176,7 +176,7 @@ export default function SettingsScreen() {
                   galleryLayout === "feed" && styles.layoutChoiceTextActive,
                 ]}
               >
-                Instagram feed
+                Instagram grid
               </Text>
             </TouchableOpacity>
           </View>

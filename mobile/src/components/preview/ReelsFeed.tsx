@@ -11,13 +11,17 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useNavigation, useFocusEffect } from "expo-router";
 import { Clapperboard, RefreshCw } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiFetch } from "../../lib/api";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { ReelItem, type ReelItemData } from "./ReelItem";
 import { FilePreviewModal } from "./FilePreviewModal";
+import {
+  FLOATING_TAB_BAR_STYLE,
+  HIDDEN_TAB_BAR_STYLE,
+} from "../tab-bar-style";
 
 type ReelsFilter = "all" | "favorites";
 
@@ -31,6 +35,7 @@ interface ReelsResponse {
 const WINDOW = Dimensions.get("window");
 
 export function ReelsFeed() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const {
     serverUrl,
@@ -73,20 +78,24 @@ export function ReelsFeed() {
 
   const setTabBarHidden = useMobileStore((s) => s.setTabBarHidden);
 
-  // Sync floating tab bar with chrome visibility (same idea as web dashboard header)
   useEffect(() => {
-    if (!isFocused) {
-      return;
-    }
+    if (!isFocused) return;
     setTabBarHidden(!chromeVisible);
-  }, [chromeVisible, isFocused, setTabBarHidden]);
+    navigation.setOptions({
+      tabBarStyle: chromeVisible ? FLOATING_TAB_BAR_STYLE : HIDDEN_TAB_BAR_STYLE,
+    });
+  }, [chromeVisible, isFocused, navigation, setTabBarHidden]);
 
-  // Restore tab bar when leaving reels
   useEffect(() => {
     return () => {
       setTabBarHidden(false);
+      try {
+        navigation.setOptions({ tabBarStyle: FLOATING_TAB_BAR_STYLE });
+      } catch {
+        // ignore
+      }
     };
-  }, [setTabBarHidden]);
+  }, [navigation, setTabBarHidden]);
 
   useEffect(() => {
     void fetchFavorites();

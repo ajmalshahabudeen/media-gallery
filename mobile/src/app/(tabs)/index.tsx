@@ -20,7 +20,7 @@ export default function GalleryScreen() {
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
       <MediaControlsHeader
-        title={galleryLayout === "feed" ? "Feed" : "Media Gallery"}
+        title={galleryLayout === "feed" ? "Grid" : "Media Gallery"}
         itemCount={files.length}
         onRefresh={() => scanMedia(true)}
         isRefreshing={isScanning}

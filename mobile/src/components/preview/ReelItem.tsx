@@ -76,12 +76,19 @@ function ActiveExpoVideo({
   useEffect(() => {
     playerRef.current = player;
     if (player && uri) {
-      try {
-        player.replace(uri);
-        player.play();
-      } catch {
-        // ignore
-      }
+      const swap = async () => {
+        try {
+          if (typeof player.replaceAsync === "function") {
+            await player.replaceAsync(uri);
+          } else {
+            player.replace(uri);
+          }
+          player.play();
+        } catch {
+          // ignore
+        }
+      };
+      void swap();
     }
     return () => {
       if (playerRef.current === player) playerRef.current = null;
