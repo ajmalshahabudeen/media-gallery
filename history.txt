@@ -726,6 +726,15 @@ Status: Completed.
 3. Global tab swipe: horizontal swipe switches tabs (`SwipeableTabScreen` on `screenLayout`) with a full-width slide interpolator.
 Status: Completed.
 
+[2026-08-22] Request 115:
+1. Tab swipe lag (especially into Reels): removed scene interpolator (`animation: none`), jumpTo instead of router.navigate, lazy Reels tab, defer reel playback 40ms after focus so the switch paints first.
+2. YouTube-style video player: 16:9, red seek bar, always-on mini progress, skip-10 circles, title/like/share watch layout, matching fullscreen chrome.
+Status: Completed.
+
+[2026-08-22] Request 116:
+1. YouTube player polish: shared `YoutubePlayerOverlay` with Reanimated chrome fade (never unmount), expanding red seek bar + thumb, skip-10 burst, play-button spring, spinning loader, 1x/1.25x/1.5x/2x speed, 2.8s auto-hide, mini progress when chrome hidden. Inlined + fullscreen both use it.
+Status: Completed.
+
 
 
 

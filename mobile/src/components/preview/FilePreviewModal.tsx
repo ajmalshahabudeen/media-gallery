@@ -71,50 +71,41 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
     }
   };
 
+  const isVideo = file.type === "video";
+
   return (
     <Modal visible={!!file} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      <View style={[styles.container, isVideo && styles.containerVideo]}>
+        <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" />
 
-        {/* Top Floating Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-            <X size={22} color="#f8fafc" />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {file.name}
-          </Text>
-
-          <View style={styles.headerRight}>
-            <TouchableOpacity onPress={() => toggleFavorite(file)} style={styles.iconBtn}>
-              <Star
-                size={20}
-                color={isFavorite ? "#eab308" : "#94a3b8"}
-                fill={isFavorite ? "#eab308" : "transparent"}
-              />
+        {!isVideo ? (
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
+              <X size={22} color="#f8fafc" />
             </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleShare} style={styles.iconBtn}>
-              <Share2 size={20} color="#94a3b8" />
-            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {file.name}
+            </Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity onPress={() => toggleFavorite(file)} style={styles.iconBtn}>
+                <Star
+                  size={20}
+                  color={isFavorite ? "#eab308" : "#94a3b8"}
+                  fill={isFavorite ? "#eab308" : "transparent"}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleShare} style={styles.iconBtn}>
+                <Share2 size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : null}
 
-        {/* Media Player Area */}
-        <View style={styles.mediaArea}>
-          {file.type === "image" && (
-            <ImageViewerView uri={mediaUrl} />
+        <View style={[styles.mediaArea, isVideo && styles.mediaAreaVideo]}>
+          {file.type === "image" && <ImageViewerView uri={mediaUrl} />}
+          {isVideo && (
+            <VideoPlayerView uri={mediaUrl} onOpenExternal={handleOpenExternal} title={file.name} />
           )}
-
-          {file.type === "video" && (
-            <VideoPlayerView
-              uri={mediaUrl}
-              onOpenExternal={handleOpenExternal}
-              title={file.name}
-            />
-          )}
-
           {file.type === "audio" && (
             <AudioPlayerView
               uri={mediaUrl}
@@ -122,7 +113,6 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
               fileSizeText={formatFileSize(file.size)}
             />
           )}
-
           {file.type === "other" && (
             <View style={styles.docCard}>
               <FileText size={64} color="#64748b" />
@@ -130,7 +120,6 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
                 {file.name}
               </Text>
               <Text style={styles.docMeta}>{file.extension.toUpperCase()} File</Text>
-
               <TouchableOpacity style={styles.externalLinkBtn} onPress={handleOpenExternal}>
                 <ExternalLink size={14} color="#818cf8" />
                 <Text style={[styles.externalLinkText, { color: "#818cf8" }]}>
@@ -141,27 +130,67 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
           )}
         </View>
 
-        {/* Details Footer Ribbon */}
-        <View style={styles.footer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metaRow}>
-            <View style={styles.metaChip}>
-              <HardDrive size={14} color="#6366f1" />
-              <Text style={styles.metaText}>{formatFileSize(file.size)}</Text>
-            </View>
-
-            <View style={styles.metaChip}>
-              <Folder size={14} color="#818cf8" />
-              <Text style={styles.metaText}>{file.folder || "Root Folder"}</Text>
-            </View>
-
-            <View style={styles.metaChip}>
-              <Calendar size={14} color="#a855f7" />
-              <Text style={styles.metaText}>
-                {new Date(file.modifiedAt || Date.now()).toLocaleDateString()}
+        {isVideo ? (
+          <View style={styles.watchInfo}>
+            <View style={styles.watchTitleRow}>
+              <TouchableOpacity onPress={onClose} style={styles.watchBack}>
+                <X size={20} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.watchTitle} numberOfLines={2}>
+                {file.name}
               </Text>
             </View>
-          </ScrollView>
-        </View>
+            <View style={styles.watchActions}>
+              <TouchableOpacity style={styles.watchAction} onPress={() => toggleFavorite(file)}>
+                <Star
+                  size={22}
+                  color={isFavorite ? "#FF0000" : "#fff"}
+                  fill={isFavorite ? "#FF0000" : "transparent"}
+                />
+                <Text style={styles.watchActionLabel}>{isFavorite ? "Liked" : "Like"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.watchAction} onPress={handleShare}>
+                <Share2 size={20} color="#fff" />
+                <Text style={styles.watchActionLabel}>Share</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metaRow}>
+              <View style={styles.metaChip}>
+                <HardDrive size={14} color="#aaa" />
+                <Text style={styles.metaText}>{formatFileSize(file.size)}</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Folder size={14} color="#aaa" />
+                <Text style={styles.metaText}>{file.folder || "Root Folder"}</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Calendar size={14} color="#aaa" />
+                <Text style={styles.metaText}>
+                  {new Date(file.modifiedAt || Date.now()).toLocaleDateString()}
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        ) : (
+          <View style={styles.footer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metaRow}>
+              <View style={styles.metaChip}>
+                <HardDrive size={14} color="#6366f1" />
+                <Text style={styles.metaText}>{formatFileSize(file.size)}</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Folder size={14} color="#818cf8" />
+                <Text style={styles.metaText}>{file.folder || "Root Folder"}</Text>
+              </View>
+              <View style={styles.metaChip}>
+                <Calendar size={14} color="#a855f7" />
+                <Text style={styles.metaText}>
+                  {new Date(file.modifiedAt || Date.now()).toLocaleDateString()}
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        )}
       </View>
     </Modal>
   );
@@ -171,6 +200,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000000",
+  },
+  containerVideo: {
+    backgroundColor: "#0f0f0f",
   },
   header: {
     flexDirection: "row",
@@ -204,6 +236,48 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#000000",
+  },
+  mediaAreaVideo: {
+    flex: 0,
+    width: "100%",
+    backgroundColor: "#000",
+  },
+  watchInfo: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    backgroundColor: "#0f0f0f",
+  },
+  watchTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  watchBack: {
+    paddingTop: 2,
+    paddingRight: 4,
+  },
+  watchTitle: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 24,
+  },
+  watchActions: {
+    flexDirection: "row",
+    gap: 22,
+    marginTop: 16,
+    marginBottom: 14,
+  },
+  watchAction: {
+    alignItems: "center",
+    gap: 4,
+  },
+  watchActionLabel: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "600",
   },
   docCard: {
     alignItems: "center",
@@ -249,16 +323,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#272727",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#334155",
   },
   metaText: {
-    color: "#cbd5e1",
+    color: "#aaa",
     fontSize: 12,
     fontWeight: "500",
   },

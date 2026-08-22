@@ -61,8 +61,11 @@ export function ReelsFeed() {
 
   useFocusEffect(
     useCallback(() => {
-      setIsFocused(true);
-      return () => setIsFocused(false);
+      const timer = setTimeout(() => setIsFocused(true), 40);
+      return () => {
+        clearTimeout(timer);
+        setIsFocused(false);
+      };
     }, [])
   );
 

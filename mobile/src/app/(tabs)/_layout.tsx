@@ -12,7 +12,6 @@ import {
 import { useMobileStore } from "../../store/useMobileStore";
 import { FLOATING_TAB_BAR_STYLE } from "../../components/tab-bar-style";
 import { SwipeableTabScreen } from "../../components/SwipeableTabScreen";
-import { slideTabInterpolator, TAB_TRANSITION_SPEC } from "../../components/tab-slide";
 
 function TabIcon({
   focused,
@@ -49,9 +48,7 @@ export default function TabsLayout() {
         headerShown: false,
         freezeOnBlur: false,
         tabBarShowLabel: false,
-        animation: "shift",
-        sceneStyleInterpolator: slideTabInterpolator,
-        transitionSpec: TAB_TRANSITION_SPEC,
+        animation: "none",
         tabBarBackground: () => (
           <View
             pointerEvents="none"
@@ -97,6 +94,7 @@ export default function TabsLayout() {
         name="reels"
         options={{
           title: "Reels",
+          lazy: true,
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} Icon={Clapperboard} />,
         }}
       />
