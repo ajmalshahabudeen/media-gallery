@@ -90,6 +90,8 @@ export const MediaListRenderer: React.FC<Props> = ({
         contentContainerStyle={styles.listContent}
         scrollEventThrottle={16}
         onScroll={onScroll}
+        alwaysBounceVertical
+        overScrollMode="always"
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -131,6 +133,8 @@ export const MediaListRenderer: React.FC<Props> = ({
       contentContainerStyle={styles.listContent}
       scrollEventThrottle={16}
       onScroll={onScroll}
+      alwaysBounceVertical
+      overScrollMode="always"
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -168,7 +172,8 @@ export const MediaListRenderer: React.FC<Props> = ({
 const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 10,
-    paddingBottom: 100,
+    paddingBottom: 140,
+    flexGrow: 1,
   },
   sectionHeader: {
     flexDirection: "row",

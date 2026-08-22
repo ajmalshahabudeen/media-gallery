@@ -2,7 +2,7 @@ import { Animated, Dimensions } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
-/** Full-width page slide when switching bottom tabs. */
+/** Fast page slide when switching bottom tabs. */
 export function slideTabInterpolator({
   current,
 }: {
@@ -14,7 +14,7 @@ export function slideTabInterpolator({
         {
           translateX: current.progress.interpolate({
             inputRange: [-1, 0, 1],
-            outputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+            outputRange: [-SCREEN_WIDTH * 0.28, 0, SCREEN_WIDTH * 0.28],
           }),
         },
       ],
@@ -24,5 +24,5 @@ export function slideTabInterpolator({
 
 export const TAB_TRANSITION_SPEC = {
   animation: "timing" as const,
-  config: { duration: 260 },
+  config: { duration: 140 },
 };

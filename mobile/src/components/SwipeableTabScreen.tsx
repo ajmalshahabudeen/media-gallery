@@ -31,12 +31,14 @@ export function SwipeableTabScreen({ children }: { children: React.ReactNode }) 
   };
 
   const pan = Gesture.Pan()
-    .activeOffsetX([-40, 40])
-    .failOffsetY([-28, 28])
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-32, 32])
     .onEnd((event) => {
-      if (event.translationX < -56) {
+      const flickedLeft = event.velocityX < -700;
+      const flickedRight = event.velocityX > 700;
+      if (event.translationX < -28 || flickedLeft) {
         runOnJS(go)(1);
-      } else if (event.translationX > 56) {
+      } else if (event.translationX > 28 || flickedRight) {
         runOnJS(go)(-1);
       }
     });

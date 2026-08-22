@@ -107,6 +107,8 @@ export function InstagramFeed({
       numColumns={COLS}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      alwaysBounceVertical
+      overScrollMode="always"
       scrollEventThrottle={16}
       onScroll={onScroll}
       refreshControl={
@@ -135,8 +137,9 @@ export function InstagramFeed({
 
 const styles = StyleSheet.create({
   list: {
-    paddingBottom: 110,
+    paddingBottom: 140,
     paddingHorizontal: 0,
+    flexGrow: 1,
   },
   cell: {
     width: CELL,

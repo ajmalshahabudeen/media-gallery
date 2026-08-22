@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, StatusBar, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
+  Easing,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -28,6 +29,8 @@ interface Props {
   emptyIcon?: React.ReactNode;
 }
 
+const CHROME_MS = 220;
+
 export function MediaLibraryScreen({
   title,
   files,
@@ -47,15 +50,21 @@ export function MediaLibraryScreen({
   const chrome = useSharedValue(1);
 
   useEffect(() => {
-    chrome.value = withTiming(chromeVisible ? 1 : 0, { duration: 220 });
+    chrome.value = withTiming(chromeVisible ? 1 : 0, {
+      duration: CHROME_MS,
+      easing: Easing.out(Easing.cubic),
+    });
   }, [chrome, chromeVisible]);
 
   const headerAnim = useAnimatedStyle(() => ({
     transform: [
       { translateY: interpolate(chrome.value, [0, 1], [-headerHeight, 0]) },
     ],
-    marginBottom: interpolate(chrome.value, [0, 1], [-headerHeight, 0]),
     opacity: chrome.value,
+  }));
+
+  const bodyAnim = useAnimatedStyle(() => ({
+    paddingTop: interpolate(chrome.value, [0, 1], [0, headerHeight]),
   }));
 
   const canUpload = showUpload && folders.length > 0;
@@ -66,7 +75,8 @@ export function MediaLibraryScreen({
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
       <Animated.View
-        style={headerAnim}
+        pointerEvents={chromeVisible ? "auto" : "none"}
+        style={[styles.chrome, headerAnim]}
         onLayout={(event) => {
           const next = event.nativeEvent.layout.height;
           if (next > 0 && Math.abs(next - headerHeight) > 1) {
@@ -84,7 +94,7 @@ export function MediaLibraryScreen({
         {showIndexing ? <IndexingProgressBanner /> : null}
       </Animated.View>
 
-      <View style={styles.body}>
+      <Animated.View style={[styles.body, bodyAnim]}>
         {galleryLayout === "feed" ? (
           <InstagramFeed
             files={files}
@@ -107,7 +117,7 @@ export function MediaLibraryScreen({
             emptyIcon={emptyIcon}
           />
         )}
-      </View>
+      </Animated.View>
 
       <FilePreviewModal file={selectedFile} onClose={() => setSelectedFile(null)} />
       <MediaUploadSheet visible={uploadOpen} onClose={() => setUploadOpen(false)} />
@@ -118,6 +128,14 @@ export function MediaLibraryScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#0f172a",
+  },
+  chrome: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 40,
     backgroundColor: "#0f172a",
   },
   body: {

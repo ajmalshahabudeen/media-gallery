@@ -21,11 +21,12 @@ export const FLOATING_TAB_BAR_STYLE = {
   shadowOpacity: 0.4,
   shadowRadius: 18,
   display: "flex" as const,
+  transform: [{ translateY: 0 }],
+  opacity: 1,
 };
 
 export const HIDDEN_TAB_BAR_STYLE = {
-  display: "none" as const,
-  height: 0,
+  ...FLOATING_TAB_BAR_STYLE,
+  transform: [{ translateY: 110 }],
   opacity: 0,
-  position: "absolute" as const,
 };
