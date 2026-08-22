@@ -68,7 +68,7 @@ export default function RootLayout() {
         }
 
         if (SystemUI?.setBackgroundColorAsync) {
-          await SystemUI.setBackgroundColorAsync("#0f172a").catch(() => {});
+          await SystemUI.setBackgroundColorAsync("#000000").catch(() => {});
         }
 
         if (Platform.OS === "android" && NavigationBar) {
@@ -112,7 +112,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: "#0f172a" },
+            contentStyle: { backgroundColor: "#000000" },
             animation: "fade",
           }}
         >
@@ -133,7 +133,7 @@ export default function RootLayout() {
 
         {showLoading ? (
           <View style={styles.loadingOverlay} pointerEvents="auto">
-            <ActivityIndicator size="large" color="#6366f1" />
+            <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.loadingLabel}>Starting Server Gallery…</Text>
           </View>
         ) : null}
@@ -145,37 +145,37 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
     gap: 14,
     zIndex: 100,
   },
   loadingLabel: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 14,
     marginTop: 4,
   },
   errorTitle: {
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 8,
     textAlign: "center",
   },
   errorBody: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 13,
     textAlign: "center",
   },

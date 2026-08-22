@@ -72,7 +72,7 @@ export function MediaLibraryScreen({
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       <Animated.View
         pointerEvents={chromeVisible ? "auto" : "none"}
@@ -128,7 +128,7 @@ export function MediaLibraryScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   chrome: {
     position: "absolute",
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   body: {
     flex: 1,

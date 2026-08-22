@@ -15,7 +15,7 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
         <View style={styles.button}>
           <ChevronRight
             size={14}
-            color="#e2e8f0"
+            color="#e5e5e5"
             style={{ transform: [{ rotate: isOpen ? "90deg" : "0deg" }] }}
           />
         </View>
@@ -45,10 +45,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
   },
   title: {
-    color: "#e2e8f0",
+    color: "#e5e5e5",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginLeft: 24,
     padding: 16,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
   },
 });

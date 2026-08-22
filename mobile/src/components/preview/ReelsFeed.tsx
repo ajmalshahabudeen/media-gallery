@@ -407,7 +407,7 @@ export function ReelsFeed() {
             style={styles.retryBtn}
             onPress={() => void loadReels({ filter, reshuffle: true })}
           >
-            <RefreshCw size={16} color="#0f172a" />
+            <RefreshCw size={16} color="#000000" />
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -558,13 +558,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#e2e8f0",
+    backgroundColor: "#e5e5e5",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
   },
   retryText: {
-    color: "#0f172a",
+    color: "#000000",
     fontWeight: "700",
     fontSize: 13,
   },

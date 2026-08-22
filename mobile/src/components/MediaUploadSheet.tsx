@@ -158,7 +158,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
           <View style={styles.header}>
             <Text style={styles.title}>Upload photos & videos</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color="#a3a3a3" />
             </TouchableOpacity>
           </View>
 
@@ -175,7 +175,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
                     setDestPath(folder.path);
                   }}
                 >
-                  <Folder size={16} color={active ? "#818cf8" : "#94a3b8"} />
+                  <Folder size={16} color={active ? "#fafafa" : "#a3a3a3"} />
                   <Text style={[styles.optionText, active && styles.optionTextActive]} numberOfLines={1}>
                     {folder.name || folder.path}
                   </Text>
@@ -204,7 +204,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Vacation 2026"
-                placeholderTextColor="#64748b"
+                placeholderTextColor="#737373"
                 value={newFolderName}
                 onChangeText={setNewFolderName}
               />
@@ -214,9 +214,9 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
                 disabled={creating || !newFolderName.trim()}
               >
                 {creating ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color="#000000" size="small" />
                 ) : (
-                  <FolderPlus size={18} color="#fff" />
+                  <FolderPlus size={18} color="#000000" />
                 )}
               </TouchableOpacity>
             </View>
@@ -240,7 +240,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
                   {asset.name}
                 </Text>
                 <TouchableOpacity onPress={() => setAssets((prev) => prev.filter((a) => a.uri !== asset.uri))}>
-                  <X size={16} color="#94a3b8" />
+                  <X size={16} color="#a3a3a3" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -251,9 +251,9 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
               disabled={uploading || assets.length === 0}
             >
               {uploading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color="#000000" size="small" />
               ) : (
-                <Upload size={18} color="#fff" />
+                <Upload size={18} color="#000000" />
               )}
               <Text style={styles.uploadBtnText}>{uploading ? "Uploading..." : "Upload"}</Text>
             </TouchableOpacity>
@@ -271,12 +271,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "88%",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   header: {
     flexDirection: "row",
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   closeBtn: {
     padding: 4,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 14,
     marginBottom: 8,
     textTransform: "uppercase",
@@ -311,25 +311,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     marginBottom: 6,
   },
   optionActive: {
-    borderColor: "#6366f1",
+    borderColor: "#ffffff",
     backgroundColor: "rgba(79, 70, 229, 0.15)",
   },
   optionText: {
     flex: 1,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 13,
     fontWeight: "600",
   },
   optionTextActive: {
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   row: {
     flexDirection: "row",
@@ -337,17 +337,17 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
+    backgroundColor: "#000000",
+    color: "#fafafa",
     borderRadius: 10,
     paddingHorizontal: 12,
     fontSize: 13,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     height: 44,
   },
   iconAction: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#ffffff",
     width: 44,
     borderRadius: 10,
     justifyContent: "center",
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#334155",
+    backgroundColor: "#262626",
     paddingVertical: 12,
     borderRadius: 12,
   },
@@ -372,14 +372,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     padding: 10,
     borderRadius: 8,
     marginTop: 6,
   },
   assetName: {
     flex: 1,
-    color: "#e2e8f0",
+    color: "#e5e5e5",
     fontSize: 12,
     marginRight: 10,
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#ffffff",
     paddingVertical: 14,
     borderRadius: 12,
   },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   uploadBtnText: {
-    color: "#fff",
+    color: "#000000",
     fontWeight: "700",
     fontSize: 14,
   },

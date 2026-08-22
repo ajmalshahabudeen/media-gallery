@@ -24,7 +24,7 @@ function TabIcon({
     <View style={focused ? styles.orbActive : styles.orb}>
       <Icon
         size={20}
-        color={focused ? "#0b1220" : "#94a3b8"}
+        color={focused ? "#000000" : "#a3a3a3"}
         strokeWidth={focused ? 2.3 : 1.8}
       />
     </View>
@@ -79,8 +79,8 @@ export default function TabsLayout() {
           height: 0,
           fontSize: 0,
         },
-        tabBarActiveTintColor: "#0b1220",
-        tabBarInactiveTintColor: "#94a3b8",
+        tabBarActiveTintColor: "#000000",
+        tabBarInactiveTintColor: "#a3a3a3",
       }}
     >
       <Tabs.Screen
@@ -147,6 +147,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#fafafa",
   },
 });

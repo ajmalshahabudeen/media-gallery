@@ -2,11 +2,12 @@ import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   apiFetch,
-  getServerUrl,
   setServerUrl as saveServerUrl,
   setSessionToken,
   getSessionToken,
 } from "../lib/api";
+import { saveLogin } from "../lib/saved-login";
+import { discoverServerUrl } from "../lib/network-scan";
 
 export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
 
@@ -109,6 +110,7 @@ interface MobileState {
 }
 
 let progressInterval: ReturnType<typeof setInterval> | null = null;
+let authCheckSeq = 0;
 
 export const useMobileStore = create<MobileState>((set, get) => ({
   serverUrl: "http://192.168.1.101:38479",
@@ -165,7 +167,6 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   initApp: async () => {
     try {
-      const url = await getServerUrl();
       const token = await getSessionToken();
       let galleryLayout: GalleryLayout = "grid";
       try {
@@ -176,7 +177,8 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       } catch {
         // ignore
       }
-      set({ serverUrl: url, sessionToken: token, galleryLayout });
+      const discovered = await discoverServerUrl({ budgetMs: 9000 });
+      set({ serverUrl: discovered.url, sessionToken: token, galleryLayout });
       await get().checkAuth();
     } catch {
       // Never leave the UI stuck on the splash/loading gate.
@@ -185,12 +187,17 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   },
 
   checkAuth: async () => {
+    const seq = ++authCheckSeq;
+    const apply = (partial: Partial<MobileState>) => {
+      if (seq !== authCheckSeq) return;
+      set(partial);
+    };
     try {
       const token = await getSessionToken();
-      set({ sessionToken: token });
+      apply({ sessionToken: token });
       // Fast path: no saved session → skip network so cold start always opens offline.
       if (!token) {
-        set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+        apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
         return false;
       }
 
@@ -206,7 +213,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
           if (authToken) {
             await setSessionToken(authToken);
           }
-          set({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
+          apply({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
           // Fire-and-forget library refresh (non-blocking for first paint)
           void get().fetchFolders();
           void get().fetchFavorites();
@@ -214,10 +221,10 @@ export const useMobileStore = create<MobileState>((set, get) => ({
           return true;
         }
       }
-      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+      apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
       return false;
     } catch {
-      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+      apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
       return false;
     }
   },
@@ -238,7 +245,13 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         if (authToken) {
           await setSessionToken(authToken);
         }
+        authCheckSeq += 1;
         set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
+        try {
+          await saveLogin({ email, password, name: data.user?.name });
+        } catch {
+          // Non-fatal: session is already live
+        }
         await get().fetchFolders();
         await get().fetchFavorites();
         await get().scanMedia(false);
@@ -269,7 +282,13 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         if (authToken) {
           await setSessionToken(authToken);
         }
+        authCheckSeq += 1;
         set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
+        try {
+          await saveLogin({ email, password, name: data.user?.name || name });
+        } catch {
+          // Non-fatal: session is already live
+        }
         return { success: true };
       }
       const msg =
@@ -289,6 +308,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       // ignore
     }
     await setSessionToken(null);
+    authCheckSeq += 1;
     set({
       user: null,
       sessionToken: null,

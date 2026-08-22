@@ -14,7 +14,7 @@ export const IndexingProgressBanner: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.topRow}>
         <View style={styles.statusRow}>
-          <ActivityIndicator size="small" color="#818cf8" />
+          <ActivityIndicator size="small" color="#fafafa" />
           <Text style={styles.title}>Indexing Media Library...</Text>
         </View>
 
@@ -27,7 +27,7 @@ export const IndexingProgressBanner: React.FC = () => {
 
       {indexingProgress.currentFolder ? (
         <View style={styles.pathRow}>
-          <FolderSearch size={14} color="#94a3b8" />
+          <FolderSearch size={14} color="#a3a3a3" />
           <Text style={styles.pathText} numberOfLines={1} ellipsizeMode="middle">
             {indexingProgress.currentFolder}
           </Text>
@@ -39,8 +39,8 @@ export const IndexingProgressBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#1e1b4b",
-    borderColor: "#4338ca",
+    backgroundColor: "#171717",
+    borderColor: "#262626",
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -60,10 +60,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#c7d2fe",
+    color: "#fafafa",
   },
   badge: {
-    backgroundColor: "#3730a3",
+    backgroundColor: "#262626",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#e0e7ff",
+    color: "#fafafa",
   },
   pathRow: {
     flexDirection: "row",
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   },
   pathText: {
     fontSize: 11,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     flex: 1,
   },
 });

@@ -68,7 +68,7 @@ export const ImageViewerView: React.FC<Props> = ({ uri }) => {
               onPress={handleZoomOut}
               disabled={zoomScale <= 1}
             >
-              <ZoomOut size={18} color={zoomScale <= 1 ? "#64748b" : "#ffffff"} />
+              <ZoomOut size={18} color={zoomScale <= 1 ? "#737373" : "#ffffff"} />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.zoomBadge} onPress={handleResetZoom}>
@@ -80,7 +80,7 @@ export const ImageViewerView: React.FC<Props> = ({ uri }) => {
               onPress={handleZoomIn}
               disabled={zoomScale >= 3}
             >
-              <ZoomIn size={18} color={zoomScale >= 3 ? "#64748b" : "#ffffff"} />
+              <ZoomIn size={18} color={zoomScale >= 3 ? "#737373" : "#ffffff"} />
             </TouchableOpacity>
           </View>
         )}
@@ -131,18 +131,18 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   toolLabel: {
-    color: "#cbd5e1",
+    color: "#d4d4d4",
     fontSize: 10,
     fontWeight: "700",
   },
   zoomBadge: {
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   zoomText: {
-    color: "#ffffff",
+    color: "#000000",
     fontSize: 11,
     fontWeight: "700",
   },

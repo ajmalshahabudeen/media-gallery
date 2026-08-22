@@ -81,7 +81,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
         {!isVideo ? (
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-              <X size={22} color="#f8fafc" />
+              <X size={22} color="#fafafa" />
             </TouchableOpacity>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {file.name}
@@ -90,12 +90,12 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
               <TouchableOpacity onPress={() => toggleFavorite(file)} style={styles.iconBtn}>
                 <Star
                   size={20}
-                  color={isFavorite ? "#eab308" : "#94a3b8"}
+                  color={isFavorite ? "#eab308" : "#a3a3a3"}
                   fill={isFavorite ? "#eab308" : "transparent"}
                 />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleShare} style={styles.iconBtn}>
-                <Share2 size={20} color="#94a3b8" />
+                <Share2 size={20} color="#a3a3a3" />
               </TouchableOpacity>
             </View>
           </View>
@@ -115,14 +115,14 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
           )}
           {file.type === "other" && (
             <View style={styles.docCard}>
-              <FileText size={64} color="#64748b" />
+              <FileText size={64} color="#737373" />
               <Text style={styles.docName} numberOfLines={2}>
                 {file.name}
               </Text>
               <Text style={styles.docMeta}>{file.extension.toUpperCase()} File</Text>
               <TouchableOpacity style={styles.externalLinkBtn} onPress={handleOpenExternal}>
-                <ExternalLink size={14} color="#818cf8" />
-                <Text style={[styles.externalLinkText, { color: "#818cf8" }]}>
+                <ExternalLink size={14} color="#fafafa" />
+                <Text style={[styles.externalLinkText, { color: "#fafafa" }]}>
                   Open / Download File
                 </Text>
               </TouchableOpacity>
@@ -175,11 +175,11 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose }) => {
           <View style={styles.footer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metaRow}>
               <View style={styles.metaChip}>
-                <HardDrive size={14} color="#6366f1" />
+                <HardDrive size={14} color="#ffffff" />
                 <Text style={styles.metaText}>{formatFileSize(file.size)}</Text>
               </View>
               <View style={styles.metaChip}>
-                <Folder size={14} color="#818cf8" />
+                <Folder size={14} color="#fafafa" />
                 <Text style={styles.metaText}>{file.folder || "Root Folder"}</Text>
               </View>
               <View style={styles.metaChip}>
@@ -211,14 +211,14 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     borderBottomWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#171717",
     zIndex: 10,
   },
   headerTitle: {
     flex: 1,
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 15,
     fontWeight: "700",
     marginHorizontal: 12,
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   docName: {
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 16,
     fontWeight: "600",
     marginTop: 16,
     textAlign: "center",
   },
   docMeta: {
-    color: "#64748b",
+    color: "#737373",
     fontSize: 13,
     marginTop: 6,
   },
@@ -301,20 +301,20 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 16,
     padding: 10,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 12,
   },
   externalLinkText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 13,
     fontWeight: "600",
   },
   footer: {
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     borderTopWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#171717",
   },
   metaRow: {
     flexDirection: "row",

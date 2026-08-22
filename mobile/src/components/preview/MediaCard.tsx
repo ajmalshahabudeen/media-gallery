@@ -56,7 +56,7 @@ export const MediaCard: React.FC<Props> = ({ file, onPress, viewMode = "grid" })
             </View>
           ) : (
             <View style={[styles.listThumb, styles.iconContainerDoc]}>
-              <FileText size={20} color="#94a3b8" />
+              <FileText size={20} color="#a3a3a3" />
             </View>
           )}
           {file.type === "video" && (
@@ -78,7 +78,7 @@ export const MediaCard: React.FC<Props> = ({ file, onPress, viewMode = "grid" })
         <TouchableOpacity onPress={handleFavoritePress} style={styles.starBtn}>
           <Star
             size={18}
-            color={isFavorite ? "#eab308" : "#475569"}
+            color={isFavorite ? "#eab308" : "#525252"}
             fill={isFavorite ? "#eab308" : "transparent"}
           />
         </TouchableOpacity>
@@ -102,7 +102,7 @@ export const MediaCard: React.FC<Props> = ({ file, onPress, viewMode = "grid" })
           </View>
         ) : (
           <View style={[styles.gridThumb, styles.iconContainerDoc]}>
-            <FileText size={32} color="#94a3b8" />
+            <FileText size={32} color="#a3a3a3" />
           </View>
         )}
 
@@ -141,16 +141,16 @@ const styles = StyleSheet.create({
   gridCard: {
     flex: 1,
     margin: 6,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   mediaContainer: {
     width: "100%",
     aspectRatio: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2e1065",
   },
   iconContainerDoc: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
   },
   videoOverlay: {
     ...StyleSheet.absoluteFill,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   gridDetails: {
     padding: 8,
@@ -215,19 +215,19 @@ const styles = StyleSheet.create({
   },
   gridSize: {
     fontSize: 10,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 2,
   },
   listCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     padding: 10,
     marginVertical: 4,
     marginHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   listThumbContainer: {
     position: "relative",
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -255,11 +255,11 @@ const styles = StyleSheet.create({
   listTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   listSubtitle: {
     fontSize: 11,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 2,
   },
   starBtn: {

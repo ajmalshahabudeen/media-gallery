@@ -10,12 +10,12 @@
     "android": {
       "package": "com.mediagallery.mobile",
       "versionCode": 3,
-      "backgroundColor": "#0f172a",
+      "backgroundColor": "#000000",
       "userInterfaceStyle": "dark",
       "allowBackup": true,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#0f172a",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -23,6 +23,7 @@
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_WIFI_STATE",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.WAKE_LOCK",
         "android.permission.RECORD_AUDIO"
@@ -73,12 +74,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0f172a",
+          "backgroundColor": "#000000",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "dark": {
-            "backgroundColor": "#0f172a",
+            "backgroundColor": "#000000",
             "image": "./assets/images/splash-icon.png"
           }
         }
@@ -87,7 +88,7 @@
         "expo-navigation-bar",
         {
           "position": "relative",
-          "backgroundColor": "#0f172a",
+          "backgroundColor": "#000000",
           "style": "light"
         }
       ],
@@ -97,7 +98,8 @@
         {
           "photosPermission": "Allow Server Gallery to pick photos and videos to upload to your media library."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

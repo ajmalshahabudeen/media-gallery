@@ -46,7 +46,7 @@ export default function SignUpScreen() {
       <View style={styles.content}>
         <View style={styles.brandContainer}>
           <View style={styles.logoCircle}>
-            <ImageIcon size={32} color="#818cf8" />
+            <ImageIcon size={32} color="#fafafa" />
           </View>
           <Text style={styles.brandTitle}>Create Account</Text>
           <Text style={styles.brandSub}>Sign up to access your server media library</Text>
@@ -54,22 +54,22 @@ export default function SignUpScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputWrapper}>
-            <UserIcon size={18} color="#64748b" style={styles.inputIcon} />
+            <UserIcon size={18} color="#737373" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Full Name"
-              placeholderTextColor="#64748b"
+              placeholderTextColor="#737373"
               value={name}
               onChangeText={setName}
             />
           </View>
 
           <View style={styles.inputWrapper}>
-            <Mail size={18} color="#64748b" style={styles.inputIcon} />
+            <Mail size={18} color="#737373" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email address"
-              placeholderTextColor="#64748b"
+              placeholderTextColor="#737373"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -78,11 +78,11 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Lock size={18} color="#64748b" style={styles.inputIcon} />
+            <Lock size={18} color="#737373" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
-              placeholderTextColor="#64748b"
+              placeholderTextColor="#737373"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -95,7 +95,7 @@ export default function SignUpScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color="#000000" />
             ) : (
               <Text style={styles.submitBtnText}>Create Account</Text>
             )}
@@ -118,7 +118,7 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   content: {
     flex: 1,
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#1e1b4b",
-    borderColor: "#4338ca",
+    backgroundColor: "#171717",
+    borderColor: "#262626",
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
@@ -143,11 +143,11 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   brandSub: {
     fontSize: 13,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 4,
     textAlign: "center",
   },
@@ -157,10 +157,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     marginBottom: 14,
     paddingHorizontal: 12,
   },
@@ -169,19 +169,19 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 14,
     paddingVertical: 12,
   },
   submitBtn: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#ffffff",
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 8,
   },
   submitBtnText: {
-    color: "#ffffff",
+    color: "#000000",
     fontSize: 15,
     fontWeight: "700",
   },
@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   footerText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 13,
   },
   linkText: {
-    color: "#818cf8",
+    color: "#fafafa",
     fontSize: 13,
     fontWeight: "700",
   },

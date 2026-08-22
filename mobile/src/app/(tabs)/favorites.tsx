@@ -26,7 +26,7 @@ export default function FavoritesScreen() {
       showUpload
       emptyTitle="No Favorites Yet"
       emptySubtitle="Tap the star icon on any photo, video, or audio file to add it to your favorites."
-      emptyIcon={<Star size={48} color="#334155" />}
+      emptyIcon={<Star size={48} color="#262626" />}
     />
   );
 }

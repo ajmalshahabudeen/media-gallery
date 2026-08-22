@@ -48,11 +48,11 @@ export const ServerConfigModal: React.FC<Props> = ({ visible, onClose }) => {
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <Server size={20} color="#6366f1" />
+              <Server size={20} color="#ffffff" />
               <Text style={styles.title}>Server URL Settings</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color="#94a3b8" />
+              <X size={20} color="#a3a3a3" />
             </TouchableOpacity>
           </View>
 
@@ -66,7 +66,7 @@ export const ServerConfigModal: React.FC<Props> = ({ visible, onClose }) => {
             value={urlInput}
             onChangeText={setUrlInput}
             placeholder="http://192.168.1.101:38479"
-            placeholderTextColor="#64748b"
+            placeholderTextColor="#737373"
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -101,7 +101,7 @@ export const ServerConfigModal: React.FC<Props> = ({ visible, onClose }) => {
               disabled={isTesting}
             >
               {isTesting ? (
-                <ActivityIndicator size="small" color="#6366f1" />
+                <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <Text style={styles.testBtnText}>Test Connection</Text>
               )}
@@ -127,11 +127,11 @@ const styles = StyleSheet.create({
   },
   container: {
     width: "100%",
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#171717",
   },
   header: {
     flexDirection: "row",
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   closeBtn: {
     padding: 4,
@@ -155,25 +155,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 8,
   },
   subtitle: {
     fontSize: 12,
-    color: "#64748b",
+    color: "#737373",
     marginTop: 4,
     marginBottom: 12,
     lineHeight: 16,
   },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#f8fafc",
+    backgroundColor: "#171717",
+    color: "#fafafa",
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     marginBottom: 12,
   },
   resultCard: {
@@ -214,12 +214,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     alignItems: "center",
     justifyContent: "center",
   },
   testBtnText: {
-    color: "#cbd5e1",
+    color: "#d4d4d4",
     fontWeight: "600",
     fontSize: 13,
   },
@@ -227,12 +227,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
   },
   saveBtnText: {
-    color: "#ffffff",
+    color: "#000000",
     fontWeight: "600",
     fontSize: 13,
   },

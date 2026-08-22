@@ -106,7 +106,7 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <View style={styles.profileRow}>
             <View style={styles.avatarCircle}>
-              <UserIcon size={24} color="#818cf8" />
+              <UserIcon size={24} color="#fafafa" />
             </View>
 
             <View style={styles.profileDetails}>
@@ -125,7 +125,7 @@ export default function SettingsScreen() {
         {/* Server Connection Section */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Server size={18} color="#818cf8" />
+            <Server size={18} color="#fafafa" />
             <Text style={styles.cardTitle}>LAN Server Settings</Text>
           </View>
 
@@ -144,7 +144,7 @@ export default function SettingsScreen() {
         {/* Home layout — mobile only */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Newspaper size={18} color="#818cf8" />
+            <Newspaper size={18} color="#fafafa" />
             <Text style={styles.cardTitle}>Home layout</Text>
           </View>
           <Text style={styles.cardSub}>
@@ -155,7 +155,7 @@ export default function SettingsScreen() {
               style={[styles.layoutChoice, galleryLayout === "grid" && styles.layoutChoiceActive]}
               onPress={() => setGalleryLayout("grid")}
             >
-              <LayoutGrid size={16} color={galleryLayout === "grid" ? "#ffffff" : "#94a3b8"} />
+              <LayoutGrid size={16} color={galleryLayout === "grid" ? "#000000" : "#a3a3a3"} />
               <Text
                 style={[
                   styles.layoutChoiceText,
@@ -169,7 +169,7 @@ export default function SettingsScreen() {
               style={[styles.layoutChoice, galleryLayout === "feed" && styles.layoutChoiceActive]}
               onPress={() => setGalleryLayout("feed")}
             >
-              <Newspaper size={16} color={galleryLayout === "feed" ? "#ffffff" : "#94a3b8"} />
+              <Newspaper size={16} color={galleryLayout === "feed" ? "#000000" : "#a3a3a3"} />
               <Text
                 style={[
                   styles.layoutChoiceText,
@@ -185,7 +185,7 @@ export default function SettingsScreen() {
         {/* Media Folders Section */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Folder size={18} color="#818cf8" />
+            <Folder size={18} color="#fafafa" />
             <Text style={styles.cardTitle}>Media Library Folders</Text>
           </View>
 
@@ -198,7 +198,7 @@ export default function SettingsScreen() {
             <TextInput
               style={styles.folderInput}
               placeholder="e.g. C:\Media or /host_drives/c/Media"
-              placeholderTextColor="#64748b"
+              placeholderTextColor="#737373"
               value={folderInput}
               onChangeText={setFolderInput}
               autoCapitalize="none"
@@ -211,9 +211,9 @@ export default function SettingsScreen() {
               disabled={adding}
             >
               {adding ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color="#000000" size="small" />
               ) : (
-                <FolderPlus size={18} color="#ffffff" />
+                <FolderPlus size={18} color="#000000" />
               )}
             </TouchableOpacity>
           </View>
@@ -241,7 +241,7 @@ export default function SettingsScreen() {
         {folders.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Upload size={18} color="#818cf8" />
+              <Upload size={18} color="#fafafa" />
               <Text style={styles.cardTitle}>Upload photos & videos</Text>
             </View>
             <Text style={styles.cardSub}>
@@ -260,9 +260,9 @@ export default function SettingsScreen() {
           disabled={isScanning}
         >
           {isScanning ? (
-            <ActivityIndicator color="#ffffff" size="small" />
+            <ActivityIndicator color="#000000" size="small" />
           ) : (
-            <RefreshCw size={18} color="#ffffff" />
+            <RefreshCw size={18} color="#000000" />
           )}
           <Text style={styles.scanBtnText}>
             {isScanning ? "Scanning Media Library..." : "Trigger Full Library Rescan"}
@@ -288,7 +288,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -298,15 +298,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#f8fafc",
+    color: "#fafafa",
     marginBottom: 16,
   },
   card: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     marginBottom: 14,
   },
   profileRow: {
@@ -317,8 +317,8 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#1e1b4b",
-    borderColor: "#4338ca",
+    backgroundColor: "#171717",
+    borderColor: "#262626",
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -330,11 +330,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   userEmail: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 2,
   },
   adminBadge: {
@@ -362,29 +362,29 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   cardSub: {
     fontSize: 12,
-    color: "#64748b",
+    color: "#737373",
     marginBottom: 12,
   },
   serverUrlText: {
     fontSize: 13,
-    color: "#cbd5e1",
-    backgroundColor: "#0f172a",
+    color: "#d4d4d4",
+    backgroundColor: "#000000",
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
   actionBtn: {
-    backgroundColor: "#334155",
+    backgroundColor: "#262626",
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
   },
   actionBtnText: {
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 13,
     fontWeight: "600",
   },
@@ -398,23 +398,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   layoutChoiceActive: {
-    backgroundColor: "#4f46e5",
-    borderColor: "#6366f1",
+    backgroundColor: "#ffffff",
+    borderColor: "#ffffff",
   },
   layoutChoiceText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 13,
     fontWeight: "700",
   },
   layoutChoiceTextActive: {
-    color: "#ffffff",
+    color: "#000000",
   },
   addFolderRow: {
     flexDirection: "row",
@@ -423,16 +423,16 @@ const styles = StyleSheet.create({
   },
   folderInput: {
     flex: 1,
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
+    backgroundColor: "#000000",
+    color: "#fafafa",
     borderRadius: 8,
     paddingHorizontal: 12,
     fontSize: 13,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   addBtn: {
-    backgroundColor: "#6366f1",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 14,
     borderRadius: 8,
     justifyContent: "center",
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     padding: 10,
     borderRadius: 8,
     marginTop: 6,
@@ -453,11 +453,11 @@ const styles = StyleSheet.create({
   },
   folderPath: {
     fontSize: 12,
-    color: "#e2e8f0",
+    color: "#e5e5e5",
   },
   folderName: {
     fontSize: 10,
-    color: "#64748b",
+    color: "#737373",
     marginTop: 2,
   },
   deleteFolderBtn: {
@@ -468,13 +468,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#ffffff",
     paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 14,
   },
   scanBtnText: {
-    color: "#ffffff",
+    color: "#000000",
     fontSize: 14,
     fontWeight: "700",
   },

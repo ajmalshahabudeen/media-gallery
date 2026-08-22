@@ -56,7 +56,7 @@ function GridCell({
         <Image source={{ uri: thumb }} style={styles.thumb} resizeMode="cover" />
       ) : (
         <View style={[styles.thumb, styles.fallback]}>
-          <ImageIcon size={22} color="#64748b" />
+          <ImageIcon size={22} color="#737373" />
         </View>
       )}
       {file.type === "video" && (
@@ -116,8 +116,8 @@ export function InstagramFeed({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#818cf8"
-            colors={["#818cf8"]}
+            tintColor="#fafafa"
+            colors={["#fafafa"]}
           />
         ) : undefined
       }
@@ -126,7 +126,7 @@ export function InstagramFeed({
       )}
       ListEmptyComponent={
         <View style={styles.empty}>
-          <ImageIcon size={48} color="#334155" />
+          <ImageIcon size={48} color="#262626" />
           <Text style={styles.emptyTitle}>{emptyTitle}</Text>
           <Text style={styles.emptySub}>{emptySubtitle}</Text>
         </View>
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL,
     height: CELL,
-    backgroundColor: "#020617",
+    backgroundColor: "#000000",
   },
   thumb: {
     width: "100%",
@@ -166,13 +166,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    color: "#cbd5e1",
+    color: "#d4d4d4",
     fontSize: 16,
     fontWeight: "700",
     marginTop: 12,
   },
   emptySub: {
-    color: "#64748b",
+    color: "#737373",
     fontSize: 13,
     textAlign: "center",
     marginTop: 6,

@@ -97,8 +97,8 @@ export const MediaListRenderer: React.FC<Props> = ({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#818cf8"
-              colors={["#818cf8"]}
+              tintColor="#fafafa"
+              colors={["#fafafa"]}
             />
           ) : undefined
         }
@@ -111,7 +111,7 @@ export const MediaListRenderer: React.FC<Props> = ({
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            {emptyIcon || <ImageIcon size={48} color="#334155" />}
+            {emptyIcon || <ImageIcon size={48} color="#262626" />}
             <Text style={styles.emptyTitle}>{emptyTitle}</Text>
             <Text style={styles.emptySub}>{emptySubtitle}</Text>
           </View>
@@ -140,8 +140,8 @@ export const MediaListRenderer: React.FC<Props> = ({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#818cf8"
-            colors={["#818cf8"]}
+            tintColor="#fafafa"
+            colors={["#fafafa"]}
           />
         ) : undefined
       }
@@ -160,7 +160,7 @@ export const MediaListRenderer: React.FC<Props> = ({
       )}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          {emptyIcon || <ImageIcon size={48} color="#334155" />}
+          {emptyIcon || <ImageIcon size={48} color="#262626" />}
           <Text style={styles.emptyTitle}>{emptyTitle}</Text>
           <Text style={styles.emptySub}>{emptySubtitle}</Text>
         </View>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
@@ -187,18 +187,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#818cf8",
+    color: "#fafafa",
   },
   sectionBadge: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#94a3b8",
-    backgroundColor: "#0f172a",
+    color: "#a3a3a3",
+    backgroundColor: "#000000",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#cbd5e1",
+    color: "#d4d4d4",
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: "#64748b",
+    color: "#737373",
     marginTop: 4,
     textAlign: "center",
     paddingHorizontal: 32,

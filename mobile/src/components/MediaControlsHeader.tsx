@@ -85,7 +85,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
         <View style={styles.topActions}>
           {onUpload && (
             <TouchableOpacity style={styles.iconBtn} onPress={onUpload}>
-              <Upload size={18} color="#94a3b8" />
+              <Upload size={18} color="#a3a3a3" />
             </TouchableOpacity>
           )}
 
@@ -95,7 +95,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
               onPress={onRefresh}
               disabled={isRefreshing}
             >
-              <RefreshCw size={18} color={isRefreshing ? "#818cf8" : "#94a3b8"} />
+              <RefreshCw size={18} color={isRefreshing ? "#fafafa" : "#a3a3a3"} />
             </TouchableOpacity>
           )}
 
@@ -105,7 +105,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
           >
             <SlidersHorizontal
               size={18}
-              color={groupBy !== "none" ? "#818cf8" : "#94a3b8"}
+              color={groupBy !== "none" ? "#fafafa" : "#a3a3a3"}
             />
           </TouchableOpacity>
 
@@ -114,9 +114,9 @@ export const MediaControlsHeader: React.FC<Props> = ({
             onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
           >
             {viewMode === "grid" ? (
-              <List size={18} color="#94a3b8" />
+              <List size={18} color="#a3a3a3" />
             ) : (
-              <LayoutGrid size={18} color="#94a3b8" />
+              <LayoutGrid size={18} color="#a3a3a3" />
             )}
           </TouchableOpacity>
         </View>
@@ -124,17 +124,17 @@ export const MediaControlsHeader: React.FC<Props> = ({
 
       {/* Search Input Bar */}
       <View style={styles.searchBar}>
-        <Search size={16} color="#64748b" style={styles.searchIcon} />
+        <Search size={16} color="#737373" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search photos, videos, audio..."
-          placeholderTextColor="#64748b"
+          placeholderTextColor="#737373"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery("")} style={{ padding: 4 }}>
-            <X size={16} color="#94a3b8" />
+            <X size={16} color="#a3a3a3" />
           </TouchableOpacity>
         )}
       </View>
@@ -159,7 +159,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
           style={[styles.filterChip, selectedType === "image" && styles.filterChipActive]}
           onPress={() => setSelectedType("image")}
         >
-          <ImageIcon size={12} color={selectedType === "image" ? "#ffffff" : "#94a3b8"} />
+          <ImageIcon size={12} color={selectedType === "image" ? "#000000" : "#a3a3a3"} />
           <Text
             style={[
               styles.filterChipText,
@@ -174,7 +174,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
           style={[styles.filterChip, selectedType === "video" && styles.filterChipActive]}
           onPress={() => setSelectedType("video")}
         >
-          <Film size={12} color={selectedType === "video" ? "#ffffff" : "#94a3b8"} />
+          <Film size={12} color={selectedType === "video" ? "#000000" : "#a3a3a3"} />
           <Text
             style={[
               styles.filterChipText,
@@ -189,7 +189,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
           style={[styles.filterChip, selectedType === "audio" && styles.filterChipActive]}
           onPress={() => setSelectedType("audio")}
         >
-          <Music size={12} color={selectedType === "audio" ? "#ffffff" : "#94a3b8"} />
+          <Music size={12} color={selectedType === "audio" ? "#000000" : "#a3a3a3"} />
           <Text
             style={[
               styles.filterChipText,
@@ -208,7 +208,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
             style={[styles.ribbonTag, groupBy !== "none" && styles.ribbonTagActive]}
             onPress={() => setShowOptionsModal(true)}
           >
-            <Layers size={12} color={groupBy !== "none" ? "#a5b4fc" : "#64748b"} />
+            <Layers size={12} color={groupBy !== "none" ? "#fafafa" : "#737373"} />
             <Text style={[styles.ribbonTagText, groupBy !== "none" && styles.ribbonTagTextActive]}>
               Group: {groupBy === "none" ? "None" : groupBy}
             </Text>
@@ -218,7 +218,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
             style={styles.ribbonTag}
             onPress={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
           >
-            <ArrowUpDown size={12} color="#64748b" />
+            <ArrowUpDown size={12} color="#737373" />
             <Text style={styles.ribbonTagText}>
               Sort: {sortBy} ({sortOrder.toUpperCase()})
             </Text>
@@ -238,7 +238,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter & Group Options</Text>
               <TouchableOpacity onPress={() => setShowOptionsModal(false)} style={styles.modalCloseBtn}>
-                <X size={20} color="#94a3b8" />
+                <X size={20} color="#a3a3a3" />
               </TouchableOpacity>
             </View>
 
@@ -256,12 +256,12 @@ export const MediaControlsHeader: React.FC<Props> = ({
                   >
                     <IconComponent
                       size={18}
-                      color={isSelected ? "#818cf8" : "#94a3b8"}
+                      color={isSelected ? "#fafafa" : "#a3a3a3"}
                     />
                     <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                       {opt.label}
                     </Text>
-                    {isSelected && <Check size={16} color="#818cf8" style={{ marginLeft: "auto" }} />}
+                    {isSelected && <Check size={16} color="#fafafa" style={{ marginLeft: "auto" }} />}
                   </TouchableOpacity>
                 );
               })}
@@ -291,7 +291,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
               style={styles.orderToggleBtn}
               onPress={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
             >
-              <ArrowUpDown size={16} color="#818cf8" />
+              <ArrowUpDown size={16} color="#fafafa" />
               <Text style={styles.orderToggleText}>
                 Order: {sortOrder === "asc" ? "Ascending (A-Z, Oldest)" : "Descending (Z-A, Newest)"}
               </Text>
@@ -312,7 +312,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   topHeader: {
     flexDirection: "row",
@@ -326,11 +326,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   headerSub: {
     fontSize: 12,
-    color: "#64748b",
+    color: "#737373",
     marginTop: 2,
   },
   topActions: {
@@ -338,29 +338,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconBtn: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     marginHorizontal: 16,
     marginVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: "#f8fafc",
+    color: "#fafafa",
     fontSize: 13,
     paddingVertical: 10,
   },
@@ -374,24 +374,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   filterChipActive: {
-    backgroundColor: "#4f46e5",
-    borderColor: "#6366f1",
+    backgroundColor: "#ffffff",
+    borderColor: "#ffffff",
   },
   filterChipText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 12,
     fontWeight: "600",
   },
   filterChipTextActive: {
-    color: "#ffffff",
+    color: "#000000",
   },
   infoRibbon: {
     paddingHorizontal: 16,
@@ -410,20 +410,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   ribbonTagActive: {
     backgroundColor: "rgba(79, 70, 229, 0.2)",
-    borderColor: "#6366f1",
+    borderColor: "#ffffff",
   },
   ribbonTagText: {
-    color: "#64748b",
+    color: "#737373",
     fontSize: 11,
     fontWeight: "500",
     textTransform: "capitalize",
   },
   ribbonTagTextActive: {
-    color: "#a5b4fc",
+    color: "#fafafa",
     fontWeight: "700",
   },
 
@@ -434,12 +434,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   modalHeader: {
     flexDirection: "row",
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   modalCloseBtn: {
     padding: 4,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 12,
     marginBottom: 8,
     textTransform: "uppercase",
@@ -472,23 +472,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   optionCardSelected: {
-    borderColor: "#6366f1",
+    borderColor: "#ffffff",
     backgroundColor: "rgba(79, 70, 229, 0.15)",
   },
   optionText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 14,
     fontWeight: "600",
   },
   optionTextSelected: {
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   optionsRow: {
     flexDirection: "row",
@@ -499,48 +499,48 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 10,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   sortChipSelected: {
-    backgroundColor: "#4f46e5",
-    borderColor: "#6366f1",
+    backgroundColor: "#ffffff",
+    borderColor: "#ffffff",
   },
   sortChipText: {
-    color: "#94a3b8",
+    color: "#a3a3a3",
     fontSize: 12,
     fontWeight: "600",
   },
   sortChipTextSelected: {
-    color: "#ffffff",
+    color: "#000000",
   },
   orderToggleBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
     marginBottom: 16,
   },
   orderToggleText: {
-    color: "#cbd5e1",
+    color: "#d4d4d4",
     fontSize: 13,
     fontWeight: "600",
   },
   applyBtn: {
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#ffffff",
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
   },
   applyBtnText: {
-    color: "#ffffff",
+    color: "#000000",
     fontSize: 15,
     fontWeight: "700",
   },

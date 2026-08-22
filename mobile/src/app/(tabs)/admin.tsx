@@ -154,7 +154,7 @@ export default function AdminScreen() {
             style={[styles.tabBtn, activeTab === "users" && styles.tabBtnActive]}
             onPress={() => setActiveTab("users")}
           >
-            <Users size={14} color={activeTab === "users" ? "#ffffff" : "#94a3b8"} />
+            <Users size={14} color={activeTab === "users" ? "#000000" : "#a3a3a3"} />
             <Text
               style={[
                 styles.tabBtnText,
@@ -169,7 +169,7 @@ export default function AdminScreen() {
             style={[styles.tabBtn, activeTab === "logs" && styles.tabBtnActive]}
             onPress={() => setActiveTab("logs")}
           >
-            <FileText size={14} color={activeTab === "logs" ? "#ffffff" : "#94a3b8"} />
+            <FileText size={14} color={activeTab === "logs" ? "#000000" : "#a3a3a3"} />
             <Text
               style={[
                 styles.tabBtnText,
@@ -184,7 +184,7 @@ export default function AdminScreen() {
 
       {loading ? (
         <View style={styles.loadingArea}>
-          <ActivityIndicator size="large" color="#818cf8" />
+          <ActivityIndicator size="large" color="#fafafa" />
         </View>
       ) : activeTab === "users" ? (
         /* Users Tab */
@@ -213,7 +213,7 @@ export default function AdminScreen() {
                   style={styles.actionPill}
                   onPress={() => handleToggleRole(item)}
                 >
-                  <Shield size={12} color="#818cf8" />
+                  <Shield size={12} color="#fafafa" />
                   <Text style={styles.actionPillText}>
                     {item.role === "admin" ? "Demote to User" : "Promote to Admin"}
                   </Text>
@@ -310,7 +310,7 @@ export default function AdminScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Log Record Details</Text>
               <TouchableOpacity onPress={() => setSelectedLog(null)}>
-                <X size={20} color="#94a3b8" />
+                <X size={20} color="#a3a3a3" />
               </TouchableOpacity>
             </View>
 
@@ -352,7 +352,7 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   header: {
     paddingHorizontal: 16,
@@ -362,16 +362,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#f8fafc",
+    color: "#fafafa",
     marginBottom: 12,
   },
   tabToggle: {
     flexDirection: "row",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     padding: 4,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   tabBtn: {
     flex: 1,
@@ -383,15 +383,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   tabBtnActive: {
-    backgroundColor: "#4f46e5",
+    backgroundColor: "#ffffff",
   },
   tabBtnText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#94a3b8",
+    color: "#a3a3a3",
   },
   tabBtnTextActive: {
-    color: "#ffffff",
+    color: "#000000",
   },
   loadingArea: {
     flex: 1,
@@ -403,12 +403,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   userCard: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   userInfoRow: {
     flexDirection: "row",
@@ -421,11 +421,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   userEmail: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: "#a3a3a3",
     marginTop: 2,
   },
   roleBadge: {
@@ -449,13 +449,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   actionPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   actionPillText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#cbd5e1",
+    color: "#d4d4d4",
   },
   textSuccess: {
     color: "#4ade80",
@@ -476,12 +476,12 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   logCard: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#262626",
   },
   logTopRow: {
     flexDirection: "row",
@@ -519,12 +519,12 @@ const styles = StyleSheet.create({
   logType: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#94a3b8",
+    color: "#a3a3a3",
     flex: 1,
   },
   logTime: {
     fontSize: 10,
-    color: "#64748b",
+    color: "#737373",
   },
   logMessage: {
     fontSize: 13,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   },
   logSubText: {
     fontSize: 11,
-    color: "#64748b",
+    color: "#737373",
     marginTop: 4,
   },
   modalOverlay: {
@@ -543,12 +543,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     borderRadius: 14,
     padding: 20,
     maxHeight: "80%",
     borderWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#171717",
   },
   modalHeader: {
     flexDirection: "row",
@@ -559,25 +559,25 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#f8fafc",
+    color: "#fafafa",
   },
   modalScroll: {},
   logLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#818cf8",
+    color: "#fafafa",
     marginTop: 10,
   },
   logVal: {
     fontSize: 13,
-    color: "#e2e8f0",
+    color: "#e5e5e5",
     marginTop: 2,
   },
   jsonBox: {
     fontSize: 11,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     color: "#38bdf8",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#171717",
     padding: 10,
     borderRadius: 8,
     marginTop: 4,
