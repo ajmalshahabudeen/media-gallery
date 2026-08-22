@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { Play, Image as ImageIcon } from "lucide-react-native";
 import { MediaFile, useMobileStore } from "../store/useMobileStore";
@@ -18,6 +20,9 @@ interface Props {
   onSelectFile: (file: MediaFile) => void;
   refreshing?: boolean;
   onRefresh?: () => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  emptyTitle?: string;
+  emptySubtitle?: string;
 }
 
 const COLS = 3;
@@ -68,6 +73,9 @@ export function InstagramFeed({
   onSelectFile,
   refreshing = false,
   onRefresh,
+  onScroll,
+  emptyTitle = "No photos or videos",
+  emptySubtitle = "Your library will show here as a tight square grid, like an Instagram profile.",
 }: Props) {
   const { selectedType, searchQuery, sortBy, sortOrder } = useMobileStore();
 
@@ -99,6 +107,8 @@ export function InstagramFeed({
       numColumns={COLS}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={onScroll}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -115,10 +125,8 @@ export function InstagramFeed({
       ListEmptyComponent={
         <View style={styles.empty}>
           <ImageIcon size={48} color="#334155" />
-          <Text style={styles.emptyTitle}>No photos or videos</Text>
-          <Text style={styles.emptySub}>
-            Your library will show here as a tight square grid, like an Instagram profile.
-          </Text>
+          <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+          <Text style={styles.emptySub}>{emptySubtitle}</Text>
         </View>
       }
     />

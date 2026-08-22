@@ -720,6 +720,12 @@ Status: Completed.
 4. Tab bar: icons only (no labels); selected tab uses a circular white orb (borderRadius 20), not a square.
 Status: Completed.
 
+[2026-08-22] Request 114:
+1. Gallery + Favorites: hide header and floating tab bar on scroll down; show again on scroll up (`useScrollChrome` + Reanimated).
+2. Favorites now shares `MediaLibraryScreen` with Gallery (same header, Instagram square grid toggle, upload, chrome hide).
+3. Global tab swipe: horizontal swipe switches tabs (`SwipeableTabScreen` on `screenLayout`) with a full-width slide interpolator.
+Status: Completed.
+
 
 
 

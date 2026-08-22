@@ -6,6 +6,8 @@ import {
   FlatList,
   SectionList,
   RefreshControl,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { Image as ImageIcon } from "lucide-react-native";
 import { MediaFile, useMobileStore } from "../store/useMobileStore";
@@ -17,6 +19,7 @@ interface Props {
   onSelectFile: (file: MediaFile) => void;
   refreshing?: boolean;
   onRefresh?: () => void;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   emptyTitle?: string;
   emptySubtitle?: string;
   emptyIcon?: React.ReactNode;
@@ -27,6 +30,7 @@ export const MediaListRenderer: React.FC<Props> = ({
   onSelectFile,
   refreshing = false,
   onRefresh,
+  onScroll,
   emptyTitle = "No Media Files Found",
   emptySubtitle = "Make sure your server folders are configured in Settings.",
   emptyIcon,
@@ -84,6 +88,8 @@ export const MediaListRenderer: React.FC<Props> = ({
         keyExtractor={(item) => item.path}
         numColumns={viewMode === "grid" ? 2 : 1}
         contentContainerStyle={styles.listContent}
+        scrollEventThrottle={16}
+        onScroll={onScroll}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -123,6 +129,8 @@ export const MediaListRenderer: React.FC<Props> = ({
       sections={sections}
       keyExtractor={(item) => item.path}
       contentContainerStyle={styles.listContent}
+      scrollEventThrottle={16}
+      onScroll={onScroll}
       refreshControl={
         onRefresh ? (
           <RefreshControl

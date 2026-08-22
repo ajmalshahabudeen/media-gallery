@@ -11,6 +11,8 @@ import {
 } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 import { FLOATING_TAB_BAR_STYLE } from "../../components/tab-bar-style";
+import { SwipeableTabScreen } from "../../components/SwipeableTabScreen";
+import { slideTabInterpolator, TAB_TRANSITION_SPEC } from "../../components/tab-slide";
 
 function TabIcon({
   focused,
@@ -42,13 +44,14 @@ export default function TabsLayout() {
   return (
     <Tabs
       detachInactiveScreens={false}
+      screenLayout={({ children }) => <SwipeableTabScreen>{children}</SwipeableTabScreen>}
       screenOptions={{
         headerShown: false,
         freezeOnBlur: false,
         tabBarShowLabel: false,
-        // Floating bar already clears the home indicator — extra inset
-        // pushes icons into the top half of the pill.
-        safeAreaInsets: { top: 0, bottom: 0 },
+        animation: "shift",
+        sceneStyleInterpolator: slideTabInterpolator,
+        transitionSpec: TAB_TRANSITION_SPEC,
         tabBarBackground: () => (
           <View
             pointerEvents="none"
