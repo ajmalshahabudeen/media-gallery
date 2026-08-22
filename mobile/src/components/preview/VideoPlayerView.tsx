@@ -24,9 +24,20 @@ interface Props {
   posterUri?: string;
   onOpenExternal?: () => void;
   title?: string;
+  onPrevVideo?: () => void;
+  onNextVideo?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }
 
-export const VideoPlayerView: React.FC<Props> = ({ uri, title }) => {
+export const VideoPlayerView: React.FC<Props> = ({
+  uri,
+  title,
+  onPrevVideo,
+  onNextVideo,
+  hasPrev,
+  hasNext,
+}) => {
   const router = useRouter();
 
   const [isPlaying, setIsPlaying] = useState(true);
@@ -415,6 +426,10 @@ export const VideoPlayerView: React.FC<Props> = ({ uri, title }) => {
         onMute={handleMuteToggle}
         onFullscreen={handleFullscreen}
         onCycleSpeed={handleCycleSpeed}
+        onPrevVideo={onPrevVideo}
+        onNextVideo={onNextVideo}
+        hasPrev={hasPrev}
+        hasNext={hasNext}
         onSeekStart={handleSeekStart}
         onSeekRatio={handleSeekRatio}
         onSeekEnd={handleSeekComplete}

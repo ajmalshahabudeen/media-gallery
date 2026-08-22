@@ -117,6 +117,17 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     return [...after, ...(after.length < UP_NEXT_LIMIT ? before : [])].slice(0, UP_NEXT_LIMIT);
   }, [active, playlist, files, favorites]);
 
+  const neighbors = useMemo(() => {
+    if (!active || active.type !== "video") return { prev: null as MediaFile | null, next: null as MediaFile | null };
+    const source = pickPlaylist(active, playlist, files, favorites).filter((f) => f.type === "video");
+    const idx = source.findIndex((f) => f.path === active.path);
+    if (idx < 0) return { prev: null as MediaFile | null, next: source[0] ?? null };
+    return {
+      prev: idx > 0 ? source[idx - 1] : null,
+      next: idx < source.length - 1 ? source[idx + 1] : null,
+    };
+  }, [active, playlist, files, favorites]);
+
   useEffect(() => {
     if (!active || active.type !== "video") {
       setVisiblePaths({});
@@ -207,6 +218,14 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
               uri={mediaUrl}
               onOpenExternal={handleOpenExternal}
               title={active.name}
+              hasPrev={!!neighbors.prev}
+              hasNext={!!neighbors.next}
+              onPrevVideo={() => {
+                if (neighbors.prev) handleSelectNext(neighbors.prev);
+              }}
+              onNextVideo={() => {
+                if (neighbors.next) handleSelectNext(neighbors.next);
+              }}
             />
           )}
           {active.type === "audio" && (

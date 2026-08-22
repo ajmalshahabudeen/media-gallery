@@ -27,6 +27,8 @@ import {
   Volume2,
   VolumeX,
   ChevronLeft,
+  SkipBack,
+  SkipForward,
 } from "lucide-react-native";
 
 export const YT_RED = "#FF0000";
@@ -139,6 +141,10 @@ interface OverlayProps {
   onFullscreen?: () => void;
   onBack?: () => void;
   onCycleSpeed?: () => void;
+  onPrevVideo?: () => void;
+  onNextVideo?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
   onSeekStart: () => void;
   onSeekRatio: (ratio: number) => void;
   onSeekEnd: (ratio: number) => void;
@@ -164,6 +170,10 @@ export function YoutubePlayerOverlay({
   onFullscreen,
   onBack,
   onCycleSpeed,
+  onPrevVideo,
+  onNextVideo,
+  hasPrev = false,
+  hasNext = false,
   onSeekStart,
   onSeekRatio,
   onSeekEnd,
@@ -238,8 +248,7 @@ export function YoutubePlayerOverlay({
         pointerEvents={visible ? "box-none" : "none"}
         style={[styles.chrome, chromeStyle]}
       >
-        <View pointerEvents="none" style={styles.topFade} />
-        <View pointerEvents="none" style={styles.bottomFade} />
+        <View pointerEvents="none" style={styles.dim} />
 
         {fullscreen ? (
           <View style={styles.topBar} pointerEvents="box-none">
@@ -258,8 +267,18 @@ export function YoutubePlayerOverlay({
         )}
 
         <View style={styles.center} pointerEvents="box-none">
+          {onPrevVideo ? (
+            <Pressable
+              onPress={onPrevVideo}
+              disabled={!hasPrev}
+              style={[styles.trackHit, !hasPrev && styles.trackDisabled]}
+            >
+              <SkipBack size={fullscreen ? 26 : 22} color="#fff" fill="#fff" />
+            </Pressable>
+          ) : null}
+
           <Pressable onPress={() => onSkip(-10)} style={styles.skipHit}>
-            <RotateCcw size={fullscreen ? 28 : 24} color="#fff" />
+            <RotateCcw size={fullscreen ? 26 : 22} color="#fff" />
             <Text style={styles.skipCaption}>10</Text>
           </Pressable>
 
@@ -279,9 +298,19 @@ export function YoutubePlayerOverlay({
           </Pressable>
 
           <Pressable onPress={() => onSkip(10)} style={styles.skipHit}>
-            <RotateCw size={fullscreen ? 28 : 24} color="#fff" />
+            <RotateCw size={fullscreen ? 26 : 22} color="#fff" />
             <Text style={styles.skipCaption}>10</Text>
           </Pressable>
+
+          {onNextVideo ? (
+            <Pressable
+              onPress={onNextVideo}
+              disabled={!hasNext}
+              style={[styles.trackHit, !hasNext && styles.trackDisabled]}
+            >
+              <SkipForward size={fullscreen ? 26 : 22} color="#fff" fill="#fff" />
+            </Pressable>
+          ) : null}
         </View>
 
         <View style={styles.bottom} pointerEvents="box-none">
@@ -371,20 +400,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: "space-between",
   },
-  topFade: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 88,
-    backgroundColor: "rgba(0,0,0,0.38)",
-  },
-  bottomFade: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 96,
+  dim: {
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.48)",
   },
   topPad: {
@@ -408,8 +425,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 34,
+    gap: 16,
     zIndex: 2,
+  },
+  trackHit: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trackDisabled: {
+    opacity: 0.28,
   },
   skipHit: {
     width: 58,
