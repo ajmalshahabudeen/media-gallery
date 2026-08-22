@@ -735,6 +735,10 @@ Status: Completed.
 1. YouTube player polish: shared `YoutubePlayerOverlay` with Reanimated chrome fade (never unmount), expanding red seek bar + thumb, skip-10 burst, play-button spring, spinning loader, 1x/1.25x/1.5x/2x speed, 2.8s auto-hide, mini progress when chrome hidden. Inlined + fullscreen both use it.
 Status: Completed.
 
+[2026-08-22] Request 117:
+1. Preview watch pane: compact size/folder/date chips (no remaining-height stretch). YouTube-style Up next list (max 20 remaining videos). Thumbnails load only when the row is on screen (viewability), same idea as gallery lists.
+Status: Completed.
+
 
 
 

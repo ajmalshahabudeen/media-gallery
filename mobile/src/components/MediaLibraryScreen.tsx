@@ -119,7 +119,11 @@ export function MediaLibraryScreen({
         )}
       </Animated.View>
 
-      <FilePreviewModal file={selectedFile} onClose={() => setSelectedFile(null)} />
+      <FilePreviewModal
+        file={selectedFile}
+        onClose={() => setSelectedFile(null)}
+        playlist={files}
+      />
       <MediaUploadSheet visible={uploadOpen} onClose={() => setUploadOpen(false)} />
     </SafeAreaView>
   );

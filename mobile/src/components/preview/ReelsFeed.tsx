@@ -444,7 +444,11 @@ export function ReelsFeed() {
         />
       ) : null}
 
-      <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />
+      <FilePreviewModal
+        file={previewFile}
+        onClose={() => setPreviewFile(null)}
+        playlist={videos}
+      />
     </View>
   );
 }
