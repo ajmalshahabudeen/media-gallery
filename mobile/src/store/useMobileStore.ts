@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   apiFetch,
   getServerUrl,
@@ -6,6 +7,10 @@ import {
   setSessionToken,
   getSessionToken,
 } from "../lib/api";
+
+export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
+
+export type GalleryLayout = "grid" | "feed";
 
 export interface User {
   id: string;
@@ -63,6 +68,8 @@ interface MobileState {
   isScanning: boolean;
   scannedAt: string | null;
   indexingProgress: IndexingProgressState;
+  galleryLayout: GalleryLayout;
+  tabBarHidden: boolean;
 
   setServerUrl: (url: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
@@ -72,6 +79,8 @@ interface MobileState {
   setSortOrder: (order: "asc" | "desc") => void;
   setGroupBy: (mode: "none" | "folder" | "type" | "date") => void;
   setActiveFolder: (folder: string | null) => void;
+  setGalleryLayout: (layout: GalleryLayout) => Promise<void>;
+  setTabBarHidden: (hidden: boolean) => void;
 
   initApp: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
@@ -84,6 +93,16 @@ interface MobileState {
   toggleFavorite: (file: MediaFile) => Promise<boolean>;
   addFolder: (path: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   removeFolder: (id: string) => Promise<boolean>;
+  fetchSubfolders: (parentPath: string) => Promise<{ name: string; path: string; isRoot?: boolean }[]>;
+  createSubfolder: (
+    parentPath: string,
+    name: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  uploadMedia: (
+    libraryPath: string,
+    destPath: string,
+    files: { uri: string; name: string; type: string }[]
+  ) => Promise<{ success: boolean; uploaded: number; failed: number; error?: string }>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
   logMediaView: (filePath: string) => Promise<void>;
@@ -119,6 +138,8 @@ export const useMobileStore = create<MobileState>((set, get) => ({
     latestFile: "",
     startTime: null,
   },
+  galleryLayout: "grid",
+  tabBarHidden: false,
 
   setServerUrl: async (url: string) => {
     await saveServerUrl(url);
@@ -132,12 +153,30 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   setSortOrder: (order) => set({ sortOrder: order }),
   setGroupBy: (mode) => set({ groupBy: mode }),
   setActiveFolder: (folder) => set({ activeFolder: folder }),
+  setTabBarHidden: (hidden) => set({ tabBarHidden: hidden }),
+  setGalleryLayout: async (layout) => {
+    set({ galleryLayout: layout });
+    try {
+      await AsyncStorage.setItem(GALLERY_LAYOUT_KEY, layout);
+    } catch {
+      // ignore persist errors
+    }
+  },
 
   initApp: async () => {
     try {
       const url = await getServerUrl();
       const token = await getSessionToken();
-      set({ serverUrl: url, sessionToken: token });
+      let galleryLayout: GalleryLayout = "grid";
+      try {
+        const savedLayout = await AsyncStorage.getItem(GALLERY_LAYOUT_KEY);
+        if (savedLayout === "feed" || savedLayout === "grid") {
+          galleryLayout = savedLayout;
+        }
+      } catch {
+        // ignore
+      }
+      set({ serverUrl: url, sessionToken: token, galleryLayout });
       await get().checkAuth();
     } catch {
       // Never leave the UI stuck on the splash/loading gate.
@@ -337,6 +376,81 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       return false;
     } catch {
       return false;
+    }
+  },
+
+  fetchSubfolders: async (parentPath) => {
+    try {
+      const res = await apiFetch(
+        `/api/media/subfolders?path=${encodeURIComponent(parentPath)}`
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.folders || [];
+    } catch {
+      return [];
+    }
+  },
+
+  createSubfolder: async (parentPath, name) => {
+    try {
+      const res = await apiFetch("/api/media/mkdir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentPath, name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.folder?.path) {
+        return { success: true, path: data.folder.path as string };
+      }
+      return { success: false, error: data?.error || "Failed to create folder" };
+    } catch {
+      return { success: false, error: "Network error creating folder" };
+    }
+  },
+
+  uploadMedia: async (libraryPath, destPath, files) => {
+    try {
+      const form = new FormData();
+      form.append("libraryPath", libraryPath);
+      form.append("destPath", destPath);
+      for (const file of files) {
+        form.append("files", {
+          uri: file.uri,
+          name: file.name,
+          type: file.type,
+        } as unknown as Blob);
+      }
+      const res = await apiFetch("/api/media/upload", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          success: false,
+          uploaded: 0,
+          failed: files.length,
+          error: data?.error || `Upload failed (HTTP ${res.status})`,
+        };
+      }
+      const uploadedFiles = (data.uploaded || []) as MediaFile[];
+      if (uploadedFiles.length > 0) {
+        set((state) => ({
+          files: [...uploadedFiles, ...state.files],
+        }));
+      }
+      return {
+        success: uploadedFiles.length > 0,
+        uploaded: uploadedFiles.length,
+        failed: Array.isArray(data.errors) ? data.errors.length : 0,
+        error:
+          uploadedFiles.length === 0
+            ? data?.error || data?.errors?.[0]?.error || "No files were uploaded"
+            : undefined,
+      };
+    } catch {
+      return { success: false, uploaded: 0, failed: files.length, error: "Network error uploading" };
     }
   },
 

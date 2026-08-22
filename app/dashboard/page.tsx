@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMediaStore } from "@/store/useMediaStore";
 import { MediaGalleryGrid } from "@/components/preview/MediaGalleryGrid";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
+import { MediaUploadPanel } from "@/components/MediaUploadPanel";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Settings } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RefreshCw, Settings, Upload } from "lucide-react";
 
 export default function DashboardGalleryPage() {
-  const { files, isScanning, scanMedia, fetchFolders, fetchFavorites } = useMediaStore();
+  const { files, folders, isScanning, scanMedia, fetchFolders, fetchFavorites } = useMediaStore();
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
     fetchFolders();
@@ -39,6 +48,18 @@ export default function DashboardGalleryPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {folders.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUploadOpen(true)}
+              className="gap-2"
+            >
+              <Upload className="size-4" />
+              <span>Upload</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -64,6 +85,18 @@ export default function DashboardGalleryPage() {
 
       {/* Media Gallery Grid with GroupBy, SortBy & ViewModes */}
       <MediaGalleryGrid files={files} showFolders={true} />
+
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload photos & videos</DialogTitle>
+            <DialogDescription className="text-xs">
+              Choose or create a folder inside your media library, then select multiple photos or videos.
+            </DialogDescription>
+          </DialogHeader>
+          <MediaUploadPanel variant="plain" />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

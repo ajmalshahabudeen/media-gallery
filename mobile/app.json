@@ -90,7 +90,13 @@
           "style": "light"
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Server Gallery to pick photos and videos to upload to your media library."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -19,10 +19,14 @@ import {
   User as UserIcon,
   Shield,
   Folder,
+  Upload,
+  LayoutGrid,
+  Newspaper,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useMobileStore } from "../../store/useMobileStore";
 import { ServerConfigModal } from "../../components/ServerConfigModal";
+import { MediaUploadSheet } from "../../components/MediaUploadSheet";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -35,11 +39,14 @@ export default function SettingsScreen() {
     scanMedia,
     isScanning,
     logout,
+    galleryLayout,
+    setGalleryLayout,
   } = useMobileStore();
 
   const [folderInput, setFolderInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
   const handleAddFolder = async () => {
     if (!folderInput.trim()) {
@@ -134,6 +141,47 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Home layout — mobile only */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Newspaper size={18} color="#818cf8" />
+            <Text style={styles.cardTitle}>Home layout</Text>
+          </View>
+          <Text style={styles.cardSub}>
+            Switch the gallery screen between the classic grid and an Instagram-style feed.
+          </Text>
+          <View style={styles.layoutRow}>
+            <TouchableOpacity
+              style={[styles.layoutChoice, galleryLayout === "grid" && styles.layoutChoiceActive]}
+              onPress={() => setGalleryLayout("grid")}
+            >
+              <LayoutGrid size={16} color={galleryLayout === "grid" ? "#ffffff" : "#94a3b8"} />
+              <Text
+                style={[
+                  styles.layoutChoiceText,
+                  galleryLayout === "grid" && styles.layoutChoiceTextActive,
+                ]}
+              >
+                Gallery
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.layoutChoice, galleryLayout === "feed" && styles.layoutChoiceActive]}
+              onPress={() => setGalleryLayout("feed")}
+            >
+              <Newspaper size={16} color={galleryLayout === "feed" ? "#ffffff" : "#94a3b8"} />
+              <Text
+                style={[
+                  styles.layoutChoiceText,
+                  galleryLayout === "feed" && styles.layoutChoiceTextActive,
+                ]}
+              >
+                Instagram feed
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Media Folders Section */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -190,6 +238,21 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {folders.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Upload size={18} color="#818cf8" />
+              <Text style={styles.cardTitle}>Upload photos & videos</Text>
+            </View>
+            <Text style={styles.cardSub}>
+              Choose or create a folder inside your media library, then pick multiple photos or videos.
+            </Text>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowUpload(true)}>
+              <Text style={styles.actionBtnText}>Choose folder & upload</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Scan Actions */}
         <TouchableOpacity
           style={styles.scanBtn}
@@ -217,6 +280,7 @@ export default function SettingsScreen() {
         visible={showServerModal}
         onClose={() => setShowServerModal(false)}
       />
+      <MediaUploadSheet visible={showUpload} onClose={() => setShowUpload(false)} />
     </SafeAreaView>
   );
 }
@@ -323,6 +387,34 @@ const styles = StyleSheet.create({
     color: "#f8fafc",
     fontSize: 13,
     fontWeight: "600",
+  },
+  layoutRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  layoutChoice: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#0f172a",
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  layoutChoiceActive: {
+    backgroundColor: "#4f46e5",
+    borderColor: "#6366f1",
+  },
+  layoutChoiceText: {
+    color: "#94a3b8",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  layoutChoiceTextActive: {
+    color: "#ffffff",
   },
   addFolderRow: {
     flexDirection: "row",

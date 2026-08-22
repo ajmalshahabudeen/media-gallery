@@ -705,6 +705,14 @@ Status: Completed.
 3. Restarted Docker containers (`docker compose up -d`).
 Status: Completed.
 
+[2026-08-22] Request 112:
+1. Added media upload into an existing library folder (web + mobile). Users pick a registered library, choose or create a subfolder, then upload multiple photos/videos only. Hidden until at least one media folder exists.
+2. New APIs: `GET /api/media/subfolders`, `POST /api/media/mkdir`, `POST /api/media/upload` (path-traversal checks, photo/video-only, unique filenames, Redis scan cache patch).
+3. Web: `MediaUploadPanel` on Settings + Dashboard Upload dialog. Mobile: `MediaUploadSheet` with `expo-image-picker` multi-select.
+4. Mobile-only Instagram-style home feed (`InstagramFeed`) toggleable from Settings (persisted `galleryLayout`).
+5. Redesigned mobile floating tab bar as a glass dock with white active orb + labels (`floating-tab-bar.tsx` via `app-tabs.tsx`). Reels chrome hide now uses `tabBarHidden` store flag.
+Status: Completed.
+
 
 
 

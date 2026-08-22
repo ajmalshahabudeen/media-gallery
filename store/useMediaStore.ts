@@ -75,6 +75,16 @@ interface MediaState {
   toggleFavorite: (file: MediaFile) => Promise<boolean>;
   addFolder: (path: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   removeFolder: (id: string) => Promise<boolean>;
+  fetchSubfolders: (parentPath: string) => Promise<{ name: string; path: string; isRoot?: boolean }[]>;
+  createSubfolder: (
+    parentPath: string,
+    name: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  uploadMedia: (
+    libraryPath: string,
+    destPath: string,
+    files: File[]
+  ) => Promise<{ success: boolean; uploaded: number; failed: number; error?: string }>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
   resetState: () => void;
@@ -208,6 +218,77 @@ export const useMediaStore = create<MediaState>()(
           return false;
         } catch {
           return false;
+        }
+      },
+
+      fetchSubfolders: async (parentPath) => {
+        try {
+          const res = await fetch(
+            `/api/media/subfolders?path=${encodeURIComponent(parentPath)}`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          return data.folders || [];
+        } catch {
+          return [];
+        }
+      },
+
+      createSubfolder: async (parentPath, name) => {
+        try {
+          const res = await fetch("/api/media/mkdir", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parentPath, name }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data?.folder?.path) {
+            return { success: true, path: data.folder.path as string };
+          }
+          return { success: false, error: data?.error || "Failed to create folder" };
+        } catch {
+          return { success: false, error: "Network error creating folder" };
+        }
+      },
+
+      uploadMedia: async (libraryPath, destPath, files) => {
+        try {
+          const form = new FormData();
+          form.append("libraryPath", libraryPath);
+          form.append("destPath", destPath);
+          for (const file of files) {
+            form.append("files", file);
+          }
+          const res = await fetch("/api/media/upload", {
+            method: "POST",
+            body: form,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            return {
+              success: false,
+              uploaded: 0,
+              failed: files.length,
+              error: data?.error || `Upload failed (HTTP ${res.status})`,
+            };
+          }
+          const uploadedFiles = (data.uploaded || []) as MediaFile[];
+          if (uploadedFiles.length > 0) {
+            set((state) => ({
+              files: [...uploadedFiles, ...state.files],
+            }));
+          }
+          return {
+            success: uploadedFiles.length > 0,
+            uploaded: uploadedFiles.length,
+            failed: Array.isArray(data.errors) ? data.errors.length : 0,
+            error:
+              uploadedFiles.length === 0
+                ? data?.error || data?.errors?.[0]?.error || "No files were uploaded"
+                : undefined,
+          };
+        } catch {
+          return { success: false, uploaded: 0, failed: files.length, error: "Network error uploading" };
         }
       },
 

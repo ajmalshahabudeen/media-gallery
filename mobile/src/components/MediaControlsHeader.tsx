@@ -24,6 +24,7 @@ import {
   Calendar,
   Layers,
   Check,
+  Upload,
 } from "lucide-react-native";
 import { useMobileStore } from "../store/useMobileStore";
 
@@ -32,6 +33,7 @@ interface Props {
   itemCount: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  onUpload?: () => void;
 }
 
 export const MediaControlsHeader: React.FC<Props> = ({
@@ -39,6 +41,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
   itemCount,
   onRefresh,
   isRefreshing = false,
+  onUpload,
 }) => {
   const {
     selectedType,
@@ -80,6 +83,12 @@ export const MediaControlsHeader: React.FC<Props> = ({
         </View>
 
         <View style={styles.topActions}>
+          {onUpload && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onUpload}>
+              <Upload size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          )}
+
           {onRefresh && (
             <TouchableOpacity
               style={styles.iconBtn}

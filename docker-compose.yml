@@ -41,9 +41,9 @@ services:
           memory: 1024M
     volumes:
       - db_data:/app/prisma_db
-      - ${HOST_MEDIA_PATH:-./}:/host_media:ro
-      - C:\:/host_drives/c:ro
-      - F:\:/host_drives/f:ro
+      - ${HOST_MEDIA_PATH:-./}:/host_media
+      - C:\:/host_drives/c
+      - F:\:/host_drives/f
     depends_on:
       redis:
         condition: service_healthy

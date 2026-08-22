@@ -5,40 +5,48 @@ import { useMobileStore, MediaFile } from "../../store/useMobileStore";
 import { IndexingProgressBanner } from "../../components/IndexingProgressBanner";
 import { MediaControlsHeader } from "../../components/MediaControlsHeader";
 import { MediaListRenderer } from "../../components/MediaListRenderer";
+import { InstagramFeed } from "../../components/InstagramFeed";
 import { FilePreviewModal } from "../../components/preview/FilePreviewModal";
+import { MediaUploadSheet } from "../../components/MediaUploadSheet";
 
 export default function GalleryScreen() {
-  const { files, scanMedia, isScanning } = useMobileStore();
+  const { files, folders, scanMedia, isScanning, galleryLayout } = useMobileStore();
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const canUpload = folders.length > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
 
-      {/* Top Header & Search/Filter/Group Controls */}
       <MediaControlsHeader
-        title="Media Gallery"
+        title={galleryLayout === "feed" ? "Feed" : "Media Gallery"}
         itemCount={files.length}
         onRefresh={() => scanMedia(true)}
         isRefreshing={isScanning}
+        onUpload={canUpload ? () => setUploadOpen(true) : undefined}
       />
 
-      {/* Real-time Indexing Banner */}
       <IndexingProgressBanner />
 
-      {/* Sectioned or Flat Media Grid/List */}
-      <MediaListRenderer
-        files={files}
-        onSelectFile={setSelectedFile}
-        refreshing={isScanning}
-        onRefresh={() => scanMedia(true)}
-      />
+      {galleryLayout === "feed" ? (
+        <InstagramFeed
+          files={files}
+          onSelectFile={setSelectedFile}
+          refreshing={isScanning}
+          onRefresh={() => scanMedia(true)}
+        />
+      ) : (
+        <MediaListRenderer
+          files={files}
+          onSelectFile={setSelectedFile}
+          refreshing={isScanning}
+          onRefresh={() => scanMedia(true)}
+        />
+      )}
 
-      {/* Full-Screen Media Player & Viewer Modal */}
-      <FilePreviewModal
-        file={selectedFile}
-        onClose={() => setSelectedFile(null)}
-      />
+      <FilePreviewModal file={selectedFile} onClose={() => setSelectedFile(null)} />
+      <MediaUploadSheet visible={uploadOpen} onClose={() => setUploadOpen(false)} />
     </SafeAreaView>
   );
 }

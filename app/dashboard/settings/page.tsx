@@ -33,6 +33,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
+import { MediaUploadPanel } from "@/components/MediaUploadPanel";
 
 interface AddFolderFormData {
   folderPath: string;
@@ -269,6 +270,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Upload into an existing library folder */}
+      {folders.length > 0 && <MediaUploadPanel />}
 
       {/* Redis Cache Settings */}
       <Card>

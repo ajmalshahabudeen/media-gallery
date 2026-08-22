@@ -11,7 +11,7 @@ import {
   StatusBar,
   Platform,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { Clapperboard, RefreshCw } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiFetch } from "../../lib/api";
@@ -31,14 +31,12 @@ interface ReelsResponse {
 const WINDOW = Dimensions.get("window");
 
 export function ReelsFeed() {
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const {
     serverUrl,
     favorites,
     toggleFavorite,
     fetchFavorites,
-    user,
   } = useMobileStore();
 
   const listRef = useRef<FlatList<ReelItemData>>(null);
@@ -73,56 +71,22 @@ export function ReelsFeed() {
     filterRef.current = filter;
   }, [filter]);
 
-  const isAdmin = user?.role === "admin";
-
-  const defaultTabBarStyle = useCallback(() => {
-    const sideMargin = isAdmin ? 28 : 44;
-    return {
-      position: "absolute" as const,
-      bottom: 24,
-      left: sideMargin,
-      right: sideMargin,
-      height: 60,
-      borderRadius: 32,
-      backgroundColor: "transparent",
-      borderTopWidth: 0,
-      borderWidth: 1,
-      borderColor: "rgba(255, 255, 255, 0.16)",
-      paddingHorizontal: 8,
-      elevation: 16,
-      shadowColor: "#000000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.45,
-      shadowRadius: 16,
-      display: "flex" as const,
-    };
-  }, [isAdmin]);
+  const setTabBarHidden = useMobileStore((s) => s.setTabBarHidden);
 
   // Sync floating tab bar with chrome visibility (same idea as web dashboard header)
   useEffect(() => {
-    if (!isFocused) return;
-    navigation.setOptions({
-      tabBarStyle: chromeVisible
-        ? defaultTabBarStyle()
-        : {
-            display: "none",
-            height: 0,
-            opacity: 0,
-            position: "absolute",
-          },
-    });
-  }, [chromeVisible, isFocused, navigation, defaultTabBarStyle]);
+    if (!isFocused) {
+      return;
+    }
+    setTabBarHidden(!chromeVisible);
+  }, [chromeVisible, isFocused, setTabBarHidden]);
 
   // Restore tab bar when leaving reels
   useEffect(() => {
     return () => {
-      try {
-        navigation.setOptions({ tabBarStyle: defaultTabBarStyle() });
-      } catch {
-        // ignore
-      }
+      setTabBarHidden(false);
     };
-  }, [navigation, defaultTabBarStyle]);
+  }, [setTabBarHidden]);
 
   useEffect(() => {
     void fetchFavorites();
