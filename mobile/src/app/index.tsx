@@ -28,11 +28,9 @@ export default function IndexGate() {
         const discovered = await discoverServerUrl({ budgetMs: 4500 });
         if (cancelled) return;
 
-        if (discovered.source === "scan") {
-          setStatus("Found server. Connecting…");
-          await setServerUrl(discovered.url);
-          await checkAuth();
-        }
+        setStatus("Connecting to Server Gallery…");
+        await setServerUrl(discovered.url);
+        await checkAuth();
       } catch {
         // Keep current saved/default URL + existing auth redirect.
       } finally {

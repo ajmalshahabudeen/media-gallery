@@ -5,10 +5,17 @@ import {
   setServerUrl as saveServerUrl,
   setSessionToken,
   getSessionToken,
+  getServerUrl,
+  pingServer,
 } from "../lib/api";
 import { saveLogin } from "../lib/saved-login";
 import { discoverServerUrl } from "../lib/network-scan";
 import { uploadPickedMedia } from "../lib/upload-media";
+import {
+  hasLiveBetterAuthSession,
+  isExplicitUnauthenticated,
+  readAuthToken,
+} from "../lib/auth-session";
 
 export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
 
@@ -168,7 +175,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   initApp: async () => {
     try {
-      const token = await getSessionToken();
+      const [url, token] = await Promise.all([getServerUrl(), getSessionToken()]);
       let galleryLayout: GalleryLayout = "grid";
       try {
         const savedLayout = await AsyncStorage.getItem(GALLERY_LAYOUT_KEY);
@@ -178,11 +185,19 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       } catch {
         // ignore
       }
-      set({ sessionToken: token, galleryLayout });
+      set({ serverUrl: url, sessionToken: token, galleryLayout });
+
+      const discovered = await discoverServerUrl({ budgetMs: 4500 });
+      if (discovered.url !== get().serverUrl) {
+        await get().setServerUrl(discovered.url);
+      } else {
+        set({ serverUrl: discovered.url });
+      }
+
       await get().checkAuth();
     } catch {
       // Never leave the UI stuck on the splash/loading gate.
-      set({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+      set({ user: null, isAuthenticated: false, authChecked: true });
     }
   },
 
@@ -205,32 +220,50 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       const res = await apiFetch("/api/auth/get-session", { signal: controller.signal });
       clearTimeout(timeoutId);
+      const data = await res.json().catch(() => ({}));
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.session && data?.user) {
-          const authToken = data.session.token || token;
-          if (authToken) {
-            await setSessionToken(authToken);
-          }
-          apply({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
-          // Fire-and-forget library refresh (non-blocking for first paint)
-          void get().fetchFolders();
-          void get().fetchFavorites();
-          void get().scanMedia(false);
-          return true;
+      if (res.ok && hasLiveBetterAuthSession(data)) {
+        const authToken = readAuthToken(data) || token;
+        if (authToken) {
+          await setSessionToken(authToken);
         }
+        apply({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
+        void get().fetchFolders();
+        void get().fetchFavorites();
+        void get().scanMedia(false);
+        return true;
       }
-      apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+
+      if (isExplicitUnauthenticated(res.status, data)) {
+        await setSessionToken(null);
+        apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+        return false;
+      }
+
+      // Reachable-but-odd response: stay signed out without wiping the token.
+      apply({ user: null, isAuthenticated: false, authChecked: true });
       return false;
-    } catch {
-      apply({ user: null, sessionToken: null, isAuthenticated: false, authChecked: true });
+    } catch (err) {
+      // Network / timeout: do not delete the session token — URL may still be wrong.
+      apply({
+        user: null,
+        isAuthenticated: false,
+        authChecked: true,
+      });
       return false;
     }
   },
 
   login: async (email, password) => {
     try {
+      const reachable = await pingServer();
+      if (!reachable.success) {
+        return {
+          success: false,
+          error: reachable.message || "Cannot reach Server Gallery. Check the server IP.",
+        };
+      }
+
       // Drop any stale session so Better Auth doesn't require Origin via cookie path
       await setSessionToken(null);
 
@@ -240,28 +273,51 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data?.user) {
-        const authToken = data.token || data.session?.token;
-        if (authToken) {
-          await setSessionToken(authToken);
-        }
-        authCheckSeq += 1;
-        set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
-        try {
-          await saveLogin({ email, password, name: data.user?.name });
-        } catch {
-          // Non-fatal: session is already live
-        }
-        await get().fetchFolders();
-        await get().fetchFavorites();
-        await get().scanMedia(false);
-        return { success: true };
+      if (!res.ok || !data?.user) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          (!res.ok ? `Sign in failed (HTTP ${res.status})` : "Invalid credentials");
+        return { success: false, error: msg };
       }
-      const msg =
-        data?.message ||
-        data?.error ||
-        (!res.ok ? `Sign in failed (HTTP ${res.status})` : "Invalid credentials");
-      return { success: false, error: msg };
+
+      const authToken = readAuthToken(data);
+      if (authToken) {
+        await setSessionToken(authToken);
+      }
+
+      const sessionRes = await apiFetch("/api/auth/get-session");
+      const sessionData = await sessionRes.json().catch(() => ({}));
+      const sessionLive = sessionRes.ok && hasLiveBetterAuthSession(sessionData);
+      if (!sessionLive && !authToken) {
+        await setSessionToken(null);
+        return {
+          success: false,
+          error: "Server did not create a Better Auth session. Check the server IP and try again.",
+        };
+      }
+
+      const confirmedToken = readAuthToken(sessionData) || authToken;
+      if (confirmedToken) {
+        await setSessionToken(confirmedToken);
+      }
+      authCheckSeq += 1;
+      set({
+        user: sessionLive ? sessionData.user : data.user,
+        sessionToken: confirmedToken || null,
+        isAuthenticated: true,
+        authChecked: true,
+        serverUrl: await getServerUrl(),
+      });
+      try {
+        await saveLogin({ email, password, name: sessionData.user?.name || data.user?.name });
+      } catch {
+        // Non-fatal: session is already live
+      }
+      await get().fetchFolders();
+      await get().fetchFavorites();
+      await get().scanMedia(false);
+      return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error. Please check server IP." };
     }
@@ -269,6 +325,14 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   register: async (name, email, password) => {
     try {
+      const reachable = await pingServer();
+      if (!reachable.success) {
+        return {
+          success: false,
+          error: reachable.message || "Cannot reach Server Gallery. Check the server IP.",
+        };
+      }
+
       await setSessionToken(null);
 
       const res = await apiFetch("/api/auth/sign-up/email", {
@@ -277,25 +341,48 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data?.user) {
-        const authToken = data.token || data.session?.token;
-        if (authToken) {
-          await setSessionToken(authToken);
-        }
-        authCheckSeq += 1;
-        set({ user: data.user, sessionToken: authToken || null, isAuthenticated: true, authChecked: true });
-        try {
-          await saveLogin({ email, password, name: data.user?.name || name });
-        } catch {
-          // Non-fatal: session is already live
-        }
-        return { success: true };
+      if (!res.ok || !data?.user) {
+        const msg =
+          data?.message ||
+          data?.error ||
+          (!res.ok ? `Registration failed (HTTP ${res.status})` : "Registration failed");
+        return { success: false, error: msg };
       }
-      const msg =
-        data?.message ||
-        data?.error ||
-        (!res.ok ? `Registration failed (HTTP ${res.status})` : "Registration failed");
-      return { success: false, error: msg };
+
+      const authToken = readAuthToken(data);
+      if (authToken) {
+        await setSessionToken(authToken);
+      }
+
+      const sessionRes = await apiFetch("/api/auth/get-session");
+      const sessionData = await sessionRes.json().catch(() => ({}));
+      const sessionLive = sessionRes.ok && hasLiveBetterAuthSession(sessionData);
+      if (!sessionLive && !authToken) {
+        await setSessionToken(null);
+        return {
+          success: false,
+          error: "Server did not create a Better Auth session. Check the server IP and try again.",
+        };
+      }
+
+      const confirmedToken = readAuthToken(sessionData) || authToken;
+      if (confirmedToken) {
+        await setSessionToken(confirmedToken);
+      }
+      authCheckSeq += 1;
+      set({
+        user: sessionLive ? sessionData.user : data.user,
+        sessionToken: confirmedToken || null,
+        isAuthenticated: true,
+        authChecked: true,
+        serverUrl: await getServerUrl(),
+      });
+      try {
+        await saveLogin({ email, password, name: sessionData.user?.name || data.user?.name || name });
+      } catch {
+        // Non-fatal: session is already live
+      }
+      return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error" };
     }

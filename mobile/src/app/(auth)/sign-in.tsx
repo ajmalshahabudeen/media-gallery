@@ -55,7 +55,7 @@ export default function SignInScreen() {
     if (result.success) {
       router.replace("/(tabs)" as any);
     } else {
-      Alert.alert("Sign In Failed", result.error || "Please check credentials and server URL.");
+      Alert.alert("Could not sign in", result.error || "Check the server IP and try again.");
     }
   };
 
