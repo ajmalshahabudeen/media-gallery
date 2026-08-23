@@ -11,35 +11,18 @@ export function useScrollChrome() {
   const lastOffsetY = useRef(0);
   const visibleRef = useRef(true);
 
-  const applyTabBar = useCallback(
-    (visible: boolean) => {
-      navigation.setOptions({
-        tabBarStyle: instagramTabBarStyle(visible, insets.bottom),
-      });
-    },
-    [navigation, insets.bottom]
-  );
-
-  const setVisible = useCallback(
-    (visible: boolean) => {
-      if (visibleRef.current === visible) return;
-      visibleRef.current = visible;
-      setChromeVisible(visible);
-      applyTabBar(visible);
-    },
-    [applyTabBar]
-  );
+  const setVisible = useCallback((visible: boolean) => {
+    if (visibleRef.current === visible) return;
+    visibleRef.current = visible;
+    setChromeVisible(visible);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       setVisible(true);
-      return () => {
-        try {
-          navigation.setOptions({ tabBarStyle: instagramTabBarStyle(true, insets.bottom) });
-        } catch {
-          // ignore
-        }
-      };
+      navigation.setOptions({
+        tabBarStyle: instagramTabBarStyle(true, insets.bottom),
+      });
     }, [navigation, setVisible, insets.bottom])
   );
 
