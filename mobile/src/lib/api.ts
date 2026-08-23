@@ -51,6 +51,25 @@ export async function setSessionToken(token: string | null): Promise<void> {
   }
 }
 
+/** Auth + Origin headers for native uploaders that cannot go through apiFetch. */
+export async function getApiAuthHeaders(): Promise<{
+  baseUrl: string;
+  headers: Record<string, string>;
+}> {
+  const baseUrl = await getServerUrl();
+  const token = await getSessionToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    Origin: baseUrl,
+    Referer: `${baseUrl}/`,
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+    headers.Cookie = `better-auth.session_token=${token}`;
+  }
+  return { baseUrl, headers };
+}
+
 /**
  * Better Auth requires a non-null Origin on cookie-bearing / mutating auth calls.
  * React Native fetch does not send Origin, so we inject the server URL as Origin/Referer.

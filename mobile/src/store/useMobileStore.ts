@@ -8,6 +8,7 @@ import {
 } from "../lib/api";
 import { saveLogin } from "../lib/saved-login";
 import { discoverServerUrl } from "../lib/network-scan";
+import { uploadPickedMedia } from "../lib/upload-media";
 
 export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
 
@@ -430,46 +431,22 @@ export const useMobileStore = create<MobileState>((set, get) => ({
 
   uploadMedia: async (libraryPath, destPath, files) => {
     try {
-      const form = new FormData();
-      form.append("libraryPath", libraryPath);
-      form.append("destPath", destPath);
-      for (const file of files) {
-        form.append("files", {
-          uri: file.uri,
-          name: file.name,
-          type: file.type,
-        } as unknown as Blob);
-      }
-      const res = await apiFetch("/api/media/upload", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        return {
-          success: false,
-          uploaded: 0,
-          failed: files.length,
-          error: data?.error || `Upload failed (HTTP ${res.status})`,
-        };
-      }
-      const uploadedFiles = (data.uploaded || []) as MediaFile[];
+      const result = await uploadPickedMedia(libraryPath, destPath, files);
+      const uploadedFiles = (result.files || []) as MediaFile[];
       if (uploadedFiles.length > 0) {
         set((state) => ({
           files: [...uploadedFiles, ...state.files],
         }));
       }
       return {
-        success: uploadedFiles.length > 0,
-        uploaded: uploadedFiles.length,
-        failed: Array.isArray(data.errors) ? data.errors.length : 0,
-        error:
-          uploadedFiles.length === 0
-            ? data?.error || data?.errors?.[0]?.error || "No files were uploaded"
-            : undefined,
+        success: result.success,
+        uploaded: result.uploaded,
+        failed: result.failed,
+        error: result.error,
       };
-    } catch {
-      return { success: false, uploaded: 0, failed: files.length, error: "Network error uploading" };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network error uploading";
+      return { success: false, uploaded: 0, failed: files.length, error: message };
     }
   },
 
