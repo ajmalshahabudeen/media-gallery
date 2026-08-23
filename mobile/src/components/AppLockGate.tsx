@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, type AppStateStatus, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Lock } from "lucide-react-native";
+import { AppState, type AppStateStatus, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useMobileStore } from "../store/useMobileStore";
 import { promptDeviceLock } from "../lib/app-lock";
 
@@ -69,11 +68,13 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
       {locked && appLockEnabled ? (
         <View style={styles.overlay} pointerEvents="auto">
           <View style={styles.card}>
-            <View style={styles.iconWrap}>
-              <Lock size={28} color="#fafafa" />
-            </View>
-            <Text style={styles.title}>App locked</Text>
-            <Text style={styles.body}>Use your device screen lock to continue.</Text>
+            <Image
+              source={require("@/assets/images/splash-icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Server Gallery</Text>
+            <Text style={styles.body}>App locked. Use your device screen lock to continue.</Text>
             <TouchableOpacity style={styles.btn} onPress={() => void unlock()} disabled={busy}>
               <Text style={styles.btnText}>{busy ? "Waiting…" : "Unlock"}</Text>
             </TouchableOpacity>
@@ -102,16 +103,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#171717",
-    borderWidth: 1,
-    borderColor: "#262626",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
+  logo: {
+    width: 180,
+    height: 180,
+    marginBottom: 4,
   },
   title: {
     color: "#fafafa",

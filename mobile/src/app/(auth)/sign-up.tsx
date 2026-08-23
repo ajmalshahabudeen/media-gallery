@@ -9,9 +9,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Lock, Mail, User as UserIcon, Image as ImageIcon } from "lucide-react-native";
+import { Lock, Mail, User as UserIcon } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 
 export default function SignUpScreen() {
@@ -45,9 +46,11 @@ export default function SignUpScreen() {
     >
       <View style={styles.content}>
         <View style={styles.brandContainer}>
-          <View style={styles.logoCircle}>
-            <ImageIcon size={32} color="#fafafa" />
-          </View>
+          <Image
+            source={require("@/assets/images/splash-icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandTitle}>Create Account</Text>
           <Text style={styles.brandSub}>Sign up to access your server media library</Text>
         </View>
@@ -129,16 +132,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 28,
   },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#171717",
-    borderColor: "#262626",
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
+  logo: {
+    width: 96,
+    height: 96,
+    marginBottom: 10,
   },
   brandTitle: {
     fontSize: 24,

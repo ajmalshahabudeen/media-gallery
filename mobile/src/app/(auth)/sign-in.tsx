@@ -9,9 +9,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Lock, Mail, Server, Image as ImageIcon, User as UserIcon, X } from "lucide-react-native";
+import { Lock, Mail, Server, User as UserIcon, X } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
 import { ServerConfigModal } from "../../components/ServerConfigModal";
 import { clearSavedLogin, getSavedLogin, type SavedLogin } from "../../lib/saved-login";
@@ -85,10 +86,12 @@ export default function SignInScreen() {
     >
       <View style={styles.content}>
         <View style={styles.brandContainer}>
-          <View style={styles.logoCircle}>
-            <ImageIcon size={32} color={Palette.foreground} />
-          </View>
-          <Text style={styles.brandTitle}>Media Gallery</Text>
+          <Image
+            source={require("@/assets/images/splash-icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandTitle}>Server Gallery</Text>
           <Text style={styles.brandSub}>Local Network Media Server</Text>
         </View>
 
@@ -220,16 +223,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
   },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Palette.cardElevated,
-    borderColor: Palette.border,
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
+  logo: {
+    width: 96,
+    height: 96,
+    marginBottom: 10,
   },
   brandTitle: {
     fontSize: 24,

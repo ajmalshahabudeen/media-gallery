@@ -1,8 +1,9 @@
 import React, { useEffect, useState, Component, type ReactNode } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, StyleSheet, Platform, Text } from "react-native";
+import { View, Image, StyleSheet, Platform, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets, SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { useMobileStore } from "../store/useMobileStore";
 import { AppLockGate } from "../components/AppLockGate";
@@ -59,6 +60,7 @@ class RootErrorBoundary extends Component<
 function RootLayoutInner() {
   const { initApp, authChecked } = useMobileStore();
   const [bootstrapped, setBootstrapped] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     let cancelled = false;
@@ -130,8 +132,14 @@ function RootLayoutInner() {
 
       {showLoading ? (
         <View style={styles.loadingOverlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.loadingLabel}>Starting Server Gallery…</Text>
+          <Image
+            source={require("@/assets/images/splash-icon.png")}
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.loadingBrand, { bottom: Math.max(insets.bottom, 12) + 40 }]}>
+            Server Gallery
+          </Text>
         </View>
       ) : null}
       </AppLockGate>
@@ -142,7 +150,9 @@ function RootLayoutInner() {
 export default function RootLayout() {
   return (
     <RootErrorBoundary>
-      <RootLayoutInner />
+      <SafeAreaProvider>
+        <RootLayoutInner />
+      </SafeAreaProvider>
     </RootErrorBoundary>
   );
 }
@@ -164,13 +174,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
-    gap: 14,
     zIndex: 100,
   },
-  loadingLabel: {
-    color: "#a3a3a3",
-    fontSize: 14,
-    marginTop: 4,
+  loadingLogo: {
+    width: 220,
+    height: 220,
+  },
+  loadingBrand: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    color: "#fafafa",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   errorTitle: {
     color: "#fafafa",
