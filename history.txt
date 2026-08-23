@@ -759,8 +759,20 @@ Status: Completed.
 5. Verified clean `bun run lint` on both `mobile/` (`tsc --noEmit`) and root workspace (`eslint .`) with 0 errors.
 Status: Completed.
 
+[2026-08-23] Request 119:
+1. Diagnosed Caddy "aborting with incomplete response" followed by a dead site: next-server was OOM-killed and left as a zombie under `bun run start`, so Docker still reported the container as Up.
+2. `/api/media/file` treated `Range: bytes=0-` as "stream the entire multi-GB file" with no backpressure; dashboard hover also mounted a real `<video>` per card.
+3. Capped open-ended AV ranges to 8 MiB, stream via `Readable.toWeb` + abort, HEAD no longer streams a body, hover uses WebP only.
+4. Added `/api/health`, web healthcheck, Caddy `flush_interval -1`, Caddy memory 256M, and `exec node next start` as PID 1 so a future OOM restarts the container.
+Status: Completed.
 
+[2026-08-23] Request 120:
+1. Restored PC hover sneak peek: muted autoplay clip (`#t=0,3`) plus WebP overlay. WebP-only failed because `/api/media/hover` returns 204 until the preview daemon caches a clip.
+Status: Completed.
 
+[2026-08-23] Request 121:
+1. PC hover sneak peek plays the full video (no 3s cap) and hops +8s every ~1s so the card skims different timestamps quickly. Videos ≤ 1 minute play straight through with no skip. Unhover aborts the stream.
+Status: Completed.
 
 
 

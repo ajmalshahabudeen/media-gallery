@@ -13,4 +13,6 @@ echo "==> Starting background media thumbnail & hover play preview generator dae
 python3 /app/scripts/preview_generator.py --daemon &
 
 echo "==> Launching Server Gallery container application..."
-exec bun run start
+# next-server must be PID 1 so an OOM kill restarts the container
+# instead of leaving bun alive with a zombie child.
+exec node ./node_modules/next/dist/bin/next start

@@ -39,6 +39,18 @@ services:
       resources:
         limits:
           memory: 1024M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
     volumes:
       - db_data:/app/prisma_db
       - ${HOST_MEDIA_PATH:-./}:/host_media
@@ -60,9 +72,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

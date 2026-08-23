@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import { Readable } from "node:stream";
+import path from "node:path";
 import { getUserSession, isPathAuthorized } from "@/lib/auth-utils";
+import { isAvMimeType, resolveByteRange } from "@/lib/byte-range";
 import { resolveServerPath } from "@/lib/server-utils";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
-    // Images
     case ".jpg":
     case ".jpeg":
       return "image/jpeg";
@@ -25,7 +29,6 @@ function getMimeType(filePath: string): string {
       return "image/x-icon";
     case ".avif":
       return "image/avif";
-    // Videos
     case ".mp4":
       return "video/mp4";
     case ".webm":
@@ -40,7 +43,6 @@ function getMimeType(filePath: string): string {
       return "video/ogg";
     case ".3gp":
       return "video/3gpp";
-    // Audio
     case ".mp3":
       return "audio/mpeg";
     case ".wav":
@@ -54,7 +56,6 @@ function getMimeType(filePath: string): string {
       return "audio/mp4";
     case ".aac":
       return "audio/aac";
-    // Documents & text
     case ".pdf":
       return "application/pdf";
     case ".json":
@@ -75,158 +76,139 @@ function getMimeType(filePath: string): string {
   }
 }
 
-export async function HEAD(request: NextRequest) {
-  return GET(request);
+function openFileWebStream(
+  resolvedPath: string,
+  start: number,
+  end: number,
+  signal: AbortSignal
+): ReadableStream<Uint8Array> {
+  const fileStream = fs.createReadStream(resolvedPath, {
+    start,
+    end,
+    highWaterMark: 64 * 1024,
+  });
+
+  const onAbort = () => {
+    fileStream.destroy();
+  };
+
+  if (signal.aborted) {
+    fileStream.destroy();
+  } else {
+    signal.addEventListener("abort", onAbort, { once: true });
+    fileStream.once("close", () => {
+      signal.removeEventListener("abort", onAbort);
+    });
+  }
+
+  return Readable.toWeb(fileStream) as ReadableStream<Uint8Array>;
 }
 
-export async function GET(request: NextRequest) {
+type FileMeta = {
+  resolvedPath: string;
+  fileSize: number;
+  contentType: string;
+};
+
+async function authorizeFile(request: NextRequest): Promise<FileMeta | NextResponse> {
   const session = await getUserSession(request);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const filePathParam = searchParams.get("path");
-
+  const filePathParam = request.nextUrl.searchParams.get("path");
   if (!filePathParam) {
     return NextResponse.json({ error: "Missing file path parameter" }, { status: 400 });
   }
 
   const resolvedPath = resolveServerPath(filePathParam);
-
   const isAdmin = (session.user as { role?: string }).role === "admin";
   const authorized = await isPathAuthorized(filePathParam, session.user.id, isAdmin);
   if (!authorized) {
     return NextResponse.json({ error: "Access denied to this file" }, { status: 403 });
   }
 
-  if (!fs.existsSync(resolvedPath)) {
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(resolvedPath);
+  } catch {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  try {
-    const stat = fs.statSync(resolvedPath);
-    if (stat.isDirectory()) {
-      return NextResponse.json({ error: "Specified path is a directory" }, { status: 400 });
-    }
+  if (stat.isDirectory()) {
+    return NextResponse.json({ error: "Specified path is a directory" }, { status: 400 });
+  }
 
-    const fileSize = stat.size;
-    const contentType = getMimeType(resolvedPath);
-    const range = request.headers.get("range");
+  return {
+    resolvedPath,
+    fileSize: stat.size,
+    contentType: getMimeType(resolvedPath),
+  };
+}
 
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+function fileHeaders(
+  meta: FileMeta,
+  resolved: { start: number; end: number; status: 200 | 206; contentLength: number }
+): HeadersInit {
+  const headers: Record<string, string> = {
+    "Accept-Ranges": "bytes",
+    "Content-Length": resolved.contentLength.toString(),
+    "Content-Type": meta.contentType,
+    "Cache-Control": "public, max-age=86400, immutable",
+  };
+  if (resolved.status === 206) {
+    headers["Content-Range"] = `bytes ${resolved.start}-${resolved.end}/${meta.fileSize}`;
+  }
+  return headers;
+}
 
-      if (start >= fileSize || end >= fileSize) {
-        return new NextResponse(null, {
-          status: 416,
-          headers: {
-            "Content-Range": `bytes */${fileSize}`,
-          },
-        });
-      }
+export async function HEAD(request: NextRequest) {
+  const meta = await authorizeFile(request);
+  if (meta instanceof NextResponse) return meta;
 
-      const chunksize = end - start + 1;
-      const fileStream = fs.createReadStream(resolvedPath, { start, end });
-      let isClosed = false;
-
-      const stream = new ReadableStream({
-        start(controller) {
-          fileStream.on("data", (chunk: Buffer) => {
-            if (isClosed) return;
-            try {
-              controller.enqueue(new Uint8Array(chunk));
-            } catch {
-              isClosed = true;
-              fileStream.destroy();
-            }
-          });
-          fileStream.on("end", () => {
-            if (isClosed) return;
-            isClosed = true;
-            try {
-              controller.close();
-            } catch {
-              // ignore
-            }
-          });
-          fileStream.on("error", (err) => {
-            if (isClosed) return;
-            isClosed = true;
-            try {
-              controller.error(err);
-            } catch {
-              // ignore
-            }
-          });
-        },
-        cancel() {
-          isClosed = true;
-          fileStream.destroy();
-        },
-      });
-
-      return new NextResponse(stream as BodyInit, {
-        status: 206,
-        headers: {
-          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": chunksize.toString(),
-          "Content-Type": contentType,
-          "Cache-Control": "public, max-age=86400, immutable",
-        },
-      });
-    }
-
-    const fileStream = fs.createReadStream(resolvedPath);
-    let isClosed = false;
-
-    const stream = new ReadableStream({
-      start(controller) {
-        fileStream.on("data", (chunk: Buffer) => {
-          if (isClosed) return;
-          try {
-            controller.enqueue(new Uint8Array(chunk));
-          } catch {
-            isClosed = true;
-            fileStream.destroy();
-          }
-        });
-        fileStream.on("end", () => {
-          if (isClosed) return;
-          isClosed = true;
-          try {
-            controller.close();
-          } catch {
-            // ignore
-          }
-        });
-        fileStream.on("error", (err) => {
-          if (isClosed) return;
-          isClosed = true;
-          try {
-            controller.error(err);
-          } catch {
-            // ignore
-          }
-        });
-      },
-      cancel() {
-        isClosed = true;
-        fileStream.destroy();
-      },
+  const resolved = resolveByteRange(request.headers.get("range"), meta.fileSize, {
+    forcePartialForFull: isAvMimeType(meta.contentType) && meta.fileSize > 0,
+  });
+  if (!resolved.ok) {
+    return new NextResponse(null, {
+      status: 416,
+      headers: { "Content-Range": `bytes */${meta.fileSize}` },
     });
+  }
 
+  return new NextResponse(null, {
+    status: resolved.range.status,
+    headers: fileHeaders(meta, resolved.range),
+  });
+}
+
+export async function GET(request: NextRequest) {
+  const meta = await authorizeFile(request);
+  if (meta instanceof NextResponse) return meta;
+
+  try {
+    const resolved = resolveByteRange(request.headers.get("range"), meta.fileSize, {
+      forcePartialForFull: isAvMimeType(meta.contentType) && meta.fileSize > 0,
+    });
+    if (!resolved.ok) {
+      return new NextResponse(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${meta.fileSize}` },
+      });
+    }
+
+    const { start, end, status, contentLength } = resolved.range;
+    if (contentLength === 0) {
+      return new NextResponse(null, {
+        status,
+        headers: fileHeaders(meta, resolved.range),
+      });
+    }
+
+    const stream = openFileWebStream(meta.resolvedPath, start, end, request.signal);
     return new NextResponse(stream as BodyInit, {
-      status: 200,
-      headers: {
-        "Content-Length": fileSize.toString(),
-        "Content-Type": contentType,
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=86400, immutable",
-      },
+      status,
+      headers: fileHeaders(meta, resolved.range),
     });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

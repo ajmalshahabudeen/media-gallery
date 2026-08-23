@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MediaFile, useMediaStore } from "@/store/useMediaStore";
 import { formatFileSize } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,82 @@ import {
   Eye,
   Star,
 } from "lucide-react";
+
+/** Play ~1s at the current spot, then jump 8s so hover skims long files. */
+const SNEAK_SEEK_STEP_S = 8;
+const SNEAK_DWELL_MS = 1000;
+const SNEAK_SKIP_MIN_DURATION_S = 60;
+
+function HoverSneakPeek({
+  path,
+  onReady,
+}: {
+  path: string;
+  onReady?: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let hopTimer = 0;
+    let cancelled = false;
+
+    const clearHop = () => {
+      window.clearTimeout(hopTimer);
+      hopTimer = 0;
+    };
+
+    const shouldSkipThrough = () =>
+      Number.isFinite(video.duration) && video.duration > SNEAK_SKIP_MIN_DURATION_S;
+
+    const hopForward = () => {
+      if (cancelled || !shouldSkipThrough()) {
+        return;
+      }
+      const next = video.currentTime + SNEAK_SEEK_STEP_S;
+      video.currentTime = next >= video.duration - 0.25 ? 0 : next;
+    };
+
+    const scheduleHop = () => {
+      clearHop();
+      if (!shouldSkipThrough()) return;
+      hopTimer = window.setTimeout(hopForward, SNEAK_DWELL_MS);
+    };
+
+    const onPlaying = () => {
+      onReady?.();
+      scheduleHop();
+    };
+
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("seeked", scheduleHop);
+    video.play().catch(() => {});
+
+    return () => {
+      cancelled = true;
+      clearHop();
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("seeked", scheduleHop);
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [path, onReady]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={`/api/media/file?path=${encodeURIComponent(path)}`}
+      muted
+      loop
+      playsInline
+      preload="auto"
+      className="absolute inset-0 w-full h-full object-cover z-0"
+    />
+  );
+}
 
 interface MediaCardProps {
   file: MediaFile;
@@ -32,6 +108,12 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     return window.matchMedia("(pointer: fine)").matches;
   });
   const [hoverImageLoaded, setHoverImageLoaded] = useState(false);
+  const markSneakPeekReady = useCallback(() => setHoverImageLoaded(true), []);
+  const startHover = useCallback(() => setIsHovered(true), []);
+  const endHover = useCallback(() => {
+    setIsHovered(false);
+    setHoverImageLoaded(false);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -107,38 +189,9 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
             }`}
           />
 
-          {/* PC Desktop Hover Sneak Peek: Instant Video Stream + WebP Overlay */}
+          {/* PC hover: full-file muted skim, hopping ~8s through the timeline */}
           {isPcScreen && isHovered && (
-            <>
-              {/* Instant Video Stream Preview */}
-              <video
-                src={`/api/media/file?path=${encodeURIComponent(file.path)}`}
-                muted
-                loop
-                autoPlay
-                playsInline
-                className="absolute inset-0 w-full h-full object-cover z-0"
-              />
-
-              {/* High-speed WebP Hover Preview Overlay */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={hoverUrl}
-                alt={`${file.name} hover preview`}
-                onLoad={(e) => {
-                  const img = e.currentTarget;
-                  if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                    setHoverImageLoaded(true);
-                  } else {
-                    setHoverImageLoaded(false);
-                  }
-                }}
-                onError={() => setHoverImageLoaded(false)}
-                className={`absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-300 ${
-                  hoverImageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            </>
+            <HoverSneakPeek path={file.path} onReady={markSneakPeekReady} />
           )}
 
           {/* Centered Play Indicator Badge */}
@@ -186,8 +239,8 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     return (
       <div
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={startHover}
+        onMouseLeave={endHover}
         className="flex items-center justify-between p-3 hover:bg-muted/40 cursor-pointer transition-colors group"
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -232,8 +285,8 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     return (
       <Card
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={startHover}
+        onMouseLeave={endHover}
         className="cursor-pointer hover:shadow-md transition-shadow group overflow-hidden border"
       >
         {renderCardThumbnail("aspect-square")}
@@ -254,8 +307,8 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     return (
       <Card
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={startHover}
+        onMouseLeave={endHover}
         className="cursor-pointer hover:shadow-lg transition-all group overflow-hidden border"
       >
         {renderCardThumbnail("aspect-video")}
@@ -287,8 +340,8 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
     return (
       <Card
         onClick={onClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={startHover}
+        onMouseLeave={endHover}
         className="cursor-pointer hover:shadow-md transition-all group overflow-hidden flex flex-col justify-between border"
       >
         <div>
@@ -324,8 +377,8 @@ export function MediaCard({ file, viewMode, onClick }: MediaCardProps) {
   return (
     <tr
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={startHover}
+      onMouseLeave={endHover}
       className="hover:bg-muted/40 cursor-pointer transition-colors group"
     >
       <td className="p-2">
