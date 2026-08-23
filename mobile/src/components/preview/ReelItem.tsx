@@ -465,7 +465,6 @@ export const ReelItem: React.FC<Props> = ({
         <View style={[StyleSheet.absoluteFill, styles.placeholder]} />
       )}
 
-      <View pointerEvents="none" style={styles.topGradient} />
       <View pointerEvents="none" style={styles.bottomGradient} />
 
       {isBuffering && isActive ? (
@@ -587,15 +586,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 10,
-  },
-  topGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    zIndex: 5,
   },
   bottomGradient: {
     position: "absolute",

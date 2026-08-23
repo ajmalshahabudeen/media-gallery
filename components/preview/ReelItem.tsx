@@ -205,8 +205,7 @@ export function ReelItem({
         }}
       />
 
-      {/* Gradient overlays (Instagram style) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+      {/* Bottom fade only — keeps title/seek readable without tinting portrait video */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
       {/* Buffering */}

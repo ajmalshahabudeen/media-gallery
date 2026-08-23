@@ -281,7 +281,7 @@ export function ReelsFeed() {
             : "opacity-0 -translate-y-full pointer-events-none"
         )}
       >
-        <div className="bg-gradient-to-b from-black/70 via-black/40 to-transparent pt-3 pb-8 px-3">
+        <div className="pt-3 pb-2 px-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 rounded-full bg-black/35 backdrop-blur-md border border-white/10 p-1">
               <button

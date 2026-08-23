@@ -466,8 +466,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 40,
     paddingHorizontal: 12,
-    paddingBottom: 28,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    paddingBottom: 8,
   },
   chromeRow: {
     flexDirection: "row",
