@@ -18,8 +18,23 @@ import {
 } from "../lib/auth-session";
 
 export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
+export const FOLDER_FILTER_KEY = "media_gallery_folder_filter";
 
 export type GalleryLayout = "grid" | "feed";
+
+type FolderFilterPersist = {
+  enabled: boolean;
+  folders: string[];
+};
+
+async function persistFolderFilter(enabled: boolean, folders: string[]) {
+  try {
+    const payload: FolderFilterPersist = { enabled, folders };
+    await AsyncStorage.setItem(FOLDER_FILTER_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore persist errors
+  }
+}
 
 export interface User {
   id: string;
@@ -79,6 +94,8 @@ interface MobileState {
   indexingProgress: IndexingProgressState;
   galleryLayout: GalleryLayout;
   tabBarHidden: boolean;
+  folderFilterEnabled: boolean;
+  selectedFolders: string[];
 
   setServerUrl: (url: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
@@ -90,6 +107,9 @@ interface MobileState {
   setActiveFolder: (folder: string | null) => void;
   setGalleryLayout: (layout: GalleryLayout) => Promise<void>;
   setTabBarHidden: (hidden: boolean) => void;
+  setFolderFilterEnabled: (enabled: boolean) => void;
+  setSelectedFolders: (folders: string[]) => void;
+  toggleSelectedFolder: (folder: string) => void;
 
   initApp: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
@@ -151,6 +171,8 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   },
   galleryLayout: "grid",
   tabBarHidden: false,
+  folderFilterEnabled: false,
+  selectedFolders: [],
 
   setServerUrl: async (url: string) => {
     await saveServerUrl(url);
@@ -165,6 +187,23 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   setGroupBy: (mode) => set({ groupBy: mode }),
   setActiveFolder: (folder) => set({ activeFolder: folder }),
   setTabBarHidden: (hidden) => set({ tabBarHidden: hidden }),
+  setFolderFilterEnabled: (enabled) => {
+    set({ folderFilterEnabled: enabled });
+    void persistFolderFilter(enabled, get().selectedFolders);
+  },
+  setSelectedFolders: (folders) => {
+    const unique = [...new Set(folders.map((f) => f.trim()).filter(Boolean))];
+    set({ selectedFolders: unique });
+    void persistFolderFilter(get().folderFilterEnabled, unique);
+  },
+  toggleSelectedFolder: (folder) => {
+    const current = get().selectedFolders;
+    const next = current.includes(folder)
+      ? current.filter((item) => item !== folder)
+      : [...current, folder];
+    set({ selectedFolders: next });
+    void persistFolderFilter(get().folderFilterEnabled, next);
+  },
   setGalleryLayout: async (layout) => {
     set({ galleryLayout: layout });
     try {
@@ -178,15 +217,27 @@ export const useMobileStore = create<MobileState>((set, get) => ({
     try {
       const [url, token] = await Promise.all([getServerUrl(), getSessionToken()]);
       let galleryLayout: GalleryLayout = "grid";
+      let folderFilterEnabled = false;
+      let selectedFolders: string[] = [];
       try {
-        const savedLayout = await AsyncStorage.getItem(GALLERY_LAYOUT_KEY);
+        const [savedLayout, savedFolderFilter] = await Promise.all([
+          AsyncStorage.getItem(GALLERY_LAYOUT_KEY),
+          AsyncStorage.getItem(FOLDER_FILTER_KEY),
+        ]);
         if (savedLayout === "feed" || savedLayout === "grid") {
           galleryLayout = savedLayout;
+        }
+        if (savedFolderFilter) {
+          const parsed = JSON.parse(savedFolderFilter) as FolderFilterPersist;
+          folderFilterEnabled = !!parsed?.enabled;
+          selectedFolders = Array.isArray(parsed?.folders)
+            ? parsed.folders.filter((item): item is string => typeof item === "string" && item.length > 0)
+            : [];
         }
       } catch {
         // ignore
       }
-      set({ serverUrl: url, sessionToken: token, galleryLayout });
+      set({ serverUrl: url, sessionToken: token, galleryLayout, folderFilterEnabled, selectedFolders });
 
       const discovered = await discoverServerUrl({ budgetMs: 4500 });
       if (discovered.url !== get().serverUrl) {

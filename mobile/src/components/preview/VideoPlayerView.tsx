@@ -10,7 +10,13 @@ import {
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { YoutubePlayerOverlay, nextPlaybackRate } from "./youtube-player-overlay";
-import { setPlaybackSession, type PlaybackItem } from "../../lib/playback-session";
+import {
+  setPlaybackSession,
+  getPlaybackSession,
+  updatePlaybackSession,
+  shouldIgnoreLandscapeOpen,
+  type PlaybackItem,
+} from "../../lib/playback-session";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -80,23 +86,25 @@ export const VideoPlayerView: React.FC<Props> = ({
     player.loop = false;
     player.play();
   });
+  const loadedUriRef = useRef(uri);
 
   useEffect(() => {
-    if (expoPlayer && uri) {
-      const swap = async () => {
-        try {
-          if (typeof expoPlayer.replaceAsync === "function") {
-            await expoPlayer.replaceAsync(uri);
-          } else {
-            expoPlayer.replace(uri);
-          }
-          expoPlayer.play();
-        } catch {
-          // ignore
+    if (!expoPlayer || !uri) return;
+    if (loadedUriRef.current === uri) return;
+    loadedUriRef.current = uri;
+    const swap = async () => {
+      try {
+        if (typeof expoPlayer.replaceAsync === "function") {
+          await expoPlayer.replaceAsync(uri);
+        } else {
+          expoPlayer.replace(uri);
         }
-      };
-      void swap();
-    }
+        expoPlayer.play();
+      } catch {
+        // ignore
+      }
+    };
+    void swap();
   }, [expoPlayer, uri]);
 
   useEffect(() => {
@@ -281,9 +289,11 @@ export const VideoPlayerView: React.FC<Props> = ({
   };
 
   const handleFullscreen = useCallback(() => {
+    if (shouldIgnoreLandscapeOpen() && getPlaybackSession()) return;
     const items =
       playlist && playlist.length > 0 ? playlist : [{ uri, title: title || "Video" }];
     const index = Math.max(0, Math.min(items.length - 1, playlistIndex));
+    const startAt = positionRef.current;
     if (expoPlayer) {
       try {
         expoPlayer.pause();
@@ -294,14 +304,17 @@ export const VideoPlayerView: React.FC<Props> = ({
     setPlaybackSession({
       items,
       index,
-      startAt: positionRef.current,
+      startAt,
       muted: isMuted,
       rate: playbackRate,
       onIndexChange: onSelectIndex,
       onExit: (pos) => {
         seekAbsolute(pos);
+        positionRef.current = pos;
+        updatePlaybackSession({ startAt: pos });
         if (expoPlayer) {
           try {
+            expoPlayer.currentTime = pos;
             expoPlayer.play();
           } catch {
             // ignore
@@ -314,7 +327,7 @@ export const VideoPlayerView: React.FC<Props> = ({
       params: {
         uri: items[index]?.uri || uri,
         title: items[index]?.title || title || "Video",
-        startAt: String(positionRef.current),
+        startAt: String(startAt),
       },
     } as any);
   }, [
@@ -333,6 +346,10 @@ export const VideoPlayerView: React.FC<Props> = ({
   const openingFs = useRef(false);
   useEffect(() => {
     const openIfLandscape = (width: number, height: number) => {
+      if (shouldIgnoreLandscapeOpen()) {
+        if (width <= height) openingFs.current = false;
+        return;
+      }
       if (openingFs.current && width <= height) {
         openingFs.current = false;
         return;

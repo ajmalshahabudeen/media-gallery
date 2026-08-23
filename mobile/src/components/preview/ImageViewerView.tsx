@@ -3,14 +3,11 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   TouchableWithoutFeedback,
   Text,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { RotateCw, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react-native";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+import { RotateCw, ZoomIn, ZoomOut } from "lucide-react-native";
 
 interface Props {
   uri: string;
@@ -92,8 +89,7 @@ export const ImageViewerView: React.FC<Props> = ({ uri }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.65,
+    width: "100%",
     backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",

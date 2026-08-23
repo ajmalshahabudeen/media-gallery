@@ -69,14 +69,29 @@ interface SeekBarProps {
 
 function YoutubeSeekBar({ progress, seeking, onSeekStart, onSeekAt, onSeekEnd }: SeekBarProps) {
   const expand = useSharedValue(seeking ? 1 : 0);
+  const barRef = React.useRef<View>(null);
   const widthRef = React.useRef(1);
+  const originXRef = React.useRef(0);
   const lastRatio = React.useRef(progress);
 
   useEffect(() => {
     expand.value = withTiming(seeking ? 1 : 0, { duration: 140, easing: Easing.out(Easing.quad) });
   }, [expand, seeking]);
 
-  const ratioFromX = (x: number) => Math.max(0, Math.min(1, x / Math.max(1, widthRef.current)));
+  const measureBar = () => {
+    barRef.current?.measureInWindow((x, _y, w) => {
+      originXRef.current = x;
+      if (w > 1) widthRef.current = w;
+    });
+  };
+
+  const ratioFromEvent = (e: { nativeEvent: { pageX?: number; locationX: number } }) => {
+    const pageX = e.nativeEvent.pageX;
+    if (typeof pageX === "number" && Number.isFinite(pageX)) {
+      return Math.max(0, Math.min(1, (pageX - originXRef.current) / Math.max(1, widthRef.current)));
+    }
+    return Math.max(0, Math.min(1, e.nativeEvent.locationX / Math.max(1, widthRef.current)));
+  };
 
   const trackStyle = useAnimatedStyle(() => ({
     height: interpolate(expand.value, [0, 1], [2.5, 5]),
@@ -91,30 +106,34 @@ function YoutubeSeekBar({ progress, seeking, onSeekStart, onSeekAt, onSeekEnd }:
 
   return (
     <View
+      ref={barRef}
+      collapsable={false}
       style={styles.seekHit}
       onLayout={(e) => {
         widthRef.current = Math.max(1, e.nativeEvent.layout.width);
+        measureBar();
       }}
       onStartShouldSetResponder={() => true}
       onMoveShouldSetResponder={() => true}
       onResponderGrant={(e) => {
-        const ratio = ratioFromX(e.nativeEvent.locationX);
+        measureBar();
+        const ratio = ratioFromEvent(e);
         lastRatio.current = ratio;
         onSeekStart();
         onSeekAt(ratio);
       }}
       onResponderMove={(e) => {
-        const ratio = ratioFromX(e.nativeEvent.locationX);
+        const ratio = ratioFromEvent(e);
         lastRatio.current = ratio;
         onSeekAt(ratio);
       }}
       onResponderRelease={() => onSeekEnd(lastRatio.current)}
       onResponderTerminate={() => onSeekEnd(lastRatio.current)}
     >
-      <Animated.View style={[styles.seekTrack, trackStyle]}>
-        <View style={[styles.seekFill, { width: pct }]} />
+      <Animated.View pointerEvents="none" style={[styles.seekTrack, trackStyle]}>
+        <View pointerEvents="none" style={[styles.seekFill, { width: pct }]} />
       </Animated.View>
-      <Animated.View style={[styles.seekThumb, { left: pct }, thumbScaleStyle]} />
+      <Animated.View pointerEvents="none" style={[styles.seekThumb, { left: pct }, thumbScaleStyle]} />
     </View>
   );
 }

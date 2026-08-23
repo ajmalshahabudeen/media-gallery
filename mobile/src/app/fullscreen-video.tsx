@@ -12,7 +12,12 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { YoutubePlayerOverlay, nextPlaybackRate } from "../components/preview/youtube-player-overlay";
-import { getPlaybackSession, updatePlaybackSession, setPlaybackSession } from "../lib/playback-session";
+import {
+  getPlaybackSession,
+  updatePlaybackSession,
+  setPlaybackSession,
+  armLandscapeCooldown,
+} from "../lib/playback-session";
 
 let ScreenOrientation: any = null;
 try {
@@ -96,26 +101,28 @@ export default function FullscreenVideoScreen() {
     if (initialSession?.rate) player.playbackRate = initialSession.rate;
     player.play();
   });
+  const loadedUriRef = useRef(uri);
 
   useEffect(() => {
-    if (expoPlayer && uri) {
-      const swap = async () => {
-        try {
-          if (typeof expoPlayer.replaceAsync === "function") {
-            await expoPlayer.replaceAsync(uri);
-          } else {
-            expoPlayer.replace(uri);
-          }
-          expoPlayer.muted = isMuted;
-          expoPlayer.volume = volumeRef.current;
-          expoPlayer.playbackRate = playbackRate;
-          expoPlayer.play();
-        } catch {
-          // ignore
+    if (!expoPlayer || !uri) return;
+    if (loadedUriRef.current === uri) return;
+    loadedUriRef.current = uri;
+    const swap = async () => {
+      try {
+        if (typeof expoPlayer.replaceAsync === "function") {
+          await expoPlayer.replaceAsync(uri);
+        } else {
+          expoPlayer.replace(uri);
         }
-      };
-      void swap();
-    }
+        expoPlayer.muted = isMuted;
+        expoPlayer.volume = volumeRef.current;
+        expoPlayer.playbackRate = playbackRate;
+        expoPlayer.play();
+      } catch {
+        // ignore
+      }
+    };
+    void swap();
   }, [expoPlayer, uri]);
 
   useEffect(() => {
@@ -129,19 +136,42 @@ export default function FullscreenVideoScreen() {
   }, [isSeeking]);
 
   useEffect(() => {
-    if (ScreenOrientation) {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-    }
+    let cancelled = false;
+    const unlock = async () => {
+      if (!ScreenOrientation) return;
+      try {
+        if (typeof ScreenOrientation.unlockAsync === "function") {
+          await ScreenOrientation.unlockAsync();
+        } else {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.ALL);
+        }
+      } catch {
+        try {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    void unlock();
     if (Brightness?.getBrightnessAsync) {
       Brightness.getBrightnessAsync()
         .then((value) => {
+          if (cancelled) return;
           const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
           setBrightness(next);
           brightnessRef.current = next;
         })
         .catch(() => {});
     }
+    const dimSub = Dimensions.addEventListener("change", ({ window }) => {
+      containerWidthRef.current = window.width;
+      containerHeightRef.current = window.height;
+    });
     return () => {
+      cancelled = true;
+      dimSub.remove();
+      armLandscapeCooldown(900);
       if (ScreenOrientation) {
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       }
@@ -152,6 +182,7 @@ export default function FullscreenVideoScreen() {
     const session = getPlaybackSession();
     session?.onExit?.(positionRef.current, activeIndex);
     setPlaybackSession(null);
+    armLandscapeCooldown(900);
     if (expoPlayer) {
       try {
         expoPlayer.pause();
@@ -207,7 +238,7 @@ export default function FullscreenVideoScreen() {
     const applyStart = () => {
       if (appliedInitialSeek.current) return;
       appliedInitialSeek.current = true;
-      if (startAt > 0.2) {
+      if (startAt > 0.15) {
         try {
           expoPlayer.currentTime = startAt;
           setPosition(startAt);
@@ -568,7 +599,7 @@ export default function FullscreenVideoScreen() {
     >
       <StatusBar hidden />
       <VideoView
-        style={[styles.video, { width: screenDims.width, height: screenDims.height }]}
+        style={styles.video}
         player={expoPlayer}
         contentFit="contain"
         nativeControls={false}
@@ -617,9 +648,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   video: {
-    position: "absolute",
-    top: 0,
-    left: 0,
+    ...StyleSheet.absoluteFill,
   },
   dim: {
     ...StyleSheet.absoluteFill,

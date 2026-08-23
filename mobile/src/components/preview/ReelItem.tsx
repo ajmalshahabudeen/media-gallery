@@ -64,38 +64,58 @@ function ReelSeekBar({
   onSeekAt: (ratio: number) => void;
   onSeekEnd: (ratio: number) => void;
 }) {
+  const barRef = useRef<View>(null);
   const widthRef = useRef(1);
+  const originXRef = useRef(0);
   const lastRatio = useRef(progress);
   const pct = `${Math.max(0, Math.min(100, progress * 100))}%` as const;
-  const ratioFromX = (x: number) => Math.max(0, Math.min(1, x / Math.max(1, widthRef.current)));
+
+  const measureBar = () => {
+    barRef.current?.measureInWindow((x, _y, w) => {
+      originXRef.current = x;
+      if (w > 1) widthRef.current = w;
+    });
+  };
+
+  const ratioFromEvent = (e: GestureResponderEvent) => {
+    const pageX = e.nativeEvent.pageX;
+    if (Number.isFinite(pageX)) {
+      return Math.max(0, Math.min(1, (pageX - originXRef.current) / Math.max(1, widthRef.current)));
+    }
+    return Math.max(0, Math.min(1, e.nativeEvent.locationX / Math.max(1, widthRef.current)));
+  };
 
   return (
     <View
+      ref={barRef}
+      collapsable={false}
       style={styles.seekHit}
       onLayout={(e) => {
         widthRef.current = Math.max(1, e.nativeEvent.layout.width);
+        measureBar();
       }}
       onStartShouldSetResponder={() => true}
       onMoveShouldSetResponder={() => true}
       onResponderTerminationRequest={() => false}
       onResponderGrant={(e) => {
-        const ratio = ratioFromX(e.nativeEvent.locationX);
+        measureBar();
+        const ratio = ratioFromEvent(e);
         lastRatio.current = ratio;
         onSeekStart();
         onSeekAt(ratio);
       }}
       onResponderMove={(e) => {
-        const ratio = ratioFromX(e.nativeEvent.locationX);
+        const ratio = ratioFromEvent(e);
         lastRatio.current = ratio;
         onSeekAt(ratio);
       }}
       onResponderRelease={() => onSeekEnd(lastRatio.current)}
       onResponderTerminate={() => onSeekEnd(lastRatio.current)}
     >
-      <View style={[styles.progressTrack, seeking && styles.progressTrackActive]}>
-        <View style={[styles.progressFill, { width: pct }]} />
+      <View pointerEvents="none" style={[styles.progressTrack, seeking && styles.progressTrackActive]}>
+        <View pointerEvents="none" style={[styles.progressFill, { width: pct }]} />
       </View>
-      {seeking ? <View style={[styles.seekThumb, { left: pct }]} /> : null}
+      {seeking ? <View pointerEvents="none" style={[styles.seekThumb, { left: pct }]} /> : null}
     </View>
   );
 }
@@ -124,25 +144,10 @@ function ActiveExpoVideo({
 
   useEffect(() => {
     playerRef.current = player;
-    if (player && uri) {
-      const swap = async () => {
-        try {
-          if (typeof player.replaceAsync === "function") {
-            await player.replaceAsync(uri);
-          } else {
-            player.replace(uri);
-          }
-          player.play();
-        } catch {
-          // ignore
-        }
-      };
-      void swap();
-    }
     return () => {
       if (playerRef.current === player) playerRef.current = null;
     };
-  }, [player, playerRef, uri]);
+  }, [player, playerRef]);
 
   useEffect(() => {
     try {
@@ -327,22 +332,20 @@ export const ReelItem: React.FC<Props> = ({
     [onProgress]
   );
 
-  const seekToRatio = useCallback(
-    (ratio: number) => {
-      const d = durationRef.current;
-      const next = d > 0 ? Math.max(0, Math.min(d, ratio * d)) : 0;
-      const p = expoPlayerRef.current;
-      if (p) {
-        try {
-          p.currentTime = next;
-        } catch {
-          // ignore
-        }
+  const seekToRatio = useCallback((ratio: number) => {
+    const d = durationRef.current;
+    if (!(d > 0) || !Number.isFinite(ratio)) return;
+    const next = Math.max(0, Math.min(d, ratio * d));
+    const p = expoPlayerRef.current;
+    if (p) {
+      try {
+        p.currentTime = next;
+      } catch {
+        // ignore
       }
-      setCurrentTime(next);
-    },
-    []
-  );
+    }
+    setCurrentTime(next);
+  }, []);
 
   const handleSeekStart = useCallback(() => {
     isSeekingRef.current = true;
@@ -351,14 +354,19 @@ export const ReelItem: React.FC<Props> = ({
 
   const handleSeekAt = useCallback((ratio: number) => {
     const d = durationRef.current;
-    setCurrentTime(d > 0 ? ratio * d : 0);
+    if (!(d > 0) || !Number.isFinite(ratio)) return;
+    setCurrentTime(ratio * d);
   }, []);
 
   const handleSeekEnd = useCallback(
     (ratio: number) => {
-      seekToRatio(ratio);
-      isSeekingRef.current = false;
-      setIsSeeking(false);
+      if (durationRef.current > 0 && Number.isFinite(ratio)) {
+        seekToRatio(ratio);
+      }
+      setTimeout(() => {
+        isSeekingRef.current = false;
+        setIsSeeking(false);
+      }, 280);
     },
     [seekToRatio]
   );

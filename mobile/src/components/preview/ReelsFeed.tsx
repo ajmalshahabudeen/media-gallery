@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from "expo-router";
 import { Clapperboard, RefreshCw } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiFetch } from "../../lib/api";
+import { applyFolderFilter } from "../../lib/folder-filter";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { ReelItem, type ReelItemData } from "./ReelItem";
 import { FilePreviewModal } from "./FilePreviewModal";
@@ -39,6 +40,8 @@ export function ReelsFeed() {
     favorites,
     toggleFavorite,
     fetchFavorites,
+    folderFilterEnabled,
+    selectedFolders,
   } = useMobileStore();
 
   const listRef = useRef<FlatList<ReelItemData>>(null);
@@ -78,24 +81,14 @@ export function ReelsFeed() {
 
   const setTabBarHidden = useMobileStore((s) => s.setTabBarHidden);
 
+  // Keep the footer tab bar visible on Reels. Only the top filter chrome hides.
+  // Changing tabBarStyle here would resize the snap page and hitch the header animation.
   useEffect(() => {
-    if (!isFocused) return;
-    setTabBarHidden(!chromeVisible);
+    setTabBarHidden(false);
     navigation.setOptions({
-      tabBarStyle: instagramTabBarStyle(chromeVisible, insets.bottom),
+      tabBarStyle: instagramTabBarStyle(true, insets.bottom),
     });
-  }, [chromeVisible, isFocused, insets.bottom, navigation, setTabBarHidden]);
-
-  useEffect(() => {
-    return () => {
-      setTabBarHidden(false);
-      try {
-        navigation.setOptions({ tabBarStyle: instagramTabBarStyle(true, insets.bottom) });
-      } catch {
-        // ignore
-      }
-    };
-  }, [navigation, setTabBarHidden]);
+  }, [insets.bottom, navigation, setTabBarHidden]);
 
   useEffect(() => {
     void fetchFavorites();
@@ -137,16 +130,25 @@ export function ReelsFeed() {
           offset: String(offset),
         });
         if (reshuffle) params.set("reshuffle", "true");
+        const folderFilterOn = useMobileStore.getState().folderFilterEnabled;
+        const folders = useMobileStore.getState().selectedFolders;
+        if (folderFilterOn && folders.length > 0) {
+          for (const folder of folders) params.append("folders", folder);
+        }
 
         const res = await apiFetch(`/api/media/reels?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to load reels");
         const data = (await res.json()) as ReelsResponse;
 
-        const mapped = (data.videos || []).map((v) => ({
-          ...v,
-          type: "video" as const,
-          isFavorite: favoritePaths.current.has(v.path) || !!v.isFavorite,
-        }));
+        const mapped = applyFolderFilter(
+          (data.videos || []).map((v) => ({
+            ...v,
+            type: "video" as const,
+            isFavorite: favoritePaths.current.has(v.path) || !!v.isFavorite,
+          })),
+          folderFilterOn,
+          folders
+        );
 
         setVideos((prev) => (append ? [...prev, ...mapped] : mapped));
         setHasMore(!!data.hasMore);
@@ -173,7 +175,7 @@ export function ReelsFeed() {
 
   useEffect(() => {
     void loadReels({ filter, reshuffle: false });
-  }, [filter, loadReels]);
+  }, [filter, folderFilterEnabled, selectedFolders, loadReels]);
 
   // Prefetch near end
   useEffect(() => {
@@ -396,7 +398,9 @@ export function ReelsFeed() {
           </Text>
           <Text style={styles.emptyBody}>
             {error ||
-              (filter === "favorites"
+              (folderFilterEnabled && selectedFolders.length > 0
+                ? "No videos in the selected folders. Change the folder filter in Gallery options."
+                : filter === "favorites"
                 ? "Like videos from All reels or the gallery to see them here."
                 : "Add media folders in Settings and scan your library first.")}
           </Text>

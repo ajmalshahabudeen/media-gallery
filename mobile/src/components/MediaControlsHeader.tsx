@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import {
   Upload,
 } from "lucide-react-native";
 import { useMobileStore } from "../store/useMobileStore";
+import { collectFolderOptions, folderLabel } from "../lib/folder-filter";
 
 interface Props {
   title: string;
@@ -58,9 +59,20 @@ export const MediaControlsHeader: React.FC<Props> = ({
     groupBy,
     setGroupBy,
     galleryLayout,
+    files,
+    folders,
+    folderFilterEnabled,
+    selectedFolders,
+    setFolderFilterEnabled,
+    toggleSelectedFolder,
   } = useMobileStore();
   const insets = useSafeAreaInsets();
   const hideViewToggle = galleryLayout === "feed";
+  const folderOptions = useMemo(
+    () => collectFolderOptions(files, folders),
+    [files, folders]
+  );
+  const folderFilterActive = folderFilterEnabled && selectedFolders.length > 0;
 
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
@@ -110,7 +122,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
           >
             <SlidersHorizontal
               size={18}
-              color={groupBy !== "none" ? "#fafafa" : "#a3a3a3"}
+              color={groupBy !== "none" || folderFilterActive ? "#fafafa" : "#a3a3a3"}
             />
           </TouchableOpacity>
 
@@ -223,6 +235,18 @@ export const MediaControlsHeader: React.FC<Props> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.ribbonTag, folderFilterActive && styles.ribbonTagActive]}
+            onPress={() => setShowOptionsModal(true)}
+          >
+            <Folder size={12} color={folderFilterActive ? "#fafafa" : "#737373"} />
+            <Text style={[styles.ribbonTagText, folderFilterActive && styles.ribbonTagTextActive]}>
+              {folderFilterActive
+                ? `Folders: ${selectedFolders.length}`
+                : "Folders: All"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.ribbonTag}
             onPress={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
           >
@@ -249,6 +273,12 @@ export const MediaControlsHeader: React.FC<Props> = ({
                 <X size={20} color="#a3a3a3" />
               </TouchableOpacity>
             </View>
+
+            <ScrollView
+              style={styles.modalBody}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
 
             {/* Group By Section */}
             <Text style={styles.sectionLabel}>Group Items By</Text>
@@ -304,6 +334,58 @@ export const MediaControlsHeader: React.FC<Props> = ({
                 Order: {sortOrder === "asc" ? "Ascending (A-Z, Oldest)" : "Descending (Z-A, Newest)"}
               </Text>
             </TouchableOpacity>
+
+            <Text style={styles.sectionLabel}>Show Only From Selected Folders</Text>
+            <TouchableOpacity
+              style={[styles.optionCard, folderFilterEnabled && styles.optionCardSelected]}
+              onPress={() => setFolderFilterEnabled(!folderFilterEnabled)}
+            >
+              <Folder size={18} color={folderFilterEnabled ? "#fafafa" : "#a3a3a3"} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.optionText, folderFilterEnabled && styles.optionTextSelected]}>
+                  Filter by folders
+                </Text>
+                <Text style={styles.optionHint}>
+                  {folderFilterEnabled
+                    ? selectedFolders.length > 0
+                      ? `${selectedFolders.length} folder${selectedFolders.length === 1 ? "" : "s"} selected`
+                      : "On — pick one or more folders below"
+                    : "Off — showing every folder"}
+                </Text>
+              </View>
+              {folderFilterEnabled ? <Check size={16} color="#fafafa" /> : null}
+            </TouchableOpacity>
+
+            {folderFilterEnabled ? (
+              <View style={styles.folderList}>
+                {folderOptions.length === 0 ? (
+                  <Text style={styles.optionHint}>Scan your library to see folders.</Text>
+                ) : (
+                  folderOptions.map((folder) => {
+                    const selected = selectedFolders.includes(folder);
+                    return (
+                      <TouchableOpacity
+                        key={folder}
+                        style={[styles.folderRow, selected && styles.folderRowSelected]}
+                        onPress={() => toggleSelectedFolder(folder)}
+                      >
+                        <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                          {selected ? <Check size={12} color="#000000" /> : null}
+                        </View>
+                        <Text
+                          style={[styles.folderRowText, selected && styles.folderRowTextSelected]}
+                          numberOfLines={2}
+                        >
+                          {folderLabel(folder)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </View>
+            ) : null}
+
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.applyBtn}
@@ -469,6 +551,9 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     padding: 4,
   },
+  modalBody: {
+    maxHeight: 460,
+  },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
@@ -547,11 +632,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  optionHint: {
+    color: "#737373",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  folderList: {
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  folderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: "#000000",
+    borderWidth: 1,
+    borderColor: "#262626",
+    marginBottom: 6,
+  },
+  folderRowSelected: {
+    borderColor: "#ffffff",
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  folderRowText: {
+    flex: 1,
+    color: "#a3a3a3",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  folderRowTextSelected: {
+    color: "#fafafa",
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#525252",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+  },
+  checkboxSelected: {
+    backgroundColor: "#ffffff",
+    borderColor: "#ffffff",
+  },
   applyBtn: {
     backgroundColor: "#ffffff",
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
+    marginTop: 12,
   },
   applyBtnText: {
     color: "#000000",

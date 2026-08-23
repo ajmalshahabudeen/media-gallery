@@ -50,6 +50,11 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "40", 10) || 40, 1), 100);
   const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10) || 0, 0);
   const forceReshuffle = searchParams.get("reshuffle") === "true";
+  const selectedFolders = searchParams
+    .getAll("folders")
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim().replace(/\\/g, "/").replace(/\/+$/, ""))
+    .filter(Boolean);
 
   try {
     const scanCacheKey = `media_scan_result_${userId}`;
@@ -135,6 +140,22 @@ export async function GET(request: NextRequest) {
       }
     } else {
       filtered = videos;
+    }
+
+    if (selectedFolders.length > 0) {
+      filtered = filtered.filter((video) => {
+        const folder = (video.folder || "").replace(/\\/g, "/").replace(/\/+$/, "");
+        const path = (video.path || "").replace(/\\/g, "/");
+        return selectedFolders.some((sel) => {
+          return (
+            folder === sel ||
+            folder.startsWith(`${sel}/`) ||
+            path.includes(`/${sel}/`) ||
+            path.endsWith(`/${sel}`) ||
+            folder.toLowerCase() === sel.toLowerCase()
+          );
+        });
+      });
     }
 
     const withFlags = filtered.map((v) => ({

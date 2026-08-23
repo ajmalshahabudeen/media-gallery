@@ -98,7 +98,13 @@
           "photosPermission": "Allow Server Gallery to pick photos and videos to upload to your media library."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-screen-orientation",
+        {
+          "defaultOrientation": "portrait"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

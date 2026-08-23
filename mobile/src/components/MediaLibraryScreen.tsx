@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, StatusBar, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useMobileStore, type MediaFile } from "../store/useMobileStore";
+import { applyFolderFilter } from "../lib/folder-filter";
 import { useScrollChrome } from "../hooks/useScrollChrome";
 import { IndexingProgressBanner } from "./IndexingProgressBanner";
 import { MediaControlsHeader } from "./MediaControlsHeader";
@@ -42,12 +43,16 @@ export function MediaLibraryScreen({
   emptySubtitle,
   emptyIcon,
 }: Props) {
-  const { folders, galleryLayout } = useMobileStore();
+  const { folders, galleryLayout, folderFilterEnabled, selectedFolders } = useMobileStore();
   const { chromeVisible, onScroll } = useScrollChrome();
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const headerHeight = useSharedValue(200);
   const chrome = useSharedValue(1);
+  const visibleFiles = useMemo(
+    () => applyFolderFilter(files, folderFilterEnabled, selectedFolders),
+    [files, folderFilterEnabled, selectedFolders]
+  );
 
   useEffect(() => {
     chrome.value = withTiming(chromeVisible ? 1 : 0, {
@@ -86,7 +91,7 @@ export function MediaLibraryScreen({
       >
         <MediaControlsHeader
           title={heading}
-          itemCount={files.length}
+          itemCount={visibleFiles.length}
           onRefresh={onRefresh}
           isRefreshing={isRefreshing}
           onUpload={canUpload ? () => setUploadOpen(true) : undefined}
@@ -97,7 +102,7 @@ export function MediaLibraryScreen({
       <Animated.View style={[styles.body, bodyAnim]}>
         {galleryLayout === "feed" ? (
           <InstagramFeed
-            files={files}
+            files={visibleFiles}
             onSelectFile={setSelectedFile}
             refreshing={isRefreshing}
             onRefresh={onRefresh}
@@ -107,7 +112,7 @@ export function MediaLibraryScreen({
           />
         ) : (
           <MediaListRenderer
-            files={files}
+            files={visibleFiles}
             onSelectFile={setSelectedFile}
             refreshing={isRefreshing}
             onRefresh={onRefresh}
@@ -122,7 +127,7 @@ export function MediaLibraryScreen({
       <FilePreviewModal
         file={selectedFile}
         onClose={() => setSelectedFile(null)}
-        playlist={files}
+        playlist={visibleFiles}
       />
       <MediaUploadSheet visible={uploadOpen} onClose={() => setUploadOpen(false)} />
     </SafeAreaView>

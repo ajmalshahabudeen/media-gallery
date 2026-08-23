@@ -11,6 +11,9 @@ import {
   StatusBar,
   FlatList,
   Image,
+  Dimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
   type ViewToken,
 } from "react-native";
 import {
@@ -31,6 +34,7 @@ import { AudioPlayerView } from "./AudioPlayerView";
 import { ImageViewerView } from "./ImageViewerView";
 
 const UP_NEXT_LIMIT = 100;
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 interface Props {
   file: MediaFile | null;
@@ -94,6 +98,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     useMobileStore();
   const [current, setCurrent] = useState<MediaFile | null>(file);
   const [visiblePaths, setVisiblePaths] = useState<Record<string, true>>({});
+  const imageListRef = useRef<FlatList<MediaFile>>(null);
 
   useEffect(() => {
     setCurrent(file);
@@ -121,6 +126,17 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     if (!active || active.type !== "video") return [];
     return pickPlaylist(active, playlist, files, favorites).filter((f) => f.type === "video");
   }, [active, playlist, files, favorites]);
+
+  const imageSource = useMemo(() => {
+    if (!active || active.type !== "image") return [];
+    return pickPlaylist(active, playlist, files, favorites).filter((f) => f.type === "image");
+  }, [active, playlist, files, favorites]);
+
+  const imageIndex = useMemo(() => {
+    if (!active || active.type !== "image") return 0;
+    const idx = imageSource.findIndex((item) => item.path === active.path);
+    return idx >= 0 ? idx : 0;
+  }, [active, imageSource]);
 
   const neighbors = useMemo(() => {
     if (!active || active.type !== "video") return { prev: null as MediaFile | null, next: null as MediaFile | null };
@@ -167,6 +183,30 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     setCurrent(next);
   }, []);
 
+  useEffect(() => {
+    if (!file || file.type !== "image" || imageSource.length === 0) return;
+    const idx = imageSource.findIndex((item) => item.path === file.path);
+    if (idx < 0) return;
+    requestAnimationFrame(() => {
+      try {
+        imageListRef.current?.scrollToIndex({ index: idx, animated: false });
+      } catch {
+        // ignore until layout is ready
+      }
+    });
+  }, [file?.path, imageSource.length]);
+
+  const handleImageScrollEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (imageSource.length < 2) return;
+      const x = event.nativeEvent.contentOffset.x;
+      const nextIndex = Math.round(x / Math.max(1, SCREEN_WIDTH));
+      const next = imageSource[nextIndex];
+      if (next && next.path !== current?.path) setCurrent(next);
+    },
+    [current?.path, imageSource]
+  );
+
   if (!active) return null;
 
   const handleOpenExternal = () => {
@@ -199,6 +239,9 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
             </TouchableOpacity>
             <Text style={styles.headerTitle} numberOfLines={1}>
               {active.name}
+              {active.type === "image" && imageSource.length > 1
+                ? `  ${imageIndex + 1}/${imageSource.length}`
+                : ""}
             </Text>
             <View style={styles.headerRight}>
               <TouchableOpacity onPress={() => toggleFavorite(active)} style={styles.iconBtn}>
@@ -216,7 +259,39 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
         ) : null}
 
         <View style={[styles.mediaArea, isVideo && styles.mediaAreaVideo]}>
-          {active.type === "image" && <ImageViewerView uri={mediaUrl} />}
+          {active.type === "image" && (
+            <FlatList
+              ref={imageListRef}
+              key={file?.path || "images"}
+              style={styles.imagePager}
+              data={imageSource.length > 0 ? imageSource : [active]}
+              keyExtractor={(item) => item.path}
+              horizontal
+              pagingEnabled
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={imageIndex}
+              getItemLayout={(_, index) => ({
+                length: SCREEN_WIDTH,
+                offset: SCREEN_WIDTH * index,
+                index,
+              })}
+              onMomentumScrollEnd={handleImageScrollEnd}
+              onScrollToIndexFailed={({ index }) => {
+                requestAnimationFrame(() => {
+                  imageListRef.current?.scrollToIndex({ index, animated: false });
+                });
+              }}
+              renderItem={({ item }) => (
+                <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+                  <ImageViewerView
+                    key={item.path}
+                    uri={buildMediaFileUrl(serverUrl, item.path, sessionToken)}
+                  />
+                </View>
+              )}
+            />
+          )}
           {isVideo && (
             <VideoPlayerView
               key={active.path}
@@ -414,6 +489,10 @@ const styles = StyleSheet.create({
     flex: 0,
     width: "100%",
     backgroundColor: "#000",
+  },
+  imagePager: {
+    flex: 1,
+    width: "100%",
   },
   watchPane: {
     flex: 1,
