@@ -23,7 +23,7 @@ function TabIcon({
     <View style={styles.orb}>
       <Icon
         size={24}
-        color="#fafafa"
+        color={focused ? "#000000" : "#a3a3a3"}
         fill={focused ? "#fafafa" : "transparent"}
         strokeWidth={focused ? 2.4 : 1.7}
       />
