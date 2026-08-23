@@ -51,6 +51,55 @@ function formatTime(seconds: number): string {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
 
+function ReelSeekBar({
+  progress,
+  seeking,
+  onSeekStart,
+  onSeekAt,
+  onSeekEnd,
+}: {
+  progress: number;
+  seeking: boolean;
+  onSeekStart: () => void;
+  onSeekAt: (ratio: number) => void;
+  onSeekEnd: (ratio: number) => void;
+}) {
+  const widthRef = useRef(1);
+  const lastRatio = useRef(progress);
+  const pct = `${Math.max(0, Math.min(100, progress * 100))}%` as const;
+  const ratioFromX = (x: number) => Math.max(0, Math.min(1, x / Math.max(1, widthRef.current)));
+
+  return (
+    <View
+      style={styles.seekHit}
+      onLayout={(e) => {
+        widthRef.current = Math.max(1, e.nativeEvent.layout.width);
+      }}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+      onResponderGrant={(e) => {
+        const ratio = ratioFromX(e.nativeEvent.locationX);
+        lastRatio.current = ratio;
+        onSeekStart();
+        onSeekAt(ratio);
+      }}
+      onResponderMove={(e) => {
+        const ratio = ratioFromX(e.nativeEvent.locationX);
+        lastRatio.current = ratio;
+        onSeekAt(ratio);
+      }}
+      onResponderRelease={() => onSeekEnd(lastRatio.current)}
+      onResponderTerminate={() => onSeekEnd(lastRatio.current)}
+    >
+      <View style={[styles.progressTrack, seeking && styles.progressTrackActive]}>
+        <View style={[styles.progressFill, { width: pct }]} />
+      </View>
+      {seeking ? <View style={[styles.seekThumb, { left: pct }]} /> : null}
+    </View>
+  );
+}
+
 /** Active-only expo-video host (hooks run only when mounted). */
 function ActiveExpoVideo({
   uri,
@@ -182,13 +231,19 @@ export const ReelItem: React.FC<Props> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showSkipHint, setShowSkipHint] = useState<"back" | "fwd" | null>(null);
+  const [isSeeking, setIsSeeking] = useState(false);
   const heartScale = useRef(new Animated.Value(0)).current;
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
   const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const durationRef = useRef(0);
+  const isSeekingRef = useRef(false);
 
   const onProgress = useCallback((current: number, dur: number) => {
-    setCurrentTime(current);
-    if (dur > 0) setDuration(dur);
+    if (dur > 0) {
+      durationRef.current = dur;
+      setDuration(dur);
+    }
+    if (!isSeekingRef.current) setCurrentTime(current);
   }, []);
 
   // Reset progress when leaving
@@ -197,6 +252,8 @@ export const ReelItem: React.FC<Props> = ({
       setCurrentTime(0);
       setIsPlaying(false);
       setIsBuffering(false);
+      setIsSeeking(false);
+      isSeekingRef.current = false;
       lastTapRef.current = null;
       if (singleTapTimer.current) {
         clearTimeout(singleTapTimer.current);
@@ -268,6 +325,42 @@ export const ReelItem: React.FC<Props> = ({
       }
     },
     [onProgress]
+  );
+
+  const seekToRatio = useCallback(
+    (ratio: number) => {
+      const d = durationRef.current;
+      const next = d > 0 ? Math.max(0, Math.min(d, ratio * d)) : 0;
+      const p = expoPlayerRef.current;
+      if (p) {
+        try {
+          p.currentTime = next;
+        } catch {
+          // ignore
+        }
+      }
+      setCurrentTime(next);
+    },
+    []
+  );
+
+  const handleSeekStart = useCallback(() => {
+    isSeekingRef.current = true;
+    setIsSeeking(true);
+  }, []);
+
+  const handleSeekAt = useCallback((ratio: number) => {
+    const d = durationRef.current;
+    setCurrentTime(d > 0 ? ratio * d : 0);
+  }, []);
+
+  const handleSeekEnd = useCallback(
+    (ratio: number) => {
+      seekToRatio(ratio);
+      isSeekingRef.current = false;
+      setIsSeeking(false);
+    },
+    [seekToRatio]
   );
 
   const togglePlay = useCallback(async () => {
@@ -419,34 +512,27 @@ export const ReelItem: React.FC<Props> = ({
             onToggleFavorite(reel);
             if (!reel.isFavorite) burstHeart();
           }}
-          activeOpacity={0.75}
+          activeOpacity={0.7}
+          hitSlop={12}
         >
-          <View style={styles.actionCircle}>
-            <Heart
-              size={28}
-              color={reel.isFavorite ? "#ef4444" : "#fff"}
-              fill={reel.isFavorite ? "#ef4444" : "transparent"}
-            />
-          </View>
-          <Text style={styles.actionLabel}>{reel.isFavorite ? "Liked" : "Like"}</Text>
+          <Heart
+            size={26}
+            color={reel.isFavorite ? "#ef4444" : "#fff"}
+            fill={reel.isFavorite ? "#ef4444" : "transparent"}
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={onToggleMute} activeOpacity={0.75}>
-          <View style={styles.actionCircle}>
-            {isMuted ? <VolumeX size={24} color="#fff" /> : <Volume2 size={24} color="#fff" />}
-          </View>
-          <Text style={styles.actionLabel}>{isMuted ? "Sound" : "Mute"}</Text>
+        <TouchableOpacity style={styles.actionBtn} onPress={onToggleMute} activeOpacity={0.7} hitSlop={12}>
+          {isMuted ? <VolumeX size={24} color="#fff" /> : <Volume2 size={24} color="#fff" />}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => onOpenInGallery(reel)}
-          activeOpacity={0.75}
+          activeOpacity={0.7}
+          hitSlop={12}
         >
-          <View style={styles.actionCircle}>
-            <ArrowUpRight size={24} color="#fff" />
-          </View>
-          <Text style={styles.actionLabel}>Open</Text>
+          <ArrowUpRight size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -466,9 +552,13 @@ export const ReelItem: React.FC<Props> = ({
         ) : null}
       </View>
 
-      <View style={styles.progressTrack} pointerEvents="none">
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-      </View>
+      <ReelSeekBar
+        progress={progress}
+        seeking={isSeeking}
+        onSeekStart={handleSeekStart}
+        onSeekAt={handleSeekAt}
+        onSeekEnd={handleSeekEnd}
+      />
     </View>
   );
 };
@@ -556,33 +646,16 @@ const styles = StyleSheet.create({
   },
   actionRail: {
     position: "absolute",
-    right: 12,
-    bottom: 120,
+    right: 10,
+    bottom: 56,
     alignItems: "center",
     gap: 18,
     zIndex: 20,
   },
   actionBtn: {
+    padding: 8,
     alignItems: "center",
-    gap: 4,
-  },
-  actionCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(0,0,0,0.28)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
     justifyContent: "center",
-    alignItems: "center",
-  },
-  actionLabel: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   meta: {
     position: "absolute",
@@ -610,17 +683,34 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontVariant: ["tabular-nums"],
   },
-  progressTrack: {
+  seekHit: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    zIndex: 25,
+    height: 28,
+    justifyContent: "flex-end",
+    zIndex: 30,
+  },
+  progressTrack: {
+    height: 2.5,
+    backgroundColor: "rgba(255,255,255,0.28)",
+    overflow: "hidden",
+  },
+  progressTrackActive: {
+    height: 5,
   },
   progressFill: {
     height: "100%",
     backgroundColor: "#fff",
+  },
+  seekThumb: {
+    position: "absolute",
+    bottom: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    marginLeft: -6,
   },
 });
