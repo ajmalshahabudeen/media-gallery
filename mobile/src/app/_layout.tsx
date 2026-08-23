@@ -5,6 +5,7 @@ import { View, ActivityIndicator, StyleSheet, Platform, Text } from "react-nativ
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import { useMobileStore } from "../store/useMobileStore";
+import { AppLockGate } from "../components/AppLockGate";
 
 // Prevent native splash screen from hiding before JS is ready
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -104,6 +105,7 @@ function RootLayoutInner() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
+      <AppLockGate>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -132,6 +134,7 @@ function RootLayoutInner() {
           <Text style={styles.loadingLabel}>Starting Server Gallery…</Text>
         </View>
       ) : null}
+      </AppLockGate>
     </GestureHandlerRootView>
   );
 }

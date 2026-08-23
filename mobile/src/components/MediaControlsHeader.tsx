@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -265,8 +266,9 @@ export const MediaControlsHeader: React.FC<Props> = ({
         animationType="slide"
         onRequestClose={() => setShowOptionsModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowOptionsModal(false)}>
-          <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowOptionsModal(false)} />
+          <View style={[styles.modalCard, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter & Group Options</Text>
               <TouchableOpacity onPress={() => setShowOptionsModal(false)} style={styles.modalCloseBtn}>
@@ -276,8 +278,11 @@ export const MediaControlsHeader: React.FC<Props> = ({
 
             <ScrollView
               style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
               keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              bounces
             >
 
             {/* Group By Section */}
@@ -394,7 +399,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
               <Text style={styles.applyBtnText}>Done</Text>
             </TouchableOpacity>
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </View>
   );
@@ -552,7 +557,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalBody: {
-    maxHeight: 460,
+    maxHeight: Math.round(Dimensions.get("window").height * 0.52),
+  },
+  modalBodyContent: {
+    paddingBottom: 8,
   },
   sectionLabel: {
     fontSize: 13,

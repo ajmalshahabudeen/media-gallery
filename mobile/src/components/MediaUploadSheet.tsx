@@ -10,9 +10,15 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FolderPlus, ImagePlus, Upload, X, Folder } from "lucide-react-native";
 import { useMobileStore } from "../store/useMobileStore";
+import { beginExternalActivity, endExternalActivity } from "./AppLockGate";
+
+const SHEET_MAX = Math.round(Dimensions.get("window").height * 0.88);
+const PICKER_LIMIT = 200;
 
 interface Props {
   visible: boolean;
@@ -51,6 +57,7 @@ function guessType(asset: { mimeType?: string | null; type?: string | null }, na
 
 export function MediaUploadSheet({ visible, onClose }: Props) {
   const { folders, fetchSubfolders, createSubfolder, uploadMedia } = useMobileStore();
+  const insets = useSafeAreaInsets();
 
   const [libraryPath, setLibraryPath] = useState("");
   const [destPath, setDestPath] = useState("");
@@ -90,13 +97,15 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
 
   const pickMedia = async () => {
     setPicking(true);
+    beginExternalActivity();
     try {
       const ImagePicker = await import("expo-image-picker");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images", "videos"],
         allowsMultipleSelection: true,
-        selectionLimit: 20,
+        selectionLimit: PICKER_LIMIT,
         quality: 1,
+        allowsEditing: false,
       });
       if (result.canceled) return;
       const next = result.assets.map((asset, index) => {
@@ -111,6 +120,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
     } catch (err: any) {
       Alert.alert("Picker error", err?.message || "Could not open the photo library.");
     } finally {
+      endExternalActivity();
       setPicking(false);
     }
   };
@@ -159,8 +169,9 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.sheet} onStartShouldSetResponder={() => true}>
+      <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={[styles.sheet, { maxHeight: SHEET_MAX, paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={styles.header}>
             <Text style={styles.title}>Upload photos & videos</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -168,7 +179,14 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={[styles.scroller, { maxHeight: SHEET_MAX - 72 - Math.max(insets.bottom, 12) }]}
+            contentContainerStyle={styles.body}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            bounces
+          >
             <Text style={styles.label}>Media library</Text>
             {folders.map((folder) => {
               const active = libraryPath === folder.path;
@@ -269,7 +287,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -284,9 +302,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#171717",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "88%",
     borderWidth: 1,
     borderColor: "#262626",
+    flexShrink: 1,
   },
   header: {
     flexDirection: "row",
@@ -304,9 +322,14 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 4,
   },
+  scroller: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
   body: {
     paddingHorizontal: 20,
     paddingBottom: 32,
+    flexGrow: 1,
   },
   label: {
     fontSize: 12,

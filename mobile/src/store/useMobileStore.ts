@@ -19,6 +19,7 @@ import {
 
 export const GALLERY_LAYOUT_KEY = "media_gallery_home_layout";
 export const FOLDER_FILTER_KEY = "media_gallery_folder_filter";
+export const APP_LOCK_KEY = "media_gallery_app_lock";
 
 export type GalleryLayout = "grid" | "feed";
 
@@ -96,6 +97,7 @@ interface MobileState {
   tabBarHidden: boolean;
   folderFilterEnabled: boolean;
   selectedFolders: string[];
+  appLockEnabled: boolean;
 
   setServerUrl: (url: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
@@ -110,6 +112,7 @@ interface MobileState {
   setFolderFilterEnabled: (enabled: boolean) => void;
   setSelectedFolders: (folders: string[]) => void;
   toggleSelectedFolder: (folder: string) => void;
+  setAppLockEnabled: (enabled: boolean) => Promise<void>;
 
   initApp: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
@@ -173,6 +176,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   tabBarHidden: false,
   folderFilterEnabled: false,
   selectedFolders: [],
+  appLockEnabled: false,
 
   setServerUrl: async (url: string) => {
     await saveServerUrl(url);
@@ -204,6 +208,14 @@ export const useMobileStore = create<MobileState>((set, get) => ({
     set({ selectedFolders: next });
     void persistFolderFilter(get().folderFilterEnabled, next);
   },
+  setAppLockEnabled: async (enabled) => {
+    set({ appLockEnabled: enabled });
+    try {
+      await AsyncStorage.setItem(APP_LOCK_KEY, enabled ? "1" : "0");
+    } catch {
+      // ignore persist errors
+    }
+  },
   setGalleryLayout: async (layout) => {
     set({ galleryLayout: layout });
     try {
@@ -219,10 +231,12 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       let galleryLayout: GalleryLayout = "grid";
       let folderFilterEnabled = false;
       let selectedFolders: string[] = [];
+      let appLockEnabled = false;
       try {
-        const [savedLayout, savedFolderFilter] = await Promise.all([
+        const [savedLayout, savedFolderFilter, savedAppLock] = await Promise.all([
           AsyncStorage.getItem(GALLERY_LAYOUT_KEY),
           AsyncStorage.getItem(FOLDER_FILTER_KEY),
+          AsyncStorage.getItem(APP_LOCK_KEY),
         ]);
         if (savedLayout === "feed" || savedLayout === "grid") {
           galleryLayout = savedLayout;
@@ -234,10 +248,11 @@ export const useMobileStore = create<MobileState>((set, get) => ({
             ? parsed.folders.filter((item): item is string => typeof item === "string" && item.length > 0)
             : [];
         }
+        appLockEnabled = savedAppLock === "1";
       } catch {
         // ignore
       }
-      set({ serverUrl: url, sessionToken: token, galleryLayout, folderFilterEnabled, selectedFolders });
+      set({ serverUrl: url, sessionToken: token, galleryLayout, folderFilterEnabled, selectedFolders, appLockEnabled });
 
       const discovered = await discoverServerUrl({ budgetMs: 4500 });
       if (discovered.url !== get().serverUrl) {

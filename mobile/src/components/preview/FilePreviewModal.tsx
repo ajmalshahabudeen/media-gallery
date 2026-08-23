@@ -8,7 +8,6 @@ import {
   ScrollView,
   Share,
   Linking,
-  StatusBar,
   FlatList,
   Image,
   Dimensions,
@@ -32,9 +31,16 @@ import { buildMediaFileUrl, buildThumbnailUrl } from "../../lib/api";
 import { VideoPlayerView } from "./VideoPlayerView";
 import { AudioPlayerView } from "./AudioPlayerView";
 import { ImageViewerView } from "./ImageViewerView";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const UP_NEXT_LIMIT = 100;
 const SCREEN_WIDTH = Dimensions.get("window").width;
+
+function ModalSafeTop({ color }: { color: string }) {
+  const insets = useSafeAreaInsets();
+  return <View style={{ height: insets.top, backgroundColor: color }} />;
+}
 
 interface Props {
   file: MediaFile | null;
@@ -229,8 +235,10 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
 
   return (
     <Modal visible={!!file} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={[styles.container, isVideo && styles.containerVideo]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" />
+      <SafeAreaProvider>
+        <View style={[styles.container, isVideo && styles.containerVideo]}>
+          <StatusBar style="light" />
+          <ModalSafeTop color={isVideo ? "#0f0f0f" : "#000000"} />
 
         {!isVideo ? (
           <View style={styles.header}>
@@ -440,6 +448,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
           </View>
         )}
       </View>
+      </SafeAreaProvider>
     </Modal>
   );
 };
@@ -456,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 48,
+    paddingTop: 8,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: "#000000",

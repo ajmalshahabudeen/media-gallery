@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -22,11 +23,13 @@ import {
   Upload,
   LayoutGrid,
   Newspaper,
+  Lock,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useMobileStore } from "../../store/useMobileStore";
 import { ServerConfigModal } from "../../components/ServerConfigModal";
 import { MediaUploadSheet } from "../../components/MediaUploadSheet";
+import { canUseDeviceLock, promptDeviceLock } from "../../lib/app-lock";
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -41,12 +44,15 @@ export default function SettingsScreen() {
     logout,
     galleryLayout,
     setGalleryLayout,
+    appLockEnabled,
+    setAppLockEnabled,
   } = useMobileStore();
 
   const [folderInput, setFolderInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [lockBusy, setLockBusy] = useState(false);
 
   const handleAddFolder = async () => {
     if (!folderInput.trim()) {
@@ -80,6 +86,39 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleToggleAppLock = async (next: boolean) => {
+    if (lockBusy) return;
+    setLockBusy(true);
+    try {
+      if (next) {
+        const available = await canUseDeviceLock();
+        if (!available.ok) {
+          Alert.alert("Screen lock required", available.reason || "Set a device lock first.");
+          return;
+        }
+        const result = await promptDeviceLock("Enable app lock");
+        if (!result.success) {
+          if (result.error && result.error !== "cancelled") {
+            Alert.alert("Could not enable", result.error);
+          }
+          return;
+        }
+        await setAppLockEnabled(true);
+      } else {
+        const result = await promptDeviceLock("Disable app lock");
+        if (!result.success) {
+          if (result.error && result.error !== "cancelled") {
+            Alert.alert("Could not disable", result.error);
+          }
+          return;
+        }
+        await setAppLockEnabled(false);
+      }
+    } finally {
+      setLockBusy(false);
+    }
   };
 
   const handleSignOut = () => {
@@ -139,6 +178,28 @@ export default function SettingsScreen() {
           >
             <Text style={styles.actionBtnText}>Configure / Test Connection</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* App lock */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Lock size={18} color="#fafafa" />
+            <Text style={styles.cardTitle}>App lock</Text>
+          </View>
+          <Text style={styles.cardSub}>
+            When enabled, Server Gallery asks for your device screen lock (fingerprint, face, PIN, or pattern) on open and when you return from the background.
+          </Text>
+          <View style={styles.lockRow}>
+            <Text style={styles.lockLabel}>{appLockEnabled ? "On" : "Off"}</Text>
+            <Switch
+              value={appLockEnabled}
+              onValueChange={(value) => void handleToggleAppLock(value)}
+              disabled={lockBusy}
+              trackColor={{ false: "#262626", true: "#ffffff" }}
+              thumbColor={appLockEnabled ? "#000000" : "#a3a3a3"}
+              ios_backgroundColor="#262626"
+            />
+          </View>
         </View>
 
         {/* Home layout — mobile only */}
@@ -415,6 +476,16 @@ const styles = StyleSheet.create({
   },
   layoutChoiceTextActive: {
     color: "#000000",
+  },
+  lockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  lockLabel: {
+    color: "#fafafa",
+    fontSize: 14,
+    fontWeight: "700",
   },
   addFolderRow: {
     flexDirection: "row",

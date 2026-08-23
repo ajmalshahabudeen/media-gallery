@@ -104,6 +104,12 @@
         {
           "defaultOrientation": "portrait"
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Server Gallery to unlock with Face ID."
+        }
       ]
     ],
     "experiments": {
