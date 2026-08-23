@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { YoutubePlayerOverlay, nextPlaybackRate } from "./youtube-player-overlay";
+import { setPlaybackSession, type PlaybackItem } from "../../lib/playback-session";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -28,6 +29,9 @@ interface Props {
   onNextVideo?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
+  playlist?: PlaybackItem[];
+  playlistIndex?: number;
+  onSelectIndex?: (index: number) => void;
 }
 
 export const VideoPlayerView: React.FC<Props> = ({
@@ -37,6 +41,9 @@ export const VideoPlayerView: React.FC<Props> = ({
   onNextVideo,
   hasPrev,
   hasNext,
+  playlist,
+  playlistIndex = 0,
+  onSelectIndex,
 }) => {
   const router = useRouter();
 
@@ -273,13 +280,75 @@ export const VideoPlayerView: React.FC<Props> = ({
     resetHideTimer();
   };
 
-  const handleFullscreen = () => {
-    if (expoPlayer) expoPlayer.pause();
+  const handleFullscreen = useCallback(() => {
+    const items =
+      playlist && playlist.length > 0 ? playlist : [{ uri, title: title || "Video" }];
+    const index = Math.max(0, Math.min(items.length - 1, playlistIndex));
+    if (expoPlayer) {
+      try {
+        expoPlayer.pause();
+      } catch {
+        // ignore
+      }
+    }
+    setPlaybackSession({
+      items,
+      index,
+      startAt: positionRef.current,
+      muted: isMuted,
+      rate: playbackRate,
+      onIndexChange: onSelectIndex,
+      onExit: (pos) => {
+        seekAbsolute(pos);
+        if (expoPlayer) {
+          try {
+            expoPlayer.play();
+          } catch {
+            // ignore
+          }
+        }
+      },
+    });
     router.push({
       pathname: "/fullscreen-video",
-      params: { uri, title: title || "Video" },
+      params: {
+        uri: items[index]?.uri || uri,
+        title: items[index]?.title || title || "Video",
+        startAt: String(positionRef.current),
+      },
     } as any);
-  };
+  }, [
+    expoPlayer,
+    isMuted,
+    onSelectIndex,
+    playbackRate,
+    playlist,
+    playlistIndex,
+    router,
+    seekAbsolute,
+    title,
+    uri,
+  ]);
+
+  const openingFs = useRef(false);
+  useEffect(() => {
+    const openIfLandscape = (width: number, height: number) => {
+      if (openingFs.current && width <= height) {
+        openingFs.current = false;
+        return;
+      }
+      if (openingFs.current) return;
+      if (width <= height) return;
+      openingFs.current = true;
+      handleFullscreen();
+    };
+    const sub = Dimensions.addEventListener("change", ({ window }) => {
+      openIfLandscape(window.width, window.height);
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [handleFullscreen]);
 
   const handleSurfaceTap = useCallback(
     (x: number) => {

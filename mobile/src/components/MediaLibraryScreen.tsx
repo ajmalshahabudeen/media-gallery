@@ -71,7 +71,7 @@ export function MediaLibraryScreen({
   const heading = galleryLayout === "feed" && title === "Media Gallery" ? "Grid" : title;
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
       <Animated.View

@@ -145,6 +145,7 @@ interface OverlayProps {
   onSeekStart: () => void;
   onSeekRatio: (ratio: number) => void;
   onSeekEnd: (ratio: number) => void;
+  sideHud?: { kind: "volume" | "brightness"; value: number } | null;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -174,6 +175,7 @@ export function YoutubePlayerOverlay({
   onSeekStart,
   onSeekRatio,
   onSeekEnd,
+  sideHud = null,
   style,
 }: OverlayProps) {
   const chrome = useSharedValue(visible ? 1 : 0);
@@ -362,6 +364,16 @@ export function YoutubePlayerOverlay({
         </View>
       ) : null}
 
+      {sideHud ? (
+        <View style={[styles.sideHud, sideHud.kind === "volume" ? styles.sideHudRight : styles.sideHudLeft]} pointerEvents="none">
+          <Text style={styles.sideHudLabel}>{sideHud.kind === "volume" ? "Vol" : "Lum"}</Text>
+          <View style={styles.sideHudTrack}>
+            <View style={[styles.sideHudFill, { height: `${Math.round(sideHud.value * 100)}%` }]} />
+          </View>
+          <Text style={styles.sideHudPct}>{Math.round(sideHud.value * 100)}</Text>
+        </View>
+      ) : null}
+
       {isLoading ? (
         <View style={styles.loading} pointerEvents="none">
           <Animated.View style={[styles.loadingDot, spinStyle]} />
@@ -546,6 +558,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     marginTop: 2,
+    fontVariant: ["tabular-nums"],
+  },
+  sideHud: {
+    position: "absolute",
+    top: "28%",
+    width: 44,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.62)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    gap: 6,
+  },
+  sideHudLeft: {
+    left: 18,
+  },
+  sideHudRight: {
+    right: 18,
+  },
+  sideHudLabel: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  sideHudTrack: {
+    width: 5,
+    height: 88,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  sideHudFill: {
+    width: "100%",
+    backgroundColor: "#fff",
+  },
+  sideHudPct: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
     fontVariant: ["tabular-nums"],
   },
   loading: {

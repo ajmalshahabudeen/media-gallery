@@ -18,10 +18,7 @@ import { apiFetch } from "../../lib/api";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { ReelItem, type ReelItemData } from "./ReelItem";
 import { FilePreviewModal } from "./FilePreviewModal";
-import {
-  FLOATING_TAB_BAR_STYLE,
-  HIDDEN_TAB_BAR_STYLE,
-} from "../tab-bar-style";
+import { instagramTabBarStyle } from "../tab-bar-style";
 
 type ReelsFilter = "all" | "favorites";
 
@@ -85,15 +82,15 @@ export function ReelsFeed() {
     if (!isFocused) return;
     setTabBarHidden(!chromeVisible);
     navigation.setOptions({
-      tabBarStyle: chromeVisible ? FLOATING_TAB_BAR_STYLE : HIDDEN_TAB_BAR_STYLE,
+      tabBarStyle: instagramTabBarStyle(chromeVisible, insets.bottom),
     });
-  }, [chromeVisible, isFocused, navigation, setTabBarHidden]);
+  }, [chromeVisible, isFocused, insets.bottom, navigation, setTabBarHidden]);
 
   useEffect(() => {
     return () => {
       setTabBarHidden(false);
       try {
-        navigation.setOptions({ tabBarStyle: FLOATING_TAB_BAR_STYLE });
+        navigation.setOptions({ tabBarStyle: instagramTabBarStyle(true, insets.bottom) });
       } catch {
         // ignore
       }

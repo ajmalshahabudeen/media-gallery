@@ -60,6 +60,7 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [progress, setProgress] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!visible) return;
@@ -139,7 +140,12 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
       return;
     }
     setUploading(true);
-    const result = await uploadMedia(libraryPath, destPath, assets);
+    setProgress({});
+    const result = await uploadMedia(libraryPath, destPath, assets, (index, percent) => {
+      const key = assets[index]?.uri;
+      if (!key) return;
+      setProgress((prev) => ({ ...prev, [key]: percent }));
+    });
     setUploading(false);
     if (result.success) {
       const extra = result.failed ? `\n${result.failed} skipped.` : "";
@@ -239,9 +245,13 @@ export function MediaUploadSheet({ visible, onClose }: Props) {
                 <Text style={styles.assetName} numberOfLines={1}>
                   {asset.name}
                 </Text>
-                <TouchableOpacity onPress={() => setAssets((prev) => prev.filter((a) => a.uri !== asset.uri))}>
-                  <X size={16} color="#a3a3a3" />
-                </TouchableOpacity>
+                {uploading ? (
+                  <Text style={styles.assetPct}>{progress[asset.uri] ?? 0}%</Text>
+                ) : (
+                  <TouchableOpacity onPress={() => setAssets((prev) => prev.filter((a) => a.uri !== asset.uri))}>
+                    <X size={16} color="#a3a3a3" />
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
 
@@ -382,6 +392,14 @@ const styles = StyleSheet.create({
     color: "#e5e5e5",
     fontSize: 12,
     marginRight: 10,
+  },
+  assetPct: {
+    color: "#fafafa",
+    fontSize: 11,
+    fontWeight: "700",
+    fontVariant: ["tabular-nums"],
+    minWidth: 36,
+    textAlign: "right",
   },
   uploadBtn: {
     marginTop: 16,

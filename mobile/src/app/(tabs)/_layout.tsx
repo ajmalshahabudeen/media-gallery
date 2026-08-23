@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Tabs, Redirect } from "expo-router";
-import { BlurView } from "expo-blur";
 import {
   Image as ImageIcon,
   Star,
@@ -10,7 +9,8 @@ import {
   Clapperboard,
 } from "lucide-react-native";
 import { useMobileStore } from "../../store/useMobileStore";
-import { FLOATING_TAB_BAR_STYLE } from "../../components/tab-bar-style";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { instagramTabBarStyle } from "../../components/tab-bar-style";
 
 function TabIcon({
   focused,
@@ -20,11 +20,12 @@ function TabIcon({
   Icon: typeof ImageIcon;
 }) {
   return (
-    <View style={focused ? styles.orbActive : styles.orb}>
+    <View style={styles.orb}>
       <Icon
-        size={20}
-        color={focused ? "#000000" : "#a3a3a3"}
-        strokeWidth={focused ? 2.3 : 1.8}
+        size={24}
+        color="#fafafa"
+        fill={focused ? "#fafafa" : "transparent"}
+        strokeWidth={focused ? 2.4 : 1.7}
       />
     </View>
   );
@@ -32,6 +33,7 @@ function TabIcon({
 
 export default function TabsLayout() {
   const { user, authChecked, isAuthenticated } = useMobileStore();
+  const insets = useSafeAreaInsets();
 
   if (authChecked && !isAuthenticated) {
     return <Redirect href="/(auth)/sign-in" />;
@@ -47,18 +49,10 @@ export default function TabsLayout() {
         freezeOnBlur: false,
         tabBarShowLabel: false,
         animation: "none",
-        tabBarBackground: () => (
-          <View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, styles.dockClip]}
-          >
-            <BlurView tint="dark" intensity={70} style={StyleSheet.absoluteFill} />
-            <View style={styles.dockTint} />
-          </View>
-        ),
-        tabBarStyle: FLOATING_TAB_BAR_STYLE,
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: instagramTabBarStyle(true, insets.bottom),
         tabBarItemStyle: {
-          height: 58,
+          height: 48,
           paddingTop: 0,
           paddingBottom: 0,
           paddingHorizontal: 0,
@@ -67,8 +61,8 @@ export default function TabsLayout() {
           alignItems: "center",
         },
         tabBarIconStyle: {
-          width: 40,
-          height: 40,
+          width: 28,
+          height: 28,
           marginTop: 0,
           marginBottom: 0,
         },
@@ -77,8 +71,8 @@ export default function TabsLayout() {
           height: 0,
           fontSize: 0,
         },
-        tabBarActiveTintColor: "#000000",
-        tabBarInactiveTintColor: "#a3a3a3",
+        tabBarActiveTintColor: "#fafafa",
+        tabBarInactiveTintColor: "#737373",
       }}
     >
       <Tabs.Screen
@@ -123,28 +117,10 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  dockClip: {
-    borderRadius: 29,
-    overflow: "hidden",
-    backgroundColor: "rgba(8, 10, 16, 0.82)",
-  },
-  dockTint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(8, 10, 16, 0.22)",
-  },
   orb: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
-  },
-  orbActive: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fafafa",
   },
 });

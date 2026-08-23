@@ -2,10 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { LayoutAnimation, Platform, UIManager } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import { useFocusEffect, useNavigation } from "expo-router";
-import {
-  FLOATING_TAB_BAR_STYLE,
-  HIDDEN_TAB_BAR_STYLE,
-} from "../components/tab-bar-style";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { instagramTabBarStyle } from "../components/tab-bar-style";
 
 try {
   if (
@@ -33,6 +31,7 @@ function animateChrome() {
 
 export function useScrollChrome() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
   const lastOffsetY = useRef(0);
   const visibleRef = useRef(true);
@@ -41,10 +40,10 @@ export function useScrollChrome() {
     (visible: boolean) => {
       animateChrome();
       navigation.setOptions({
-        tabBarStyle: visible ? FLOATING_TAB_BAR_STYLE : HIDDEN_TAB_BAR_STYLE,
+        tabBarStyle: instagramTabBarStyle(visible, insets.bottom),
       });
     },
-    [navigation]
+    [navigation, insets.bottom]
   );
 
   const setVisible = useCallback(
@@ -62,12 +61,12 @@ export function useScrollChrome() {
       setVisible(true);
       return () => {
         try {
-          navigation.setOptions({ tabBarStyle: FLOATING_TAB_BAR_STYLE });
+          navigation.setOptions({ tabBarStyle: instagramTabBarStyle(true, insets.bottom) });
         } catch {
           // ignore
         }
       };
-    }, [navigation, setVisible])
+    }, [navigation, setVisible, insets.bottom])
   );
 
   const onScroll = useCallback(

@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { YoutubePlayerOverlay, nextPlaybackRate } from "../components/preview/youtube-player-overlay";
+import { getPlaybackSession, updatePlaybackSession, setPlaybackSession } from "../lib/playback-session";
 
 let ScreenOrientation: any = null;
 try {
@@ -20,22 +21,39 @@ try {
   // not available
 }
 
+let Brightness: { getBrightnessAsync?: () => Promise<number>; setBrightnessAsync?: (v: number) => Promise<void> } | null =
+  null;
+try {
+  Brightness = require("expo-brightness");
+} catch {
+  Brightness = null;
+}
+
 const DOUBLE_TAP_MS = 300;
 const ZONE_LEFT = 0.35;
 const ZONE_RIGHT = 0.65;
 const SCRUB_DX_THRESHOLD = 14;
 const SCRUB_AXIS_RATIO = 1.15;
+const SIDE_ZONE = 0.22;
+const SIDE_DY_THRESHOLD = 10;
 
 export default function FullscreenVideoScreen() {
-  const params = useLocalSearchParams<{ uri: string; title?: string }>();
+  const params = useLocalSearchParams<{ uri: string; title?: string; startAt?: string }>();
   const router = useRouter();
-  const uri = params.uri || "";
-  const title = params.title || "Video";
+  const initialSession = getPlaybackSession();
+  const [activeIndex, setActiveIndex] = useState(initialSession?.index ?? 0);
+  const items =
+    initialSession?.items && initialSession.items.length > 0
+      ? initialSession.items
+      : [{ uri: params.uri || "", title: params.title || "Video" }];
+  const uri = items[Math.max(0, Math.min(items.length - 1, activeIndex))]?.uri || params.uri || "";
+  const title = items[Math.max(0, Math.min(items.length - 1, activeIndex))]?.title || params.title || "Video";
+  const startAt = initialSession?.startAt ?? Number(params.startAt || 0);
 
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(initialSession?.muted ?? false);
   const [showControls, setShowControls] = useState(true);
-  const [position, setPosition] = useState(0);
+  const [position, setPosition] = useState(startAt);
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSeeking, setIsSeeking] = useState(false);
@@ -44,7 +62,10 @@ export default function FullscreenVideoScreen() {
     delta: number;
     target: number;
   } | null>(null);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(initialSession?.rate ?? 1);
+  const [volume, setVolume] = useState(1);
+  const [brightness, setBrightness] = useState(1);
+  const [sideHud, setSideHud] = useState<{ kind: "volume" | "brightness"; value: number } | null>(null);
 
   const hideControlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const durationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -52,18 +73,27 @@ export default function FullscreenVideoScreen() {
   const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const screenDims = Dimensions.get("screen");
 
-  const positionRef = useRef(0);
+  const positionRef = useRef(startAt);
   const durationRef = useRef(0);
   const isSeekingRef = useRef(false);
   const containerWidthRef = useRef(screenDims.width);
+  const containerHeightRef = useRef(screenDims.height);
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
   const scrubActiveRef = useRef(false);
+  const sideActiveRef = useRef<"volume" | "brightness" | null>(null);
+  const sideStartRef = useRef(0);
+  const volumeRef = useRef(1);
+  const brightnessRef = useRef(1);
   const scrubStartPosRef = useRef(0);
   const scrubTargetRef = useRef(0);
   const grantXRef = useRef(0);
+  const appliedInitialSeek = useRef(false);
 
   const expoPlayer = useVideoPlayer(uri, (player: any) => {
     player.loop = false;
+    player.muted = initialSession?.muted ?? false;
+    player.volume = 1;
+    if (initialSession?.rate) player.playbackRate = initialSession.rate;
     player.play();
   });
 
@@ -76,6 +106,9 @@ export default function FullscreenVideoScreen() {
           } else {
             expoPlayer.replace(uri);
           }
+          expoPlayer.muted = isMuted;
+          expoPlayer.volume = volumeRef.current;
+          expoPlayer.playbackRate = playbackRate;
           expoPlayer.play();
         } catch {
           // ignore
@@ -99,6 +132,15 @@ export default function FullscreenVideoScreen() {
     if (ScreenOrientation) {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
     }
+    if (Brightness?.getBrightnessAsync) {
+      Brightness.getBrightnessAsync()
+        .then((value) => {
+          const next = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
+          setBrightness(next);
+          brightnessRef.current = next;
+        })
+        .catch(() => {});
+    }
     return () => {
       if (ScreenOrientation) {
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
@@ -107,6 +149,9 @@ export default function FullscreenVideoScreen() {
   }, []);
 
   const handleExit = useCallback(() => {
+    const session = getPlaybackSession();
+    session?.onExit?.(positionRef.current, activeIndex);
+    setPlaybackSession(null);
     if (expoPlayer) {
       try {
         expoPlayer.pause();
@@ -115,7 +160,7 @@ export default function FullscreenVideoScreen() {
       }
     }
     router.back();
-  }, [expoPlayer, router]);
+  }, [activeIndex, expoPlayer, router]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -147,10 +192,31 @@ export default function FullscreenVideoScreen() {
         durationPollRef.current = null;
       }
     };
-  }, [expoPlayer]);
+  }, [expoPlayer, uri]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    if (appliedInitialSeek.current) {
+      setPosition(0);
+      positionRef.current = 0;
+    }
+  }, [uri]);
 
   useEffect(() => {
     if (!expoPlayer) return;
+    const applyStart = () => {
+      if (appliedInitialSeek.current) return;
+      appliedInitialSeek.current = true;
+      if (startAt > 0.2) {
+        try {
+          expoPlayer.currentTime = startAt;
+          setPosition(startAt);
+          positionRef.current = startAt;
+        } catch {
+          // ignore
+        }
+      }
+    };
     const timeSub = expoPlayer.addListener("timeUpdate", (event: any) => {
       if (!isSeekingRef.current) setPosition(event.currentTime || 0);
       const d = event.duration || expoPlayer.duration;
@@ -161,6 +227,7 @@ export default function FullscreenVideoScreen() {
       const statusStr = typeof status === "string" ? status : status?.status;
       if (statusStr === "readyToPlay") {
         setIsLoading(false);
+        applyStart();
         try {
           const d = expoPlayer.duration;
           if (d && d > 0 && isFinite(d)) setDuration(d);
@@ -177,7 +244,7 @@ export default function FullscreenVideoScreen() {
       statusSub?.remove();
       playingSub?.remove();
     };
-  }, [expoPlayer]);
+  }, [activeIndex, expoPlayer, startAt]);
 
   const resetHideTimer = useCallback(() => {
     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
@@ -276,6 +343,18 @@ export default function FullscreenVideoScreen() {
     resetHideTimer();
   };
 
+  const goToIndex = useCallback(
+    (nextIndex: number) => {
+      if (nextIndex < 0 || nextIndex >= items.length) return;
+      setActiveIndex(nextIndex);
+      updatePlaybackSession({ index: nextIndex, startAt: 0 });
+      getPlaybackSession()?.onIndexChange?.(nextIndex);
+      setPosition(0);
+      positionRef.current = 0;
+    },
+    [items.length]
+  );
+
   const handleSeekStart = () => {
     setIsSeeking(true);
     isSeekingRef.current = true;
@@ -293,6 +372,35 @@ export default function FullscreenVideoScreen() {
     isSeekingRef.current = false;
     resetHideTimer();
   };
+
+  const applyVolume = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0, Math.min(1, next));
+      volumeRef.current = clamped;
+      setVolume(clamped);
+      if (expoPlayer) {
+        try {
+          expoPlayer.volume = clamped;
+          expoPlayer.muted = clamped <= 0.001;
+          setIsMuted(clamped <= 0.001);
+        } catch {
+          // ignore
+        }
+      }
+      setSideHud({ kind: "volume", value: clamped });
+    },
+    [expoPlayer]
+  );
+
+  const applyBrightness = useCallback((next: number) => {
+    const clamped = Math.max(0.05, Math.min(1, next));
+    brightnessRef.current = clamped;
+    setBrightness(clamped);
+    if (Brightness?.setBrightnessAsync) {
+      Brightness.setBrightnessAsync(clamped).catch(() => {});
+    }
+    setSideHud({ kind: "brightness", value: clamped });
+  }, []);
 
   const handleSurfaceTap = useCallback(
     (x: number) => {
@@ -333,30 +441,62 @@ export default function FullscreenVideoScreen() {
   const seekAbsoluteRef = useRef(seekAbsolute);
   const handleSurfaceTapRef = useRef(handleSurfaceTap);
   const resetHideTimerRef = useRef(resetHideTimer);
+  const applyVolumeRef = useRef(applyVolume);
+  const applyBrightnessRef = useRef(applyBrightness);
   useEffect(() => {
     seekAbsoluteRef.current = seekAbsolute;
     handleSurfaceTapRef.current = handleSurfaceTap;
     resetHideTimerRef.current = resetHideTimer;
-  }, [seekAbsolute, handleSurfaceTap, resetHideTimer]);
+    applyVolumeRef.current = applyVolume;
+    applyBrightnessRef.current = applyBrightness;
+  }, [applyBrightness, applyVolume, handleSurfaceTap, resetHideTimer, seekAbsolute]);
 
   const stablePan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_e, g: PanResponderGestureState) => {
+        const width = Math.max(1, containerWidthRef.current);
+        const x = grantXRef.current;
+        const onSide = x < width * SIDE_ZONE || x > width * (1 - SIDE_ZONE);
+        if (onSide && Math.abs(g.dy) > SIDE_DY_THRESHOLD && Math.abs(g.dy) > Math.abs(g.dx)) {
+          return true;
+        }
         return Math.abs(g.dx) > SCRUB_DX_THRESHOLD && Math.abs(g.dx) > Math.abs(g.dy) * SCRUB_AXIS_RATIO;
       },
-      onPanResponderTerminationRequest: () => !scrubActiveRef.current,
+      onPanResponderTerminationRequest: () => !scrubActiveRef.current && !sideActiveRef.current,
       onPanResponderGrant: (e: GestureResponderEvent) => {
         scrubActiveRef.current = false;
+        sideActiveRef.current = null;
         scrubStartPosRef.current = positionRef.current;
         scrubTargetRef.current = positionRef.current;
         grantXRef.current = e.nativeEvent.locationX ?? 0;
       },
       onPanResponderMove: (_e, g: PanResponderGestureState) => {
+        const width = Math.max(1, containerWidthRef.current);
+        const height = Math.max(1, containerHeightRef.current);
+        const x = grantXRef.current;
+        const onLeft = x < width * SIDE_ZONE;
+        const onRight = x > width * (1 - SIDE_ZONE);
+        const vertical = Math.abs(g.dy) > SIDE_DY_THRESHOLD && Math.abs(g.dy) > Math.abs(g.dx);
+        if ((onLeft || onRight) && (vertical || sideActiveRef.current)) {
+          if (!sideActiveRef.current) {
+            sideActiveRef.current = onLeft ? "brightness" : "volume";
+            sideStartRef.current = onLeft ? brightnessRef.current : volumeRef.current;
+            if (singleTapTimer.current) {
+              clearTimeout(singleTapTimer.current);
+              singleTapTimer.current = null;
+            }
+            lastTapRef.current = null;
+          }
+          const delta = -g.dy / height;
+          const next = sideStartRef.current + delta;
+          if (sideActiveRef.current === "volume") applyVolumeRef.current(next);
+          else applyBrightnessRef.current(next);
+          return;
+        }
         const horizontal =
           Math.abs(g.dx) > SCRUB_DX_THRESHOLD && Math.abs(g.dx) > Math.abs(g.dy) * SCRUB_AXIS_RATIO;
         if (!horizontal && !scrubActiveRef.current) return;
-        const width = Math.max(1, containerWidthRef.current);
         const d = durationRef.current;
         const windowSec = d > 0 ? d : 30;
         const delta = (g.dx / width) * windowSec;
@@ -379,6 +519,12 @@ export default function FullscreenVideoScreen() {
         setScrubOverlay({ delta: target - scrubStartPosRef.current, target });
       },
       onPanResponderRelease: (e: GestureResponderEvent) => {
+        if (sideActiveRef.current) {
+          sideActiveRef.current = null;
+          setSideHud(null);
+          resetHideTimerRef.current();
+          return;
+        }
         if (scrubActiveRef.current) {
           const target = scrubTargetRef.current;
           scrubActiveRef.current = false;
@@ -393,6 +539,10 @@ export default function FullscreenVideoScreen() {
         handleSurfaceTapRef.current(x);
       },
       onPanResponderTerminate: () => {
+        if (sideActiveRef.current) {
+          sideActiveRef.current = null;
+          setSideHud(null);
+        }
         if (scrubActiveRef.current) {
           scrubActiveRef.current = false;
           setScrubOverlay(null);
@@ -404,12 +554,16 @@ export default function FullscreenVideoScreen() {
     })
   ).current;
 
+  const dim = Brightness?.setBrightnessAsync ? 0 : 1 - brightness;
+
   return (
     <View
       style={styles.container}
       onLayout={(e) => {
         const w = e.nativeEvent.layout.width;
+        const h = e.nativeEvent.layout.height;
         if (w > 0) containerWidthRef.current = w;
+        if (h > 0) containerHeightRef.current = h;
       }}
     >
       <StatusBar hidden />
@@ -420,6 +574,9 @@ export default function FullscreenVideoScreen() {
         nativeControls={false}
         pointerEvents="none"
       />
+      {dim > 0.02 ? (
+        <View pointerEvents="none" style={[styles.dim, { opacity: Math.min(0.72, dim) }]} />
+      ) : null}
       <View style={styles.gestureLayer} {...stablePan.panHandlers} />
       <YoutubePlayerOverlay
         visible={showControls}
@@ -434,11 +591,16 @@ export default function FullscreenVideoScreen() {
         fullscreen
         skipHint={showSkipHint}
         scrub={scrubOverlay}
+        sideHud={sideHud}
         onPlayPause={handlePlayPause}
         onSkip={handleSkip}
         onMute={handleMuteToggle}
         onBack={handleExit}
         onCycleSpeed={handleCycleSpeed}
+        onPrevVideo={() => goToIndex(activeIndex - 1)}
+        onNextVideo={() => goToIndex(activeIndex + 1)}
+        hasPrev={activeIndex > 0}
+        hasNext={activeIndex < items.length - 1}
         onSeekStart={handleSeekStart}
         onSeekRatio={handleSeekRatio}
         onSeekEnd={handleSeekComplete}
@@ -458,6 +620,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
+  },
+  dim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "#000000",
+    zIndex: 2,
   },
   gestureLayer: {
     position: "absolute",

@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Search,
   RefreshCw,
@@ -56,7 +57,10 @@ export const MediaControlsHeader: React.FC<Props> = ({
     setSortOrder,
     groupBy,
     setGroupBy,
+    galleryLayout,
   } = useMobileStore();
+  const insets = useSafeAreaInsets();
+  const hideViewToggle = galleryLayout === "feed";
 
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
@@ -75,17 +79,16 @@ export const MediaControlsHeader: React.FC<Props> = ({
 
   return (
     <View style={styles.container}>
-      {/* Top Bar Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top, 8) }]}>
         <View style={styles.titleContainer}>
           <Text style={styles.headerTitle}>{title}</Text>
-          <Text style={styles.headerSub}>{itemCount} items</Text>
+          <Text style={styles.headerCount}>{itemCount}</Text>
         </View>
 
         <View style={styles.topActions}>
           {onUpload && (
-            <TouchableOpacity style={styles.iconBtn} onPress={onUpload}>
-              <Upload size={18} color="#a3a3a3" />
+            <TouchableOpacity style={styles.iconBtn} onPress={onUpload} hitSlop={10}>
+              <Upload size={18} color="#fafafa" />
             </TouchableOpacity>
           )}
 
@@ -94,14 +97,16 @@ export const MediaControlsHeader: React.FC<Props> = ({
               style={styles.iconBtn}
               onPress={onRefresh}
               disabled={isRefreshing}
+              hitSlop={10}
             >
-              <RefreshCw size={18} color={isRefreshing ? "#fafafa" : "#a3a3a3"} />
+              <RefreshCw size={18} color={isRefreshing ? "#737373" : "#fafafa"} />
             </TouchableOpacity>
           )}
 
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => setShowOptionsModal(true)}
+            hitSlop={10}
           >
             <SlidersHorizontal
               size={18}
@@ -109,16 +114,19 @@ export const MediaControlsHeader: React.FC<Props> = ({
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-          >
-            {viewMode === "grid" ? (
-              <List size={18} color="#a3a3a3" />
-            ) : (
-              <LayoutGrid size={18} color="#a3a3a3" />
-            )}
-          </TouchableOpacity>
+          {hideViewToggle ? null : (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              hitSlop={10}
+            >
+              {viewMode === "grid" ? (
+                <List size={18} color="#fafafa" />
+              ) : (
+                <LayoutGrid size={18} color="#fafafa" />
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -201,7 +209,7 @@ export const MediaControlsHeader: React.FC<Props> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Quick Group & Sort Info Ribbon */}
+      {hideViewToggle ? null : (
       <View style={styles.infoRibbon}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ribbonScroll}>
           <TouchableOpacity
@@ -225,8 +233,8 @@ export const MediaControlsHeader: React.FC<Props> = ({
           </TouchableOpacity>
         </ScrollView>
       </View>
+      )}
 
-      {/* Filter & Group Options Modal */}
       <Modal
         visible={showOptionsModal}
         transparent
@@ -318,15 +326,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 44,
-    paddingBottom: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 2,
   },
-  titleContainer: {},
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    flexShrink: 1,
+  },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "700",
     color: "#fafafa",
+    letterSpacing: -0.3,
+  },
+  headerCount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#737373",
   },
   headerSub: {
     fontSize: 12,
@@ -335,25 +353,22 @@ const styles = StyleSheet.create({
   },
   topActions: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 2,
   },
   iconBtn: {
-    backgroundColor: "#171717",
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#262626",
+    padding: 8,
+    borderRadius: 8,
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#171717",
-    marginHorizontal: 16,
-    marginVertical: 6,
-    paddingHorizontal: 12,
+    marginHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingHorizontal: 10,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#262626",
   },
   searchIcon: {
     marginRight: 8,
@@ -366,20 +381,19 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    marginVertical: 4,
-    gap: 8,
+    paddingHorizontal: 14,
+    marginTop: 2,
+    marginBottom: 6,
+    gap: 6,
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#171717",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#262626",
+    gap: 4,
+    backgroundColor: "transparent",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
   filterChipActive: {
     backgroundColor: "#ffffff",

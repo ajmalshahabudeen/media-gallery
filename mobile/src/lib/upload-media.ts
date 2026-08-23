@@ -1,13 +1,8 @@
 /**
  * Native multipart upload via XMLHttpRequest.
  *
- * Expo 57 replaces global fetch with winter/fetch. That serializer throws
- * `Unsupported FormDataPart implementation` for React Native `{ uri, name, type }`
- * parts. Do not send those through apiFetch/fetch.
- *
- * XMLHttpRequest still uses RN networking, which understands `{ uri, name, type }`.
- * Do not statically import expo-file-system from the store — that native module
- * loads on cold start and can break thumbnail / video loading.
+ * Expo 57 winter fetch cannot serialize RN `{ uri, name, type }` FormData parts.
+ * Upload one file at a time so each row can show a real percent.
  */
 import { getApiAuthHeaders } from "./api";
 import { normalizeLocalFileUri, sanitizeUploadFileName } from "./upload-form";
@@ -26,6 +21,8 @@ export interface UploadMediaResult {
   error?: string;
 }
 
+export type UploadProgressHandler = (index: number, percent: number) => void;
+
 type RnFilePart = { uri: string; name: string; type: string };
 
 function appendLocalFile(form: FormData, field: string, asset: PickedUploadFile): void {
@@ -40,7 +37,8 @@ function appendLocalFile(form: FormData, field: string, asset: PickedUploadFile)
 function xhrPostFormData(
   url: string,
   form: FormData,
-  headers: Record<string, string>
+  headers: Record<string, string>,
+  onPercent?: (percent: number) => void
 ): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -50,7 +48,13 @@ function xhrPostFormData(
       if (key.toLowerCase() === "content-type") continue;
       xhr.setRequestHeader(key, value);
     }
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total <= 0) return;
+      const pct = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      onPercent?.(pct);
+    };
     xhr.onload = () => {
+      onPercent?.(100);
       resolve({ status: xhr.status, body: typeof xhr.response === "string" ? xhr.response : "" });
     };
     xhr.onerror = () => reject(new Error("Network error uploading"));
@@ -59,47 +63,64 @@ function xhrPostFormData(
   });
 }
 
+function parseUploadBody(body: string): {
+  uploaded?: unknown[];
+  errors?: { error?: string }[];
+  error?: string;
+} {
+  try {
+    return JSON.parse(body || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export async function uploadPickedMedia(
   libraryPath: string,
   destPath: string,
-  files: PickedUploadFile[]
+  files: PickedUploadFile[],
+  onProgress?: UploadProgressHandler
 ): Promise<UploadMediaResult> {
   const { baseUrl, headers } = await getApiAuthHeaders();
-  const form = new FormData();
-  form.append("libraryPath", libraryPath);
-  form.append("destPath", destPath);
-  for (const file of files) {
-    appendLocalFile(form, "files", file);
+  const url = `${baseUrl}/api/media/upload`;
+  const uploaded: unknown[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    onProgress?.(i, 0);
+    try {
+      const form = new FormData();
+      form.append("libraryPath", libraryPath);
+      form.append("destPath", destPath);
+      appendLocalFile(form, "files", file);
+      const result = await xhrPostFormData(url, form, headers, (pct) => onProgress?.(i, pct));
+      const data = parseUploadBody(result.body);
+      if (result.status < 200 || result.status >= 300) {
+        onProgress?.(i, 0);
+        errors.push(data.error || `Upload failed (HTTP ${result.status})`);
+        continue;
+      }
+      const batch = Array.isArray(data.uploaded) ? data.uploaded : [];
+      if (batch.length === 0) {
+        onProgress?.(i, 0);
+        errors.push(data.error || data.errors?.[0]?.error || `No files were uploaded for ${file.name}`);
+        continue;
+      }
+      onProgress?.(i, 100);
+      uploaded.push(...batch);
+    } catch (err: unknown) {
+      onProgress?.(i, 0);
+      const message = err instanceof Error ? err.message : "Network error uploading";
+      errors.push(`${file.name}: ${message}`);
+    }
   }
 
-  const result = await xhrPostFormData(`${baseUrl}/api/media/upload`, form, headers);
-  let data: { uploaded?: unknown[]; errors?: { error?: string }[]; error?: string } = {};
-  try {
-    data = JSON.parse(result.body || "{}");
-  } catch {
-    data = {};
-  }
-
-  if (result.status < 200 || result.status >= 300) {
-    return {
-      success: false,
-      uploaded: 0,
-      failed: files.length,
-      files: [],
-      error: data.error || `Upload failed (HTTP ${result.status})`,
-    };
-  }
-
-  const uploaded = Array.isArray(data.uploaded) ? data.uploaded : [];
-  const failed = Array.isArray(data.errors) ? data.errors.length : 0;
   return {
     success: uploaded.length > 0,
     uploaded: uploaded.length,
-    failed,
+    failed: Math.max(files.length - uploaded.length, errors.length),
     files: uploaded,
-    error:
-      uploaded.length === 0
-        ? data.error || data.errors?.[0]?.error || "No files were uploaded"
-        : undefined,
+    error: uploaded.length === 0 ? errors[0] || "No files were uploaded" : undefined,
   };
 }

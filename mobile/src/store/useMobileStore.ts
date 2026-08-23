@@ -110,7 +110,8 @@ interface MobileState {
   uploadMedia: (
     libraryPath: string,
     destPath: string,
-    files: { uri: string; name: string; type: string }[]
+    files: { uri: string; name: string; type: string }[],
+    onProgress?: (index: number, percent: number) => void
   ) => Promise<{ success: boolean; uploaded: number; failed: number; error?: string }>;
   scanMedia: (force?: boolean) => Promise<void>;
   fetchProgress: () => Promise<void>;
@@ -516,9 +517,9 @@ export const useMobileStore = create<MobileState>((set, get) => ({
     }
   },
 
-  uploadMedia: async (libraryPath, destPath, files) => {
+  uploadMedia: async (libraryPath, destPath, files, onProgress) => {
     try {
-      const result = await uploadPickedMedia(libraryPath, destPath, files);
+      const result = await uploadPickedMedia(libraryPath, destPath, files, onProgress);
       const uploadedFiles = (result.files || []) as MediaFile[];
       if (uploadedFiles.length > 0) {
         set((state) => ({

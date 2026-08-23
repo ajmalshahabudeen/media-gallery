@@ -30,7 +30,7 @@ import { VideoPlayerView } from "./VideoPlayerView";
 import { AudioPlayerView } from "./AudioPlayerView";
 import { ImageViewerView } from "./ImageViewerView";
 
-const UP_NEXT_LIMIT = 20;
+const UP_NEXT_LIMIT = 100;
 
 interface Props {
   file: MediaFile | null;
@@ -117,16 +117,21 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     return [...after, ...(after.length < UP_NEXT_LIMIT ? before : [])].slice(0, UP_NEXT_LIMIT);
   }, [active, playlist, files, favorites]);
 
+  const videoSource = useMemo(() => {
+    if (!active || active.type !== "video") return [];
+    return pickPlaylist(active, playlist, files, favorites).filter((f) => f.type === "video");
+  }, [active, playlist, files, favorites]);
+
   const neighbors = useMemo(() => {
     if (!active || active.type !== "video") return { prev: null as MediaFile | null, next: null as MediaFile | null };
-    const source = pickPlaylist(active, playlist, files, favorites).filter((f) => f.type === "video");
+    const source = videoSource;
     const idx = source.findIndex((f) => f.path === active.path);
     if (idx < 0) return { prev: null as MediaFile | null, next: source[0] ?? null };
     return {
       prev: idx > 0 ? source[idx - 1] : null,
       next: idx < source.length - 1 ? source[idx + 1] : null,
     };
-  }, [active, playlist, files, favorites]);
+  }, [active, videoSource]);
 
   useEffect(() => {
     if (!active || active.type !== "video") {
@@ -225,6 +230,18 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
               }}
               onNextVideo={() => {
                 if (neighbors.next) handleSelectNext(neighbors.next);
+              }}
+              playlist={videoSource.map((item) => ({
+                uri: buildMediaFileUrl(serverUrl, item.path, sessionToken),
+                title: item.name,
+              }))}
+              playlistIndex={Math.max(
+                0,
+                videoSource.findIndex((item) => item.path === active.path)
+              )}
+              onSelectIndex={(index) => {
+                const next = videoSource[index];
+                if (next) handleSelectNext(next);
               }}
             />
           )}
