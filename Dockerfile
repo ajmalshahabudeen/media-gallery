@@ -30,7 +30,7 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 RUN bun run db:generate
 RUN bun run build
 
-EXPOSE 3000
+EXPOSE 38479
 
 # Entrypoint script initializes SQLite DB at container startup & launches server
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

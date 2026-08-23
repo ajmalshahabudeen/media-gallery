@@ -15,4 +15,4 @@ python3 /app/scripts/preview_generator.py --daemon &
 echo "==> Launching Server Gallery container application..."
 # next-server must be PID 1 so an OOM kill restarts the container
 # instead of leaving bun alive with a zombie child.
-exec node ./node_modules/next/dist/bin/next start
+exec node ./node_modules/next/dist/bin/next start -H 0.0.0.0 -p "${PORT:-38479}"

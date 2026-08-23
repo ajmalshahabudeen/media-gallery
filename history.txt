@@ -774,6 +774,9 @@ Status: Completed.
 1. PC hover sneak peek plays the full video (no 3s cap) and hops +8s every ~1s so the card skims different timestamps quickly. Videos ≤ 1 minute play straight through with no skip. Unhover aborts the stream.
 Status: Completed.
 
+[2026-08-23] Request 122:
+1. Removed Caddy. Next.js listens on host port 38479 directly. It was only reverse-proxying :38479 → web:3000 after TLS experiments were dropped.
+Status: Completed.
 
 
 
