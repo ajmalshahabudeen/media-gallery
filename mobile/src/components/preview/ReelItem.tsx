@@ -138,6 +138,8 @@ function ActiveExpoVideo({
 }) {
   const player = useVideoPlayer(uri, (p: any) => {
     p.loop = true;
+    // Expo disables timeUpdate events until a positive interval is set (seconds).
+    p.timeUpdateEventInterval = 0.25;
     p.muted = isMuted;
     p.play();
   });
@@ -465,8 +467,6 @@ export const ReelItem: React.FC<Props> = ({
         <View style={[StyleSheet.absoluteFill, styles.placeholder]} />
       )}
 
-      <View pointerEvents="none" style={styles.bottomGradient} />
-
       {isBuffering && isActive ? (
         <View style={styles.centerOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#ffffff" />
@@ -586,15 +586,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 10,
-  },
-  bottomGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 180,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    zIndex: 5,
   },
   centerOverlay: {
     position: "absolute",

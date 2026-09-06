@@ -40,6 +40,8 @@ export const AudioPlayerView: React.FC<Props> = ({ uri, title, fileSizeText }) =
 
   const player = useVideoPlayer(uri, (p) => {
     p.loop = false;
+    // Expo disables timeUpdate events until a positive interval is set (seconds).
+    p.timeUpdateEventInterval = 0.25;
   });
 
   const rates = [0.75, 1.0, 1.25, 1.5, 2.0];

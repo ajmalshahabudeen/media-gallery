@@ -84,6 +84,8 @@ export const VideoPlayerView: React.FC<Props> = ({
 
   const expoPlayer = useVideoPlayer(uri, (player: any) => {
     player.loop = false;
+    // Expo disables timeUpdate events until a positive interval is set (seconds).
+    player.timeUpdateEventInterval = 0.25;
     player.play();
   });
   const loadedUriRef = useRef(uri);
