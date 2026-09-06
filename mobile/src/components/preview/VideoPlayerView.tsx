@@ -7,13 +7,13 @@ import {
   GestureResponderEvent,
   PanResponderGestureState,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { YoutubePlayerOverlay, nextPlaybackRate } from "./youtube-player-overlay";
 import {
   setPlaybackSession,
   getPlaybackSession,
-  updatePlaybackSession,
+  takePlaybackResume,
   shouldIgnoreLandscapeOpen,
   type PlaybackItem,
 } from "../../lib/playback-session";
@@ -81,33 +81,37 @@ export const VideoPlayerView: React.FC<Props> = ({
   const scrubStartPosRef = useRef(0);
   const scrubTargetRef = useRef(0);
   const grantXRef = useRef(0);
+  const focusedRef = useRef(false);
+  const mutedRef = useRef(false);
 
   const expoPlayer = useVideoPlayer(uri, (player: any) => {
     player.loop = false;
     // Expo disables timeUpdate events until a positive interval is set (seconds).
     player.timeUpdateEventInterval = 0.25;
-    player.play();
   });
-  const loadedUriRef = useRef(uri);
 
-  useEffect(() => {
-    if (!expoPlayer || !uri) return;
-    if (loadedUriRef.current === uri) return;
-    loadedUriRef.current = uri;
-    const swap = async () => {
+  // useVideoPlayer recreates the player when uri changes. Do not replace/play
+  // again asynchronously: a hidden playlist remount must stay paused.
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    expoPlayer.muted = mutedRef.current || !!getPlaybackSession();
+    const resume = takePlaybackResume(uri);
+    if (resume) {
+      expoPlayer.currentTime = resume.position;
+      positionRef.current = resume.position;
+      setPosition(resume.position);
+    }
+    if (!getPlaybackSession()) expoPlayer.play();
+    return () => {
+      focusedRef.current = false;
       try {
-        if (typeof expoPlayer.replaceAsync === "function") {
-          await expoPlayer.replaceAsync(uri);
-        } else {
-          expoPlayer.replace(uri);
-        }
-        expoPlayer.play();
+        expoPlayer.muted = true;
+        expoPlayer.pause();
       } catch {
-        // ignore
+        // The native player may already have been released on unmount.
       }
     };
-    void swap();
-  }, [expoPlayer, uri]);
+  }, [expoPlayer, uri]));
 
   useEffect(() => {
     positionRef.current = position;
@@ -166,6 +170,12 @@ export const VideoPlayerView: React.FC<Props> = ({
       }
     });
     const playingSub = expoPlayer.addListener("playingChange", (event: any) => {
+      if (event.isPlaying && (!focusedRef.current || getPlaybackSession())) {
+        expoPlayer.muted = true;
+        expoPlayer.pause();
+        setIsPlaying(false);
+        return;
+      }
       setIsPlaying(event.isPlaying);
     });
     return () => {
@@ -220,7 +230,7 @@ export const VideoPlayerView: React.FC<Props> = ({
   );
 
   const handlePlayPause = useCallback(() => {
-    if (!expoPlayer) return;
+    if (!expoPlayer || !focusedRef.current || getPlaybackSession()) return;
     if (expoPlayer.playing) expoPlayer.pause();
     else expoPlayer.play();
     resetHideTimer();
@@ -255,8 +265,9 @@ export const VideoPlayerView: React.FC<Props> = ({
 
   const handleMuteToggle = () => {
     const next = !isMuted;
+    mutedRef.current = next;
     setIsMuted(next);
-    if (expoPlayer) expoPlayer.muted = next;
+    if (expoPlayer) expoPlayer.muted = next || !focusedRef.current || !!getPlaybackSession();
   };
 
   const handleCycleSpeed = () => {
@@ -291,13 +302,14 @@ export const VideoPlayerView: React.FC<Props> = ({
   };
 
   const handleFullscreen = useCallback(() => {
-    if (shouldIgnoreLandscapeOpen() && getPlaybackSession()) return;
+    if (!focusedRef.current || getPlaybackSession()) return;
     const items =
       playlist && playlist.length > 0 ? playlist : [{ uri, title: title || "Video" }];
     const index = Math.max(0, Math.min(items.length - 1, playlistIndex));
     const startAt = positionRef.current;
     if (expoPlayer) {
       try {
+        expoPlayer.muted = true;
         expoPlayer.pause();
       } catch {
         // ignore
@@ -310,19 +322,6 @@ export const VideoPlayerView: React.FC<Props> = ({
       muted: isMuted,
       rate: playbackRate,
       onIndexChange: onSelectIndex,
-      onExit: (pos) => {
-        seekAbsolute(pos);
-        positionRef.current = pos;
-        updatePlaybackSession({ startAt: pos });
-        if (expoPlayer) {
-          try {
-            expoPlayer.currentTime = pos;
-            expoPlayer.play();
-          } catch {
-            // ignore
-          }
-        }
-      },
     });
     router.push({
       pathname: "/fullscreen-video",
@@ -340,7 +339,6 @@ export const VideoPlayerView: React.FC<Props> = ({
     playlist,
     playlistIndex,
     router,
-    seekAbsolute,
     title,
     uri,
   ]);

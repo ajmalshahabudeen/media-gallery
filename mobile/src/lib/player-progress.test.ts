@@ -40,7 +40,10 @@ function loadPlayerSetup(relativePath: string) {
   const { outputText } = ts.transpileModule(`(${setup.getText(source)});`, {
     compilerOptions: { target: ts.ScriptTarget.ES2022 },
   });
-  return runInNewContext(outputText, { initialSession: null, isMuted: false });
+  return runInNewContext(outputText, {
+    initialSession: null, isMuted: false, volume: 1, playbackRate: 1,
+    exitingRef: { current: false },
+  });
 }
 
 describe("Expo player progress events", () => {

@@ -15,7 +15,7 @@ import { YoutubePlayerOverlay, nextPlaybackRate } from "../components/preview/yo
 import {
   getPlaybackSession,
   updatePlaybackSession,
-  setPlaybackSession,
+  finishPlaybackSession,
   armLandscapeCooldown,
 } from "../lib/playback-session";
 
@@ -45,7 +45,7 @@ const SIDE_DY_THRESHOLD = 10;
 export default function FullscreenVideoScreen() {
   const params = useLocalSearchParams<{ uri: string; title?: string; startAt?: string }>();
   const router = useRouter();
-  const initialSession = getPlaybackSession();
+  const initialSession = useRef(getPlaybackSession()).current;
   const [activeIndex, setActiveIndex] = useState(initialSession?.index ?? 0);
   const items =
     initialSession?.items && initialSession.items.length > 0
@@ -93,39 +93,23 @@ export default function FullscreenVideoScreen() {
   const scrubTargetRef = useRef(0);
   const grantXRef = useRef(0);
   const appliedInitialSeek = useRef(false);
+  const exitingRef = useRef(false);
 
   const expoPlayer = useVideoPlayer(uri, (player: any) => {
     player.loop = false;
     // Expo disables timeUpdate events until a positive interval is set (seconds).
     player.timeUpdateEventInterval = 0.25;
-    player.muted = initialSession?.muted ?? false;
-    player.volume = 1;
-    if (initialSession?.rate) player.playbackRate = initialSession.rate;
-    player.play();
+    player.muted = isMuted || exitingRef.current;
+    player.volume = volume;
+    player.playbackRate = playbackRate;
+    if (!exitingRef.current) player.play();
   });
-  const loadedUriRef = useRef(uri);
-
+  // The hook already loads each URI; no delayed replace/play after exit.
   useEffect(() => {
-    if (!expoPlayer || !uri) return;
-    if (loadedUriRef.current === uri) return;
-    loadedUriRef.current = uri;
-    const swap = async () => {
-      try {
-        if (typeof expoPlayer.replaceAsync === "function") {
-          await expoPlayer.replaceAsync(uri);
-        } else {
-          expoPlayer.replace(uri);
-        }
-        expoPlayer.muted = isMuted;
-        expoPlayer.volume = volumeRef.current;
-        expoPlayer.playbackRate = playbackRate;
-        expoPlayer.play();
-      } catch {
-        // ignore
-      }
-    };
-    void swap();
-  }, [expoPlayer, uri]);
+    expoPlayer.muted = isMuted || exitingRef.current;
+    expoPlayer.volume = volume;
+    expoPlayer.playbackRate = playbackRate;
+  }, [expoPlayer, isMuted, volume, playbackRate]);
 
   useEffect(() => {
     positionRef.current = position;
@@ -181,17 +165,20 @@ export default function FullscreenVideoScreen() {
   }, []);
 
   const handleExit = useCallback(() => {
-    const session = getPlaybackSession();
-    session?.onExit?.(positionRef.current, activeIndex);
-    setPlaybackSession(null);
-    armLandscapeCooldown(900);
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+    let finalPosition = positionRef.current;
     if (expoPlayer) {
       try {
+        finalPosition = expoPlayer.currentTime;
+        expoPlayer.muted = true;
         expoPlayer.pause();
       } catch {
         // ignore
       }
     }
+    finishPlaybackSession(finalPosition, activeIndex);
+    armLandscapeCooldown(900);
     router.back();
   }, [activeIndex, expoPlayer, router]);
 
@@ -270,6 +257,10 @@ export default function FullscreenVideoScreen() {
       }
     });
     const playingSub = expoPlayer.addListener("playingChange", (event: any) => {
+      if (event.isPlaying && exitingRef.current) {
+        expoPlayer.pause();
+        return;
+      }
       setIsPlaying(event.isPlaying);
     });
     return () => {
