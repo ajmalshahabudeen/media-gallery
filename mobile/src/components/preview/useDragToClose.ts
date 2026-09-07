@@ -4,8 +4,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  runOnJS,
   interpolate,
   Extrapolation,
 } from "react-native-reanimated";
@@ -105,13 +103,10 @@ export function useDragToClose({ onClose, enabled = true }: UseDragToCloseOption
 
         if (shouldDismiss) {
           isDismissing.value = true;
-          translateY.value = withTiming(
-            SCREEN_HEIGHT,
-            { duration: 250 },
-            (finished) => {
-              if (finished) runOnJS(fireClose)();
-            }
-          );
+          // Close immediately so the modal unmounts and stops eating touches.
+          // No need to wait for the slide-out animation — the modal will
+          // disappear as soon as onClose sets file to null.
+          fireClose();
         } else {
           // Snap back
           translateY.value = withSpring(0, {

@@ -17,3 +17,6 @@
   - The video player's own PanResponder handles horizontal scrub gestures
   - The drag-to-close only activates on clearly vertical downward movement
   - Video overlay controls (YoutubePlayerOverlay) sit on top with their own pointer events
+- **Bug fix**: After drag-dismiss, the transparent modal was lingering for ~250ms eating all touches.
+  Fixed by calling `onClose` immediately on release instead of waiting for the slide-out `withTiming` animation callback.
+  Removed unused `withTiming` and `runOnJS` imports.
