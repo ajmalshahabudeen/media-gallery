@@ -1,0 +1,19 @@
+# Conversation History
+
+## 2026-09-07: YouTube-style drag-to-close on video preview
+- Created `useDragToClose.ts` hook using PanResponder + Reanimated
+  - Detects vertical-downward drags only (dy > 10, dy > dx * 1.5) to avoid interfering with video player horizontal scrub gestures
+  - Provides animated translateY for container, fade opacity for up-next list, and backdrop fade
+  - Dismiss threshold: 20% of screen height or velocity > 0.5 px/ms
+  - Snaps back with spring animation if threshold not met
+- Modified `FilePreviewModal.tsx`:
+  - Wrapped outer container with Animated.View + dragContainerStyle (translateY)
+  - Added dragPanHandlers to the video player area and the watchInfo section (title, actions, meta chips)
+  - Wrapped up-next list in Animated.View with dragUpNextOpacity (fades as user drags)
+  - Made modal transparent for video mode to show backdrop fade effect
+  - Added dragBackdrop behind content that fades from opaque black to transparent
+  - Reset drag state when file prop changes
+- Video player controls (play/pause, seek, skip, fullscreen) remain unaffected since:
+  - The video player's own PanResponder handles horizontal scrub gestures
+  - The drag-to-close only activates on clearly vertical downward movement
+  - Video overlay controls (YoutubePlayerOverlay) sit on top with their own pointer events

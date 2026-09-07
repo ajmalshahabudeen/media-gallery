@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Animated from "react-native-reanimated";
 import {
   Modal,
   View,
@@ -31,6 +32,7 @@ import { buildMediaFileUrl, buildThumbnailUrl } from "../../lib/api";
 import { VideoPlayerView } from "./VideoPlayerView";
 import { AudioPlayerView } from "./AudioPlayerView";
 import { ImageViewerView } from "./ImageViewerView";
+import { useDragToClose } from "./useDragToClose";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -104,10 +106,19 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
     useMobileStore();
   const [current, setCurrent] = useState<MediaFile | null>(file);
   const [visiblePaths, setVisiblePaths] = useState<Record<string, true>>({});
+
+  const {
+    containerStyle: dragContainerStyle,
+    upNextOpacity: dragUpNextOpacity,
+    backdropStyle: dragBackdropStyle,
+    panHandlers: dragPanHandlers,
+    reset: dragReset,
+  } = useDragToClose({ onClose });
   const imageListRef = useRef<FlatList<MediaFile>>(null);
 
   useEffect(() => {
     setCurrent(file);
+    dragReset();
   }, [file]);
 
   const active = current || file;
@@ -234,9 +245,10 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
   const isVideo = active.type === "video";
 
   return (
-    <Modal visible={!!file} animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal visible={!!file} animationType="slide" transparent={isVideo} onRequestClose={onClose}>
       <SafeAreaProvider>
-        <View style={[styles.container, isVideo && styles.containerVideo]}>
+        {isVideo && <Animated.View style={[styles.dragBackdrop, dragBackdropStyle]} />}
+        <Animated.View style={[styles.container, isVideo && styles.containerVideo, isVideo && dragContainerStyle]}>
           <StatusBar style="light" />
           <ModalSafeTop color={isVideo ? "#0f0f0f" : "#000000"} />
 
@@ -301,32 +313,34 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
             />
           )}
           {isVideo && (
-            <VideoPlayerView
-              key={active.path}
-              uri={mediaUrl}
-              onOpenExternal={handleOpenExternal}
-              title={active.name}
-              hasPrev={!!neighbors.prev}
-              hasNext={!!neighbors.next}
-              onPrevVideo={() => {
-                if (neighbors.prev) handleSelectNext(neighbors.prev);
-              }}
-              onNextVideo={() => {
-                if (neighbors.next) handleSelectNext(neighbors.next);
-              }}
-              playlist={videoSource.map((item) => ({
-                uri: buildMediaFileUrl(serverUrl, item.path, sessionToken),
-                title: item.name,
-              }))}
-              playlistIndex={Math.max(
-                0,
-                videoSource.findIndex((item) => item.path === active.path)
-              )}
-              onSelectIndex={(index) => {
-                const next = videoSource[index];
-                if (next) handleSelectNext(next);
-              }}
-            />
+            <View {...dragPanHandlers}>
+              <VideoPlayerView
+                key={active.path}
+                uri={mediaUrl}
+                onOpenExternal={handleOpenExternal}
+                title={active.name}
+                hasPrev={!!neighbors.prev}
+                hasNext={!!neighbors.next}
+                onPrevVideo={() => {
+                  if (neighbors.prev) handleSelectNext(neighbors.prev);
+                }}
+                onNextVideo={() => {
+                  if (neighbors.next) handleSelectNext(neighbors.next);
+                }}
+                playlist={videoSource.map((item) => ({
+                  uri: buildMediaFileUrl(serverUrl, item.path, sessionToken),
+                  title: item.name,
+                }))}
+                playlistIndex={Math.max(
+                  0,
+                  videoSource.findIndex((item) => item.path === active.path)
+                )}
+                onSelectIndex={(index) => {
+                  const next = videoSource[index];
+                  if (next) handleSelectNext(next);
+                }}
+              />
+            </View>
           )}
           {active.type === "audio" && (
             <AudioPlayerView
@@ -354,7 +368,7 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
 
         {isVideo ? (
           <View style={styles.watchPane}>
-            <View style={styles.watchInfo}>
+            <View style={styles.watchInfo} {...dragPanHandlers}>
               <View style={styles.watchTitleRow}>
                 <TouchableOpacity onPress={onClose} style={styles.watchBack}>
                   <X size={20} color="#fff" />
@@ -400,32 +414,34 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
               </ScrollView>
             </View>
 
-            {upNext.length > 0 ? (
-              <FlatList
-                data={upNext}
-                keyExtractor={(item) => item.path}
-                style={styles.upNextList}
-                contentContainerStyle={styles.upNextContent}
-                initialNumToRender={5}
-                maxToRenderPerBatch={6}
-                windowSize={5}
-                removeClippedSubviews
-                onViewableItemsChanged={onViewableItemsChanged}
-                viewabilityConfig={viewabilityConfig}
-                ListHeaderComponent={<Text style={styles.upNextHeading}>Up next</Text>}
-                renderItem={({ item }) => (
-                  <UpNextRow
-                    item={item}
-                    visible={!!visiblePaths[item.path]}
-                    onPress={() => handleSelectNext(item)}
-                  />
-                )}
-              />
-            ) : (
-              <View style={styles.upNextEmpty}>
-                <Text style={styles.upNextEmptyText}>No more videos in this library</Text>
-              </View>
-            )}
+            <Animated.View style={[{ flex: 1 }, dragUpNextOpacity]}>
+              {upNext.length > 0 ? (
+                <FlatList
+                  data={upNext}
+                  keyExtractor={(item) => item.path}
+                  style={styles.upNextList}
+                  contentContainerStyle={styles.upNextContent}
+                  initialNumToRender={5}
+                  maxToRenderPerBatch={6}
+                  windowSize={5}
+                  removeClippedSubviews
+                  onViewableItemsChanged={onViewableItemsChanged}
+                  viewabilityConfig={viewabilityConfig}
+                  ListHeaderComponent={<Text style={styles.upNextHeading}>Up next</Text>}
+                  renderItem={({ item }) => (
+                    <UpNextRow
+                      item={item}
+                      visible={!!visiblePaths[item.path]}
+                      onPress={() => handleSelectNext(item)}
+                    />
+                  )}
+                />
+              ) : (
+                <View style={styles.upNextEmpty}>
+                  <Text style={styles.upNextEmptyText}>No more videos in this library</Text>
+                </View>
+              )}
+            </Animated.View>
           </View>
         ) : (
           <View style={styles.footer}>
@@ -447,13 +463,17 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
             </ScrollView>
           </View>
         )}
-      </View>
+      </Animated.View>
       </SafeAreaProvider>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  dragBackdrop: {
+    ...(StyleSheet.absoluteFill as any),
+    backgroundColor: "#000000",
+  },
   container: {
     flex: 1,
     backgroundColor: "#000000",
