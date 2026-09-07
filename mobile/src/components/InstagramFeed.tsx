@@ -23,6 +23,7 @@ interface Props {
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   emptyTitle?: string;
   emptySubtitle?: string;
+  topInset?: number;
 }
 
 const COLS = 3;
@@ -40,8 +41,9 @@ function GridCell({
   onOpen: () => void;
 }) {
   const { serverUrl, sessionToken } = useMobileStore();
-  const thumb = buildThumbnailUrl(serverUrl, file.path, sessionToken);
-  const isEndOfRow = (index + 1) % COLS === 0;
+  const isVideo = file.type === "video";
+  const isMiddle = index % COLS === 1;
+  const thumbUri = buildThumbnailUrl(serverUrl, file.path, sessionToken);
 
   return (
     <TouchableOpacity
@@ -49,21 +51,20 @@ function GridCell({
       onPress={onOpen}
       style={[
         styles.cell,
-        { marginRight: isEndOfRow ? 0 : GAP, marginBottom: GAP },
+        isMiddle && { marginHorizontal: GAP },
+        { marginBottom: GAP },
       ]}
     >
-      {file.type === "image" || file.type === "video" ? (
-        <Image source={{ uri: thumb }} style={styles.thumb} resizeMode="cover" />
-      ) : (
-        <View style={[styles.thumb, styles.fallback]}>
-          <ImageIcon size={22} color="#737373" />
-        </View>
-      )}
-      {file.type === "video" && (
+      <Image
+        source={{ uri: thumbUri }}
+        style={styles.thumb}
+        resizeMode="cover"
+      />
+      {isVideo ? (
         <View style={styles.videoMark}>
-          <Play size={11} color="#fff" fill="#fff" />
+          <Play size={14} color="#fafafa" fill="#fafafa" />
         </View>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -74,24 +75,25 @@ export function InstagramFeed({
   refreshing = false,
   onRefresh,
   onScroll,
-  emptyTitle = "No photos or videos",
-  emptySubtitle = "Your library will show here as a tight square grid, like an Instagram profile.",
+  emptyTitle = "No Posts Yet",
+  emptySubtitle = "Photos and videos from your folders will appear here.",
+  topInset,
 }: Props) {
   const { selectedType, searchQuery, sortBy, sortOrder } = useMobileStore();
 
   const posts = useMemo(() => {
-    const filtered = files.filter((file) => {
-      if (file.type !== "image" && file.type !== "video") return false;
+    return files.filter((file) => {
       if (selectedType !== "all" && file.type !== selectedType) return false;
       const terms = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-      if (terms.length === 0) return true;
-      return terms.every(
-        (term) =>
-          file.name.toLowerCase().includes(term) ||
-          file.folder.toLowerCase().includes(term)
-      );
-    });
-    return [...filtered].sort((a, b) => {
+      if (terms.length > 0) {
+        return terms.every(
+          (t) =>
+            file.name.toLowerCase().includes(t) ||
+            file.folder.toLowerCase().includes(t)
+        );
+      }
+      return true;
+    }).sort((a, b) => {
       let comparison = 0;
       if (sortBy === "name") comparison = a.name.localeCompare(b.name);
       else if (sortBy === "size") comparison = a.size - b.size;
@@ -100,12 +102,14 @@ export function InstagramFeed({
     });
   }, [files, selectedType, searchQuery, sortBy, sortOrder]);
 
+  const containerPadding = topInset !== undefined ? { paddingTop: topInset + 8 } : null;
+
   return (
     <FlatList
       data={posts}
       keyExtractor={(item) => item.path}
       numColumns={COLS}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, containerPadding]}
       showsVerticalScrollIndicator={false}
       alwaysBounceVertical
       overScrollMode="always"
@@ -116,8 +120,10 @@ export function InstagramFeed({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#fafafa"
-            colors={["#fafafa"]}
+            tintColor="#818cf8"
+            colors={["#818cf8", "#6366f1"]}
+            progressBackgroundColor="#1e293b"
+            progressViewOffset={topInset ? topInset + 8 : 0}
           />
         ) : undefined
       }

@@ -39,13 +39,19 @@ export const IndexingProgressBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#171717",
-    borderColor: "#262626",
-    borderWidth: 1,
-    borderRadius: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.90)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderWidth: 1.2,
+    borderRadius: 16,
     padding: 12,
-    marginHorizontal: 16,
-    marginVertical: 8,
+    marginHorizontal: 12,
+    marginTop: 2,
+    marginBottom: 6,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   topRow: {
     flexDirection: "row",

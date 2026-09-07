@@ -774,9 +774,17 @@ Status: Completed.
 1. PC hover sneak peek plays the full video (no 3s cap) and hops +8s every ~1s so the card skims different timestamps quickly. Videos ≤ 1 minute play straight through with no skip. Unhover aborts the stream.
 Status: Completed.
 
-[2026-08-23] Request 122:
-1. Removed Caddy. Next.js listens on host port 38479 directly. It was only reverse-proxying :38479 → web:3000 after TLS experiments were dropped.
+[2026-09-07] Request 123:
+1. Fixed pull-to-refresh spinner invisibility in mobile app:
+   - Replaced white-on-white spinner/background with high-contrast colors (`tintColor="#818cf8"`, `colors={["#818cf8", "#6366f1"]}`, `progressBackgroundColor="#1e293b"`) across `MediaListRenderer.tsx` and `InstagramFeed.tsx`.
+   - Added `progressViewOffset` aligned to the top header height so the spinner displays cleanly below the floating header on pull down.
+2. Made header overlay on top of the files area without shifting or moving the files area:
+   - Updated `styles.chrome` to `backgroundColor: "transparent"` positioned absolutely as an overlay.
+   - Removed `bodyAnim`'s `paddingTop` interpolation so the files area does not jump up or down when the header hides or shows.
+   - Tracked measured header height (`staticHeaderHeight`) and passed `topInset` to `MediaListRenderer` and `InstagramFeed`'s `contentContainerStyle` so the initial top content always stays below the header height without moving down on scroll.
+3. Redesigned mobile header into a sleek floating island bar:
+   - Built a floating frosted-glass capsule card (`marginHorizontal: 12`, `borderRadius: 22`, `BlurView` backdrop blur, subtle glass border, drop shadow, and top specular highlight line).
+   - Redesigned header UI: crisp title with indigo count pill badge, circular frosted action buttons (Upload, Refresh, Filter/Grouping with active glow indicator, Grid/List layout toggle), modern pill search bar, and segmented media type chips.
+   - Updated `IndexingProgressBanner` styling to match the floating bar aesthetic.
+4. Verified mobile TypeScript compilation with `bun run lint` (`tsc --noEmit`) with 0 errors.
 Status: Completed.
-
-
-

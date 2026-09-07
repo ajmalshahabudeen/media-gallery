@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, StatusBar, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   Easing,
   interpolate,
@@ -45,9 +45,12 @@ export function MediaLibraryScreen({
 }: Props) {
   const { folders, galleryLayout, folderFilterEnabled, selectedFolders } = useMobileStore();
   const { chromeVisible, onScroll } = useScrollChrome();
+  const insets = useSafeAreaInsets();
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const headerHeight = useSharedValue(200);
+  const estimatedHeaderHeight = Math.max(insets.top, 8) + 160;
+  const headerHeight = useSharedValue(estimatedHeaderHeight);
+  const [staticHeaderHeight, setStaticHeaderHeight] = useState(estimatedHeaderHeight);
   const chrome = useSharedValue(1);
   const visibleFiles = useMemo(
     () => applyFolderFilter(files, folderFilterEnabled, selectedFolders),
@@ -63,13 +66,9 @@ export function MediaLibraryScreen({
 
   const headerAnim = useAnimatedStyle(() => ({
     transform: [
-      { translateY: interpolate(chrome.value, [0, 1], [-headerHeight.value, 0]) },
+      { translateY: interpolate(chrome.value, [0, 1], [-headerHeight.value - 30, 0]) },
     ],
     opacity: chrome.value,
-  }));
-
-  const bodyAnim = useAnimatedStyle(() => ({
-    paddingTop: interpolate(chrome.value, [0, 1], [0, headerHeight.value]),
   }));
 
   const canUpload = showUpload && folders.length > 0;
@@ -83,9 +82,12 @@ export function MediaLibraryScreen({
         pointerEvents={chromeVisible ? "auto" : "none"}
         style={[styles.chrome, headerAnim]}
         onLayout={(event) => {
-          const next = event.nativeEvent.layout.height;
+          const next = Math.round(event.nativeEvent.layout.height);
           if (next > 0) {
             headerHeight.value = next;
+            if (Math.abs(next - staticHeaderHeight) > 1) {
+              setStaticHeaderHeight(next);
+            }
           }
         }}
       >
@@ -99,7 +101,7 @@ export function MediaLibraryScreen({
         {showIndexing ? <IndexingProgressBanner /> : null}
       </Animated.View>
 
-      <Animated.View style={[styles.body, bodyAnim]}>
+      <View style={styles.body}>
         {galleryLayout === "feed" ? (
           <InstagramFeed
             files={visibleFiles}
@@ -109,6 +111,7 @@ export function MediaLibraryScreen({
             onScroll={onScroll}
             emptyTitle={emptyTitle}
             emptySubtitle={emptySubtitle}
+            topInset={staticHeaderHeight}
           />
         ) : (
           <MediaListRenderer
@@ -120,9 +123,10 @@ export function MediaLibraryScreen({
             emptyTitle={emptyTitle}
             emptySubtitle={emptySubtitle}
             emptyIcon={emptyIcon}
+            topInset={staticHeaderHeight}
           />
         )}
-      </Animated.View>
+      </View>
 
       <FilePreviewModal
         file={selectedFile}
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    backgroundColor: "#000000",
+    backgroundColor: "transparent",
   },
   body: {
     flex: 1,

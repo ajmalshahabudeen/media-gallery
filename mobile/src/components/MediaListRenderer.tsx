@@ -23,6 +23,7 @@ interface Props {
   emptyTitle?: string;
   emptySubtitle?: string;
   emptyIcon?: React.ReactNode;
+  topInset?: number;
 }
 
 export const MediaListRenderer: React.FC<Props> = ({
@@ -34,6 +35,7 @@ export const MediaListRenderer: React.FC<Props> = ({
   emptyTitle = "No Media Files Found",
   emptySubtitle = "Make sure your server folders are configured in Settings.",
   emptyIcon,
+  topInset,
 }) => {
   const {
     selectedType,
@@ -79,6 +81,8 @@ export const MediaListRenderer: React.FC<Props> = ({
   // Group files into sections
   const sections = groupMediaFiles(sortedFiles, groupBy);
 
+  const containerPadding = topInset !== undefined ? { paddingTop: topInset + 8 } : null;
+
   // If groupBy is "none", render standard FlatList
   if (groupBy === "none") {
     return (
@@ -87,7 +91,7 @@ export const MediaListRenderer: React.FC<Props> = ({
         data={sortedFiles}
         keyExtractor={(item) => item.path}
         numColumns={viewMode === "grid" ? 2 : 1}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, containerPadding]}
         scrollEventThrottle={16}
         onScroll={onScroll}
         alwaysBounceVertical
@@ -97,8 +101,10 @@ export const MediaListRenderer: React.FC<Props> = ({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#fafafa"
-              colors={["#fafafa"]}
+              tintColor="#818cf8"
+              colors={["#818cf8", "#6366f1"]}
+              progressBackgroundColor="#1e293b"
+              progressViewOffset={topInset ? topInset + 8 : 0}
             />
           ) : undefined
         }
@@ -130,7 +136,7 @@ export const MediaListRenderer: React.FC<Props> = ({
       key={viewMode === "grid" ? "section-grid-2" : "section-list-1"}
       sections={sections}
       keyExtractor={(item) => item.path}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, containerPadding]}
       scrollEventThrottle={16}
       onScroll={onScroll}
       alwaysBounceVertical
@@ -140,8 +146,10 @@ export const MediaListRenderer: React.FC<Props> = ({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#fafafa"
-            colors={["#fafafa"]}
+            tintColor="#818cf8"
+            colors={["#818cf8", "#6366f1"]}
+            progressBackgroundColor="#1e293b"
+            progressViewOffset={topInset ? topInset + 8 : 0}
           />
         ) : undefined
       }
