@@ -1,18 +1,19 @@
 import { useRef } from "react";
 import { Dimensions, PanResponder, type PanResponderInstance } from "react-native";
-import Animated, {
+import {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  runOnJS,
   interpolate,
   Extrapolation,
 } from "react-native-reanimated";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
-/** How far down the user must drag before release triggers dismiss */
-const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.10;
-/** Velocity that can override the distance threshold (px/ms) */
-const VELOCITY_THRESHOLD = 0.3;
+/** Minimum downward distance in px to trigger dismiss on release */
+const DISMISS_THRESHOLD = 40;
+/** Velocity that can override distance threshold (px/ms) */
+const VELOCITY_THRESHOLD = 0.2;
 
 interface UseDragToCloseOptions {
   /** Called when the dismiss animation finishes */
@@ -22,7 +23,7 @@ interface UseDragToCloseOptions {
 }
 
 /**
- * Returns animated styles + a PanResponder for drag-to-dismiss.
+ * Returns animated styles + a PanResponder for drag-to-dismiss with genuine physics inertia.
  *
  * • `containerStyle` – apply to the whole screen wrapper (translateY)
  * • `upNextStyle`    – apply to the "Up Next" / below-video list (opacity fade)
@@ -35,13 +36,17 @@ export function useDragToClose({ onClose, enabled = true }: UseDragToCloseOption
 
   /**
    * We track a "dismissed" flag in a ref so we don't fire onClose twice
-   * (the spring can bounce near zero, and RN timers can be jittery).
    */
   const dismissedRef = useRef(false);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fireClose = () => {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
     onClose();
   };
 
@@ -54,7 +59,7 @@ export function useDragToClose({ onClose, enabled = true }: UseDragToCloseOption
   const upNextOpacity = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateY.value,
-      [0, DISMISS_THRESHOLD],
+      [0, 100],
       [1, 0],
       Extrapolation.CLAMP
     );
@@ -76,52 +81,81 @@ export function useDragToClose({ onClose, enabled = true }: UseDragToCloseOption
   const panResponder = useRef<PanResponderInstance>(
     PanResponder.create({
       /**
-       * Only claim the gesture when the user is dragging predominantly
-       * downward and has moved more than 10px in that direction.
-       * This avoids stealing horizontal scrub / tap gestures from the
-       * video player overlay.
+       * Claim the gesture as soon as user drags down slightly (> 6px)
+       * and the movement is predominantly vertical downward.
        */
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_e, g) => {
-        if (!enabled) return false;
-        // Only respond to clear vertical-down drags
-        return g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5;
+        if (!enabled || isDismissing.value) return false;
+        return g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2;
       },
       onPanResponderGrant: () => {
-        // nothing – translateY is already at the right value
+        // active gesture started
       },
       onPanResponderMove: (_e, g) => {
         if (isDismissing.value) return;
-        // Only allow downward movement (clamp at 0 to prevent upward dragging)
-        translateY.value = Math.max(0, g.dy);
+        if (g.dy < 0) {
+          // Subtle rubber-band resistance when dragging upward
+          translateY.value = g.dy * 0.15;
+        } else {
+          // Direct 1:1 finger tracking
+          translateY.value = g.dy;
+        }
       },
       onPanResponderRelease: (_e, g) => {
         if (isDismissing.value) return;
 
+        const velocity = g.vy * 1000; // convert px/ms to px/sec
+        const isFlickingUp = g.vy < -0.15;
         const shouldDismiss =
-          g.dy > DISMISS_THRESHOLD || g.vy > VELOCITY_THRESHOLD;
+          !isFlickingUp && (g.dy > DISMISS_THRESHOLD || g.vy > VELOCITY_THRESHOLD);
 
         if (shouldDismiss) {
           isDismissing.value = true;
-          // Close immediately so the modal unmounts and stops eating touches.
-          // No need to wait for the slide-out animation — the modal will
-          // disappear as soon as onClose sets file to null.
-          fireClose();
+
+          // Physics inertia:
+          // Honor the user's release velocity, with a minimum exit momentum of 1500 px/s
+          // so even a slow release rapidly accelerates and glides off-screen smoothly in ~130ms.
+          const exitVelocity = Math.max(velocity, 1500);
+
+          translateY.value = withSpring(
+            SCREEN_HEIGHT + 80,
+            {
+              velocity: exitVelocity,
+              damping: 24,
+              stiffness: 280,
+              mass: 0.5,
+              overshootClamping: true,
+            },
+            (finished) => {
+              if (finished) {
+                runOnJS(fireClose)();
+              }
+            }
+          );
+
+          // Safety timeout ensures onClose always runs even if animation is interrupted
+          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+          dismissTimerRef.current = setTimeout(() => {
+            fireClose();
+          }, 220);
         } else {
-          // Snap back
+          // Snap back with natural physics spring
           translateY.value = withSpring(0, {
-            damping: 20,
-            stiffness: 300,
-            mass: 0.8,
+            velocity: velocity,
+            damping: 22,
+            stiffness: 320,
+            mass: 0.6,
           });
         }
       },
-      onPanResponderTerminate: () => {
+      onPanResponderTerminate: (_e, g) => {
         if (!isDismissing.value) {
           translateY.value = withSpring(0, {
-            damping: 20,
-            stiffness: 300,
-            mass: 0.8,
+            velocity: (g?.vy ?? 0) * 1000,
+            damping: 22,
+            stiffness: 320,
+            mass: 0.6,
           });
         }
       },
@@ -136,6 +170,10 @@ export function useDragToClose({ onClose, enabled = true }: UseDragToCloseOption
     /** Reset state if the modal is reused */
     reset: () => {
       dismissedRef.current = false;
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
       translateY.value = 0;
       isDismissing.value = false;
     },

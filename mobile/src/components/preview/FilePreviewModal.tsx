@@ -245,9 +245,9 @@ export const FilePreviewModal: React.FC<Props> = ({ file, onClose, playlist }) =
   const isVideo = active.type === "video";
 
   return (
-    <Modal visible={!!file} animationType="slide" transparent={isVideo} onRequestClose={onClose}>
+    <Modal visible={!!file} animationType={isVideo ? "fade" : "slide"} transparent={isVideo} onRequestClose={onClose}>
       <SafeAreaProvider>
-        {isVideo && <Animated.View style={[styles.dragBackdrop, dragBackdropStyle]} />}
+        {isVideo && <Animated.View style={[styles.dragBackdrop, dragBackdropStyle]} pointerEvents="none" />}
         <Animated.View style={[styles.container, isVideo && styles.containerVideo, isVideo && dragContainerStyle]}>
           <StatusBar style="light" />
           <ModalSafeTop color={isVideo ? "#0f0f0f" : "#000000"} />
