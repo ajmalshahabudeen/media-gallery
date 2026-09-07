@@ -10,9 +10,9 @@ import Animated, {
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 /** How far down the user must drag before release triggers dismiss */
-const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.2;
+const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.10;
 /** Velocity that can override the distance threshold (px/ms) */
-const VELOCITY_THRESHOLD = 0.5;
+const VELOCITY_THRESHOLD = 0.3;
 
 interface UseDragToCloseOptions {
   /** Called when the dismiss animation finishes */
