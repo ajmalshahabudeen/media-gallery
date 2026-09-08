@@ -11,7 +11,6 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
 import {
   Search,
   RefreshCw,
@@ -92,203 +91,200 @@ export const MediaControlsHeader: React.FC<Props> = ({
   ];
 
   return (
-    <View style={styles.floatingWrapper}>
-      <View style={[styles.floatingCard, { marginTop: Math.max(insets.top, 8) }]}>
-        <BlurView
-          tint="dark"
-          intensity={85}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
-        <View style={styles.specularLine} pointerEvents="none" />
-
-        <View style={styles.topHeader}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.headerTitle}>{title}</Text>
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{itemCount}</Text>
-            </View>
-          </View>
-
-          <View style={styles.topActions}>
-            {onUpload && (
-              <TouchableOpacity style={styles.iconBtn} onPress={onUpload} hitSlop={8}>
-                <Upload size={16} color="#fafafa" />
-              </TouchableOpacity>
-            )}
-
-            {onRefresh && (
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={onRefresh}
-                disabled={isRefreshing}
-                hitSlop={8}
-              >
-                <RefreshCw size={16} color={isRefreshing ? "#737373" : "#fafafa"} />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[
-                styles.iconBtn,
-                (groupBy !== "none" || folderFilterActive) && styles.iconBtnActive,
-              ]}
-              onPress={() => setShowOptionsModal(true)}
-              hitSlop={8}
-            >
-              <SlidersHorizontal
-                size={16}
-                color={groupBy !== "none" || folderFilterActive ? "#a5b4fc" : "#a3a3a3"}
-              />
-            </TouchableOpacity>
-
-            {hideViewToggle ? null : (
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                hitSlop={8}
-              >
-                {viewMode === "grid" ? (
-                  <List size={16} color="#fafafa" />
-                ) : (
-                  <LayoutGrid size={16} color="#fafafa" />
-                )}
-              </TouchableOpacity>
-            )}
+    <View style={styles.root}>
+      <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 12) }]}>
+      <View style={styles.topHeader}>
+        <View style={styles.titleContainer}>
+          <Text style={styles.headerTitle}>{title}</Text>
+          <View style={styles.countBadge}>
+            <Text style={styles.countBadgeText}>{itemCount}</Text>
           </View>
         </View>
 
-        {/* Search Input Bar */}
-        <View style={styles.searchBar}>
-          <Search size={15} color="#737373" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search photos, videos, audio..."
-            placeholderTextColor="#737373"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearBtn} hitSlop={6}>
-              <X size={14} color="#a3a3a3" />
+        <View style={styles.topActions}>
+          {onUpload && (
+            <TouchableOpacity style={styles.iconBtn} onPress={onUpload} hitSlop={8}>
+              <Upload size={17} color="#fafafa" />
+            </TouchableOpacity>
+          )}
+
+          {onRefresh && (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={onRefresh}
+              disabled={isRefreshing}
+              hitSlop={8}
+            >
+              <RefreshCw size={16} color={isRefreshing ? "#525252" : "#fafafa"} />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.iconBtn,
+              (groupBy !== "none" || folderFilterActive) && styles.iconBtnActive,
+            ]}
+            onPress={() => setShowOptionsModal(true)}
+            hitSlop={8}
+          >
+            <SlidersHorizontal
+              size={16}
+              color={groupBy !== "none" || folderFilterActive ? "#ffffff" : "#a3a3a3"}
+            />
+            {(groupBy !== "none" || folderFilterActive) && (
+              <View style={styles.activeDot} />
+            )}
+          </TouchableOpacity>
+
+          {hideViewToggle ? null : (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              hitSlop={8}
+            >
+              {viewMode === "grid" ? (
+                <List size={17} color="#fafafa" />
+              ) : (
+                <LayoutGrid size={17} color="#fafafa" />
+              )}
             </TouchableOpacity>
           )}
         </View>
+      </View>
 
-        {/* Filter Type Chips */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[styles.filterChip, selectedType === "all" && styles.filterChipActive]}
-            onPress={() => setSelectedType("all")}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedType === "all" && styles.filterChipTextActive,
-              ]}
-            >
-              All
-            </Text>
+      {/* Search Input Bar */}
+      <View style={styles.searchBar}>
+        <Search size={15} color="#737373" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search photos, videos, audio..."
+          placeholderTextColor="#666666"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearBtn} hitSlop={8}>
+            <X size={14} color="#a3a3a3" />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, selectedType === "image" && styles.filterChipActive]}
-            onPress={() => setSelectedType("image")}
-          >
-            <ImageIcon size={12} color={selectedType === "image" ? "#000000" : "#a3a3a3"} />
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedType === "image" && styles.filterChipTextActive,
-              ]}
-            >
-              Photos
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, selectedType === "video" && styles.filterChipActive]}
-            onPress={() => setSelectedType("video")}
-          >
-            <Film size={12} color={selectedType === "video" ? "#000000" : "#a3a3a3"} />
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedType === "video" && styles.filterChipTextActive,
-              ]}
-            >
-              Videos
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterChip, selectedType === "audio" && styles.filterChipActive]}
-            onPress={() => setSelectedType("audio")}
-          >
-            <Music size={12} color={selectedType === "audio" ? "#000000" : "#a3a3a3"} />
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedType === "audio" && styles.filterChipTextActive,
-              ]}
-            >
-              Audio
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {hideViewToggle ? null : (
-          <View style={styles.infoRibbon}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.ribbonScroll}
-            >
-              <TouchableOpacity
-                style={[styles.ribbonTag, groupBy !== "none" && styles.ribbonTagActive]}
-                onPress={() => setShowOptionsModal(true)}
-              >
-                <Layers size={12} color={groupBy !== "none" ? "#a5b4fc" : "#737373"} />
-                <Text
-                  style={[
-                    styles.ribbonTagText,
-                    groupBy !== "none" && styles.ribbonTagTextActive,
-                  ]}
-                >
-                  Group: {groupBy === "none" ? "None" : groupBy}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.ribbonTag, folderFilterActive && styles.ribbonTagActive]}
-                onPress={() => setShowOptionsModal(true)}
-              >
-                <Folder size={12} color={folderFilterActive ? "#a5b4fc" : "#737373"} />
-                <Text
-                  style={[
-                    styles.ribbonTagText,
-                    folderFilterActive && styles.ribbonTagTextActive,
-                  ]}
-                >
-                  {folderFilterActive
-                    ? `Folders: ${selectedFolders.length}`
-                    : "Folders: All"}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.ribbonTag}
-                onPress={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              >
-                <ArrowUpDown size={12} color="#737373" />
-                <Text style={styles.ribbonTagText}>
-                  Sort: {sortBy} ({sortOrder.toUpperCase()})
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
         )}
       </View>
+
+      {/* Filter Type Chips */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterChip, selectedType === "all" && styles.filterChipActive]}
+          onPress={() => setSelectedType("all")}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedType === "all" && styles.filterChipTextActive,
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, selectedType === "image" && styles.filterChipActive]}
+          onPress={() => setSelectedType("image")}
+        >
+          <ImageIcon size={13} color={selectedType === "image" ? "#000000" : "#8e8e93"} />
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedType === "image" && styles.filterChipTextActive,
+            ]}
+          >
+            Photos
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, selectedType === "video" && styles.filterChipActive]}
+          onPress={() => setSelectedType("video")}
+        >
+          <Film size={13} color={selectedType === "video" ? "#000000" : "#8e8e93"} />
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedType === "video" && styles.filterChipTextActive,
+            ]}
+          >
+            Videos
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, selectedType === "audio" && styles.filterChipActive]}
+          onPress={() => setSelectedType("audio")}
+        >
+          <Music size={13} color={selectedType === "audio" ? "#000000" : "#8e8e93"} />
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedType === "audio" && styles.filterChipTextActive,
+            ]}
+          >
+            Audio
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {hideViewToggle ? null : (
+        <View style={styles.infoRibbon}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.ribbonScroll}
+          >
+            <TouchableOpacity
+              style={[styles.ribbonTag, groupBy !== "none" && styles.ribbonTagActive]}
+              onPress={() => setShowOptionsModal(true)}
+            >
+              <Layers size={12} color={groupBy !== "none" ? "#e0e7ff" : "#737373"} />
+              <Text
+                style={[
+                  styles.ribbonTagText,
+                  groupBy !== "none" && styles.ribbonTagTextActive,
+                ]}
+              >
+                Group: {groupBy === "none" ? "None" : groupBy}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.ribbonTag, folderFilterActive && styles.ribbonTagActive]}
+              onPress={() => setShowOptionsModal(true)}
+            >
+              <Folder size={12} color={folderFilterActive ? "#e0e7ff" : "#737373"} />
+              <Text
+                style={[
+                  styles.ribbonTagText,
+                  folderFilterActive && styles.ribbonTagTextActive,
+                ]}
+              >
+                {folderFilterActive
+                  ? `Folders: ${selectedFolders.length}`
+                  : "Folders: All"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.ribbonTag}
+              onPress={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowUpDown size={12} color="#737373" />
+              <Text style={styles.ribbonTagText}>
+                Sort: {sortBy} ({sortOrder.toUpperCase()})
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+    </View>
 
       <Modal
         visible={showOptionsModal}
@@ -436,33 +432,16 @@ export const MediaControlsHeader: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  floatingWrapper: {
+  root: {
+    width: "100%",
     backgroundColor: "transparent",
   },
-  floatingCard: {
-    marginHorizontal: 12,
-    marginBottom: 6,
-    borderRadius: 22,
-    borderWidth: 1.2,
-    borderColor: "rgba(255, 255, 255, 0.14)",
-    backgroundColor: "rgba(15, 23, 42, 0.86)",
-    overflow: "hidden",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 10,
-    paddingTop: 10,
+  headerContainer: {
+    backgroundColor: "#000000",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 16,
     paddingBottom: 10,
-    paddingHorizontal: 12,
-  },
-  specularLine: {
-    position: "absolute",
-    top: 0,
-    left: 24,
-    right: 24,
-    height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
   },
   topHeader: {
     flexDirection: "row",
@@ -477,23 +456,23 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 22,
     fontWeight: "800",
     color: "#fafafa",
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   countBadge: {
-    backgroundColor: "rgba(99, 102, 241, 0.16)",
+    backgroundColor: "#141414",
     borderWidth: 1,
-    borderColor: "rgba(129, 140, 248, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.10)",
     borderRadius: 12,
-    paddingHorizontal: 7,
-    paddingVertical: 1.5,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   countBadgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "700",
-    color: "#a5b4fc",
+    color: "#a3a3a3",
   },
   headerSub: {
     fontSize: 12,
@@ -503,33 +482,43 @@ const styles = StyleSheet.create({
   topActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   iconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#141414",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "rgba(255, 255, 255, 0.10)",
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
   },
   iconBtnActive: {
-    backgroundColor: "rgba(99, 102, 241, 0.22)",
-    borderColor: "rgba(129, 140, 248, 0.5)",
+    backgroundColor: "#222222",
+    borderColor: "rgba(255, 255, 255, 0.25)",
+  },
+  activeDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#818cf8",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "#121212",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    marginTop: 8,
-    marginBottom: 6,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    height: 36,
+    borderColor: "rgba(255, 255, 255, 0.10)",
+    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    height: 38,
   },
   searchIcon: {
     marginRight: 8,
@@ -537,7 +526,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: "#fafafa",
-    fontSize: 13,
+    fontSize: 13.5,
     paddingVertical: 0,
   },
   clearBtn: {
@@ -546,26 +535,26 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: "row",
     marginTop: 2,
-    gap: 6,
+    gap: 7,
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "#121212",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   filterChipActive: {
     backgroundColor: "#ffffff",
     borderColor: "#ffffff",
   },
   filterChipText: {
-    color: "#a3a3a3",
-    fontSize: 11.5,
+    color: "#8e8e93",
+    fontSize: 12,
     fontWeight: "600",
   },
   filterChipTextActive: {
@@ -573,7 +562,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   infoRibbon: {
-    marginTop: 7,
+    marginTop: 8,
   },
   ribbonScroll: {
     flexDirection: "row",
@@ -583,16 +572,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    backgroundColor: "#121212",
     paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
   ribbonTagActive: {
-    backgroundColor: "rgba(99, 102, 241, 0.18)",
-    borderColor: "rgba(129, 140, 248, 0.4)",
+    backgroundColor: "#1c1c24",
+    borderColor: "rgba(129, 140, 248, 0.35)",
   },
   ribbonTagText: {
     color: "#737373",
@@ -601,23 +590,24 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   ribbonTagTextActive: {
-    color: "#e0e7ff",
+    color: "#c7d2fe",
     fontWeight: "600",
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0,0,0,0.75)",
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: "#171717",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: "#0d0d0d",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#262626",
+    borderBottomWidth: 0,
+    borderColor: "rgba(255, 255, 255, 0.12)",
   },
   modalHeader: {
     flexDirection: "row",
@@ -640,9 +630,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   sectionLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
-    color: "#a3a3a3",
+    color: "#8e8e93",
     marginTop: 12,
     marginBottom: 8,
     textTransform: "uppercase",
@@ -656,15 +646,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#000000",
+    backgroundColor: "#141414",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   optionCardSelected: {
     borderColor: "#ffffff",
-    backgroundColor: "rgba(79, 70, 229, 0.15)",
+    backgroundColor: "#202028",
   },
   optionText: {
     color: "#a3a3a3",
@@ -683,10 +673,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 10,
-    backgroundColor: "#000000",
+    backgroundColor: "#141414",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   sortChipSelected: {
     backgroundColor: "#ffffff",
@@ -705,11 +695,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#000000",
+    backgroundColor: "#141414",
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "rgba(255, 255, 255, 0.08)",
     marginBottom: 16,
   },
   orderToggleText: {
@@ -733,14 +723,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: "#000000",
+    backgroundColor: "#141414",
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "rgba(255, 255, 255, 0.08)",
     marginBottom: 6,
   },
   folderRowSelected: {
     borderColor: "#ffffff",
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   folderRowText: {
     flex: 1,

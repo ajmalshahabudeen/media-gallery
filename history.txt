@@ -1096,3 +1096,18 @@ Status: Completed.
 Status: Completed.
 
 
+[2026-09-08] Request 130:
+1. Redesigned Start Screen (Gallery) & Favorites Screen Header:
+   - Eliminated glassy, translucent, and blur-backed floating card architecture (`BlurView`, `specularLine`, floating card margins, and rounded card styling) from `MediaControlsHeader.tsx`.
+   - Built a flush, edge-to-edge pure black header (`#000000`) matching the bottom navigation bar (`BASE_TAB_BAR` from `tab-bar-style.ts`), with bottom border `borderBottomWidth: StyleSheet.hairlineWidth` and `borderBottomColor: "rgba(255, 255, 255, 0.12)"`.
+   - Integrated safe area top padding (`paddingTop: Math.max(insets.top, 12)`) so the pure black surface extends seamlessly behind the status bar.
+   - Refined typography and elements: bold screen title (`#ffffff`, 22px, weight 800), sleek item count badge (`#141414`), 36x36 tactile circular action buttons (`#141414` with active indicator badge on filter/options), sleek embedded search bar (`#121212`, 10px rounded corners, height 38px), and high-contrast monochromatic media type filter chips (`#121212` unselected, `#ffffff` with black text/icon when active).
+   - Updated quick info tags and filter/group options modal to match the pure black aesthetic.
+2. Updated IndexingProgressBanner:
+   - Redesigned `IndexingProgressBanner.tsx` to match the pure black header with flush edge-to-edge styling, `#0d0d0d` background, and matching hairlineWidth bottom border.
+3. Verification:
+   - Mobile TypeScript check clean (`bun run lint` in `mobile/` -> `tsc --noEmit` with 0 errors).
+   - All 32 unit tests pass across 7 test suites (`bun test`).
+   - Root ESLint clean (`bun run lint` -> `eslint .` with 0 errors).
+   - Root Next.js production build clean (`bun run build` -> `next build` compiled with 0 errors).
+Status: Completed.

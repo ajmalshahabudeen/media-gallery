@@ -39,19 +39,11 @@ export const IndexingProgressBanner: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "rgba(15, 23, 42, 0.90)",
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    borderWidth: 1.2,
-    borderRadius: 16,
-    padding: 12,
-    marginHorizontal: 12,
-    marginTop: 2,
-    marginBottom: 6,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: "#0d0d0d",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   topRow: {
     flexDirection: "row",
@@ -69,7 +61,9 @@ const styles = StyleSheet.create({
     color: "#fafafa",
   },
   badge: {
-    backgroundColor: "#262626",
+    backgroundColor: "#1c1c1e",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.10)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
