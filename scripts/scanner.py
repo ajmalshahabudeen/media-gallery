@@ -92,7 +92,7 @@ def get_media_type(ext):
 IGNORED_DIRS = {
     'node_modules', '.git', '.next', '.prisma', 'prisma', 'build', 'dist',
     '.expo', 'android', 'ios', 'venv', '__pycache__', '.gemini', 'caddy_data',
-    'db_data', 'redis_data', '.idea', '.vscode'
+    'db_data', 'redis_data', '.idea', '.vscode', 'mobile'
 }
 
 def resolve_target_path(target_path):

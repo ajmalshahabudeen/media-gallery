@@ -1,21 +1,50 @@
+# Dependency and build directories
 node_modules
+node_modules/**
 .next
-.git
-*.log
+.next/**
 dist
 tmp
-.env*.local
-dev.db
+out
+build
+generated
+generated/**
+
+# Mobile Phone Application (React Native / Expo) - excluded from web Docker
 mobile
-mobile/
+mobile/**
+**/mobile
+**/mobile/**
 **/android
 **/ios
-**/build
 **/.expo
+**/.hermes
 **/*.apk
 **/*.aab
+
+# Local database, logs, and environments
+dev.db
+*.db
+*.db-journal
+*.log
+.env*.local
+
+# IDE, agent, and tooling caches
+.git
+.agents
+.agents/**
+.claude
+.claude/**
+.windsurf
+.windsurf/**
+.expo
+.expo/**
+tsconfig.tsbuildinfo
+
+# Project documentation and tracking
 history.txt
 implementation_plan.md
+walkthrough.md
 *.md
 !README.md
-.hermes
+

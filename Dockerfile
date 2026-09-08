@@ -18,7 +18,7 @@ ENV DATABASE_URL "file:/app/prisma_db/dev.db"
 ENV BETTER_AUTH_URL "http://localhost:38479"
 
 # Install node dependencies
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --backend=copyfile && rm -rf /root/.bun/install/cache
 
 # Copy application source code
 COPY . .
@@ -26,9 +26,9 @@ COPY . .
 # Make entrypoint script executable and convert line endings
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
-# Generate Prisma Client & Build Next.js
+# Generate Prisma Client & Build Next.js with webpack (avoids Turbopack symlink tar issues in containerd)
 RUN bun run db:generate
-RUN bun run build
+RUN bun run next build --webpack && rm -rf .next/cache
 
 EXPOSE 38479
 

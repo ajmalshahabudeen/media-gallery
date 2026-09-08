@@ -996,3 +996,47 @@ Status: Completed.
    - Added `pointerEvents="none"` to `dragBackdrop` to prevent touch capture.
 3. Verified TypeScript compilation with `bun run lint` (`tsc --noEmit`) with 0 errors.
 Status: Completed.
+
+[2026-09-08] Request 125:
+1. Implemented intelligent, adaptive reel video caching system on mobile (`mobile/src/lib/cache.ts`):
+   - Device Hardware Profiling & Mathematical Modeling: calculated hardware score ($S_{dev} = 0.6 \cdot M_{ram} + 0.4 \cdot M_{year}$) from RAM and CPU year class to allocate 1 to 3 parallel background workers safely.
+   - Real-time Contention / Frame-jitter Monitor: lightweight event-loop ticker measuring jitter to dynamically throttle concurrency and inject cooling pauses under UI load so the phone never lags.
+   - Network Speed Estimator: rolling throughput EMA measuring transfer speed to calculate network quality factor ($Q_{net}$).
+   - Dynamic Bidirectional Windowing: pre-caches next 3 reels guaranteed, expanding up to 10 next and 10 previous reels if hardware and network quality allow.
+   - Video Size Branching: full disk cache for reels <= 100MB; initial 15-20s chunk (~16MB HTTP Range) for reels > 100MB.
+   - Disk Safety & Quota: checks internal storage (500MB safety buffer) and caps reel cache at 1.2GB with LRU eviction.
+2. Updated Splashscreen & Lifecycle in `mobile/src/app/_layout.tsx`:
+   - Added `ReelCacheManager.clearAllCache()` during app startup bootstrap before splashscreen dismissal, and hooked into `AppState` background transitions.
+3. Updated Reels Feed & Player in `ReelsFeed.tsx` and `ReelItem.tsx`:
+   - Connected `ReelsFeed` active index and video list to `ReelCacheManager.updateFeedContext(...)` to drive continuous predictive prefetching.
+   - Updated `ReelItem` to play from local disk cache (`file://...`) for instant 0ms swipe playback.
+   - Added zero-friction fallback: `handlePlayerError` detects any playback issue on local disk files, marks them corrupted, and immediately falls back to direct server HTTP range streaming without interrupting the user.
+4. Updated Server Backend (`lib/byte-range.ts` and `app/api/media/file/route.ts`):
+   - Added `bypassMaxChunk` and `full=1` support so mobile cache download tasks can retrieve whole files or custom ranges cleanly without being clamped to 8 MiB, while keeping browser `<video>` open-ended streams protected from OOM.
+5. Verification:
+   - All 32 unit tests pass across 7 test suites (`bun test`).
+   - Mobile TypeScript compilation clean (`tsc --noEmit` with 0 errors).
+   - Root ESLint clean (`eslint .` with 0 errors).
+   - Root Next.js production build clean (`next build` compiled with 0 errors).
+Status: Completed.
+
+[2026-09-08] Request 126:
+1. Diagnosed Docker Compose build failure (`failed to extract layer sha256:...: archive/tar: invalid tar header`):
+   - Next.js 16 default Turbopack compiler creates symlinks inside `.next/node_modules/` pointing to host/container root package paths and creates a 0-byte `turbopack` control artifact, which corrupts layer archives during BuildKit tar generation in containerd's overlayfs snapshotter on Docker Desktop.
+   - `docker builder prune -f` in `run.bat` and `run.sh` lacked the `-a` flag, preventing corrupted layer cache from being purged on build retries.
+   - Mobile app directory `mobile/` was not fully isolated across Dockerignore, Python scanner, and scan routes.
+2. Excluded `mobile` and local build artifacts from Docker:
+   - Updated `.dockerignore` to comprehensively exclude `mobile/**`, `**/mobile/**`, `**/android`, `**/ios`, `**/.expo`, `**/.hermes`, `generated/**`, `.agents/**`, `.claude/**`, `.windsurf/**`, and `tsconfig.tsbuildinfo`.
+   - Added `'mobile'` to `IGNORED_DIRS` in `scripts/scanner.py` to guarantee the media indexing scanner never traverses the mobile directory.
+   - Added `/mobile/` and `mobile` directory filters in `app/api/media/scan/route.ts` for both cached and real-time scan responses.
+3. Fixed Dockerfile & Build Recovery:
+   - Configured Next.js build in `Dockerfile` to use `--webpack` (`bun run next build --webpack && rm -rf .next/cache`), generating standard, clean web assets without Turbopack's container-breaking symlinks and discarding unnecessary `.next/cache`.
+   - Optimized `bun install` with `--backend=copyfile && rm -rf /root/.bun/install/cache` to avoid layer cross-hardlinks and save over 1GB per build.
+   - Updated `run.bat` and `run.sh` build failure recovery to execute `docker rmi media-gallery-web:latest >nul 2>&1` and `docker builder prune -a -f` so retries reliably flush corrupted layer cache.
+   - Added `--no-warn-ignored` to `"lint"` in `package.json` to avoid ESLint 9 code 5 on Windows.
+4. Verification:
+   - Verified `bun run lint` (0 errors).
+   - Verified `bun run build` (0 errors).
+   - Verified clean Docker build and startup via `docker compose up -d --build` (0.3s cached build, container `media_gallery_app` healthy, `http://localhost:38479/api/health` returning 200 OK).
+Status: Completed.
+

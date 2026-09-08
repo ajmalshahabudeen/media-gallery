@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
           !p.includes("/.next/") &&
           !p.includes("/prisma/") &&
           !p.includes("/caddy_data/") &&
-          !p.includes("/db_data/")
+          !p.includes("/db_data/") &&
+          !p.includes("/mobile/")
         );
       });
       const sanitizedFolders = (cached.folders || []).filter(
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
           !f.includes("node_modules") &&
           !f.includes(".git") &&
           !f.includes(".next") &&
-          !f.includes("prisma")
+          !f.includes("prisma") &&
+          !f.includes("mobile")
       );
       return NextResponse.json({
         ...cached,
@@ -110,7 +112,8 @@ async function performScan(userId: string, cacheKey: string) {
         !p.includes("/.next/") &&
         !p.includes("/prisma/") &&
         !p.includes("/caddy_data/") &&
-        !p.includes("/db_data/")
+        !p.includes("/db_data/") &&
+        !p.includes("/mobile/")
       );
     });
 
@@ -120,7 +123,8 @@ async function performScan(userId: string, cacheKey: string) {
           !f.includes("node_modules") &&
           !f.includes(".git") &&
           !f.includes(".next") &&
-          !f.includes("prisma")
+          !f.includes("prisma") &&
+          !f.includes("mobile")
       )
       .sort();
 

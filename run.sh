@@ -43,7 +43,8 @@ echo "[3/4] Building images & launching containers..."
 docker compose down --remove-orphans &> /dev/null
 if ! docker compose up -d --build; then
     echo "⚠️ Warning: Normal build failed. Clearing corrupted build cache and retrying..."
-    docker builder prune -f
+    docker rmi media-gallery-web:latest &> /dev/null || true
+    docker builder prune -a -f
     if ! (docker compose build --no-cache && docker compose up -d); then
         echo "❌ Error: Failed to build or start Docker containers after cache reset."
         echo "Showing recent container logs:"

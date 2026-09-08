@@ -44,7 +44,8 @@ docker compose down --remove-orphans >nul 2>&1
 docker compose up -d --build
 if !ERRORLEVEL! NEQ 0 (
     echo [WARNING] Normal build failed. Clearing corrupted build cache and retrying...
-    docker builder prune -f
+    docker rmi media-gallery-web:latest >nul 2>&1
+    docker builder prune -a -f
     docker compose build --no-cache
     docker compose up -d
     if !ERRORLEVEL! NEQ 0 (
