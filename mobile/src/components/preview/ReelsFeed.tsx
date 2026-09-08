@@ -20,6 +20,7 @@ import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { ReelItem, type ReelItemData } from "./ReelItem";
 import { FilePreviewModal } from "./FilePreviewModal";
 import { instagramTabBarStyle } from "../tab-bar-style";
+import { ReelCacheManager } from "../../lib/cache";
 
 type ReelsFilter = "all" | "favorites";
 
@@ -37,6 +38,7 @@ export function ReelsFeed() {
   const insets = useSafeAreaInsets();
   const {
     serverUrl,
+    sessionToken,
     favorites,
     toggleFavorite,
     fetchFavorites,
@@ -181,13 +183,24 @@ export function ReelsFeed() {
   useEffect(() => {
     if (!hasMore || isLoadingMore || isLoading) return;
     if (activeIndex < videos.length - 4) return;
-    if (loadingMoreLock.current) return;
     void loadReels({
       filter: filterRef.current,
       offset: videos.length,
       append: true,
     });
   }, [activeIndex, videos.length, hasMore, isLoadingMore, isLoading, loadReels]);
+
+  // Drive adaptive disk caching for surrounding reels
+  useEffect(() => {
+    if (videos.length > 0 && serverUrl) {
+      ReelCacheManager.getInstance().updateFeedContext(
+        videos,
+        activeIndex,
+        serverUrl,
+        sessionToken
+      );
+    }
+  }, [videos, activeIndex, serverUrl, sessionToken]);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {

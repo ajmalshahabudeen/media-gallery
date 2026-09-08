@@ -65,4 +65,24 @@ describe("resolveByteRange", () => {
     expect(result.range.status).toBe(200);
     expect(result.range.contentLength).toBe(120_000);
   });
+
+  test("bypassMaxChunk allows full file stream without capping at 8MB", () => {
+    const result = resolveByteRange(null, 50_000_000, { bypassMaxChunk: true });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.range.status).toBe(200);
+    expect(result.range.start).toBe(0);
+    expect(result.range.end).toBe(49_999_999);
+    expect(result.range.contentLength).toBe(50_000_000);
+  });
+
+  test("bypassMaxChunk allows larger explicit range chunks", () => {
+    const result = resolveByteRange("bytes=0-16777215", 50_000_000, { bypassMaxChunk: true });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.range.status).toBe(206);
+    expect(result.range.start).toBe(0);
+    expect(result.range.end).toBe(16_777_215);
+    expect(result.range.contentLength).toBe(16_777_216);
+  });
 });

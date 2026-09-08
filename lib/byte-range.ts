@@ -14,9 +14,11 @@ export type ResolveByteRangeResult =
 export function resolveByteRange(
   rangeHeader: string | null,
   fileSize: number,
-  options?: { maxChunkBytes?: number; forcePartialForFull?: boolean }
+  options?: { maxChunkBytes?: number; forcePartialForFull?: boolean; bypassMaxChunk?: boolean }
 ): ResolveByteRangeResult {
-  const maxChunk = options?.maxChunkBytes ?? MAX_RANGE_CHUNK_BYTES;
+  const maxChunk = options?.bypassMaxChunk
+    ? fileSize
+    : (options?.maxChunkBytes ?? MAX_RANGE_CHUNK_BYTES);
 
   if (fileSize <= 0) {
     return {

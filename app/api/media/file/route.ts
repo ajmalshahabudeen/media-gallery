@@ -166,8 +166,13 @@ export async function HEAD(request: NextRequest) {
   const meta = await authorizeFile(request);
   if (meta instanceof NextResponse) return meta;
 
+  const isFull =
+    request.nextUrl.searchParams.get("full") === "1" ||
+    request.headers.get("x-full-file") === "1";
+
   const resolved = resolveByteRange(request.headers.get("range"), meta.fileSize, {
-    forcePartialForFull: isAvMimeType(meta.contentType) && meta.fileSize > 0,
+    forcePartialForFull: !isFull && isAvMimeType(meta.contentType) && meta.fileSize > 0,
+    bypassMaxChunk: isFull,
   });
   if (!resolved.ok) {
     return new NextResponse(null, {
@@ -187,8 +192,13 @@ export async function GET(request: NextRequest) {
   if (meta instanceof NextResponse) return meta;
 
   try {
+    const isFull =
+      request.nextUrl.searchParams.get("full") === "1" ||
+      request.headers.get("x-full-file") === "1";
+
     const resolved = resolveByteRange(request.headers.get("range"), meta.fileSize, {
-      forcePartialForFull: isAvMimeType(meta.contentType) && meta.fileSize > 0,
+      forcePartialForFull: !isFull && isAvMimeType(meta.contentType) && meta.fileSize > 0,
+      bypassMaxChunk: isFull,
     });
     if (!resolved.ok) {
       return new NextResponse(null, {

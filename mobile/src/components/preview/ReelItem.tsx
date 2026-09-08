@@ -20,6 +20,7 @@ import {
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { buildMediaFileUrl } from "../../lib/api";
+import { ReelCacheManager } from "../../lib/cache";
 
 export interface ReelItemData extends MediaFile {
   isFavorite?: boolean;
@@ -127,6 +128,7 @@ function ActiveExpoVideo({
   onProgress,
   onPlayingChange,
   onBufferingChange,
+  onError,
   playerRef,
 }: {
   uri: string;
@@ -134,6 +136,7 @@ function ActiveExpoVideo({
   onProgress: (current: number, duration: number) => void;
   onPlayingChange: (playing: boolean) => void;
   onBufferingChange: (buffering: boolean) => void;
+  onError?: (error: any) => void;
   playerRef: React.MutableRefObject<any>;
 }) {
   const player = useVideoPlayer(uri, (p: any) => {
@@ -159,6 +162,21 @@ function ActiveExpoVideo({
     }
   }, [player, isMuted]);
 
+  // Keep player source in sync if uri changes (e.g. from server stream to local disk cache)
+  useEffect(() => {
+    if (player && uri) {
+      try {
+        if (typeof player.replaceAsync === "function") {
+          player.replaceAsync(uri).catch(() => {});
+        } else if (typeof player.replace === "function") {
+          player.replace(uri);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [player, uri]);
+
   useEffect(() => {
     onBufferingChange(true);
     try {
@@ -181,6 +199,9 @@ function ActiveExpoVideo({
       const s = typeof status === "string" ? status : status?.status;
       if (s === "readyToPlay") onBufferingChange(false);
       if (s === "loading") onBufferingChange(true);
+      if (s === "error") {
+        onError?.(status?.error || new Error("Video playback error"));
+      }
     });
 
     const poll = setInterval(() => {
@@ -204,7 +225,7 @@ function ActiveExpoVideo({
         // ignore
       }
     };
-  }, [player, onProgress, onPlayingChange, onBufferingChange]);
+  }, [player, onProgress, onPlayingChange, onBufferingChange, onError]);
 
   return (
     <VideoView
@@ -229,7 +250,34 @@ export const ReelItem: React.FC<Props> = ({
   onOpenInGallery,
 }) => {
   const { sessionToken } = useMobileStore();
-  const uri = buildMediaFileUrl(serverUrl, reel.path, sessionToken);
+  const [videoUri, setVideoUri] = useState<string>(() => {
+    return ReelCacheManager.getInstance().getPlayableUri(reel.path, serverUrl, sessionToken);
+  });
+
+  // Keep videoUri aligned when reel props change
+  useEffect(() => {
+    setVideoUri(ReelCacheManager.getInstance().getPlayableUri(reel.path, serverUrl, sessionToken));
+  }, [reel.path, serverUrl, sessionToken]);
+
+  // Subscribe to disk cache readiness events for instant 0ms playback
+  useEffect(() => {
+    const unsub = ReelCacheManager.getInstance().subscribe(reel.path, (entry) => {
+      if (entry.status === "ready" && !entry.isPartial) {
+        setVideoUri(entry.localUri);
+      }
+    });
+    return unsub;
+  }, [reel.path]);
+
+  // Zero-friction fallback: if local cache playback fails, fallback to server stream instantly
+  const handlePlayerError = useCallback(() => {
+    if (videoUri.startsWith("file://")) {
+      console.warn("[ReelItem] Local cache playback error, falling back to server stream:", reel.path);
+      ReelCacheManager.getInstance().markCorrupted(reel.path);
+      setVideoUri(buildMediaFileUrl(serverUrl, reel.path, sessionToken));
+    }
+  }, [videoUri, reel.path, serverUrl, sessionToken]);
+
   const avRef = useRef<any>(null);
   const expoPlayerRef = useRef<any>(null);
   const slideWidthRef = useRef(0);
@@ -456,11 +504,12 @@ export const ReelItem: React.FC<Props> = ({
       {/* Video layer (non-interactive) */}
       {isActive ? (
         <ActiveExpoVideo
-          uri={uri}
+          uri={videoUri}
           isMuted={isMuted}
           onProgress={onProgress}
           onPlayingChange={setIsPlaying}
           onBufferingChange={setIsBuffering}
+          onError={handlePlayerError}
           playerRef={expoPlayerRef}
         />
       ) : (

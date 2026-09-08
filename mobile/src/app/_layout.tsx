@@ -7,6 +7,7 @@ import { useSafeAreaInsets, SafeAreaProvider } from "react-native-safe-area-cont
 import * as SplashScreen from "expo-splash-screen";
 import { useMobileStore } from "../store/useMobileStore";
 import { AppLockGate } from "../components/AppLockGate";
+import { ReelCacheManager } from "../lib/cache";
 
 // Prevent native splash screen from hiding before JS is ready
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -79,6 +80,9 @@ function RootLayoutInner() {
             // Non-fatal on OEM skins / API mismatches
           }
         }
+
+        // Clear reel video disk cache on app startup at splashscreen
+        await ReelCacheManager.clearAllCache().catch(() => {});
 
         await initApp();
       } catch (err) {
