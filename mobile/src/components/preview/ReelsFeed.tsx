@@ -216,9 +216,30 @@ export function ReelsFeed() {
     itemVisiblePercentThreshold: 70,
   }).current;
 
+  const dragStartY = useRef(0);
+  const lastScrollDirection = useRef<"next" | "prev" | null>(null);
+
+  const handleScrollBeginDrag = (e: any) => {
+    dragStartY.current = e.nativeEvent.contentOffset.y;
+  };
+
+  const handleScrollEndDrag = () => {
+    lastScrollDirection.current = null;
+  };
+
   const handleScroll = (e: any) => {
     const y = e.nativeEvent.contentOffset.y as number;
     const delta = y - lastOffsetY.current;
+
+    // Detect immediate drag direction when user starts dragging to prefetch next or prev reels instantly
+    const dragDelta = y - dragStartY.current;
+    if (Math.abs(dragDelta) > 12) {
+      const dir: "next" | "prev" = dragDelta > 0 ? "next" : "prev";
+      if (dir !== lastScrollDirection.current) {
+        lastScrollDirection.current = dir;
+        ReelCacheManager.getInstance().onScrollDirection(dir, activeIndex);
+      }
+    }
 
     if (Math.abs(delta) > 8) {
       if (delta > 0 && y > 40) {
@@ -441,6 +462,9 @@ export function ReelsFeed() {
           disableIntervalMomentum
           getItemLayout={getItemLayout}
           onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={handleScrollEndDrag}
+          onMomentumScrollEnd={handleScrollEndDrag}
           scrollEventThrottle={16}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}

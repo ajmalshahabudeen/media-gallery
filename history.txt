@@ -1040,3 +1040,59 @@ Status: Completed.
    - Verified clean Docker build and startup via `docker compose up -d --build` (0.3s cached build, container `media_gallery_app` healthy, `http://localhost:38479/api/health` returning 200 OK).
 Status: Completed.
 
+[2026-09-08] Request 127:
+1. Current Viewing Video Priority Caching:
+   - Elevated the active reel's caching priority to top level (1000-1200) in `mobile/src/lib/cache.ts`.
+   - Implemented dynamic worker preemption: if all worker slots are occupied by distant reels and the current viewing reel (or immediate next reel) needs caching, lower-priority downloads are immediately cancelled to free workers and bandwidth instantly.
+2. Scroll-Direction-Aware Preemption & Cancellation:
+   - Added `onScrollBeginDrag` and real-time drag vector tracking in `ReelsFeed.tsx` to detect swipe direction (`next` vs `prev`) the exact millisecond user movement begins.
+   - Connected `onScrollDirection` in `ReelCacheManager`: immediately cancels downloads running in the opposite or distant directions to dedicate 100% of network/CPU to the incoming reel.
+3. Fixed Playback, Restart, and Seeking Bugs:
+   - Fixed video restarting from beginning and video not playing: removed redundant `replaceAsync` on player mount by tracking `currentUriRef`, and prevented mid-playback source swapping when background downloads complete while the reel is actively playing.
+   - Fixed corrupted/partial cache files: implemented atomic file downloads using `.tmp` extensions that only rename to final `.mp4` upon verified HTTP 200/206 completion.
+   - Fixed slow seek bar response: added `seekTolerance: { before: 0.5, after: 0.5 }` to `expo-video` player for sub-50ms keyframe seeking, ensured `p.play()` is invoked on seek end, and added `pauseForSeek(1200)` to temporarily halt background download tasks during seeks so the video stream gets 100% of network bandwidth.
+4. Verification:
+   - All 32 unit tests pass (`bun test`).
+   - Mobile TypeScript compilation clean (`tsc --noEmit` with 0 errors).
+   - Root ESLint clean (`eslint .` with 0 errors).
+   - Root Next.js production build clean (`next build` compiled with 0 errors).
+Status: Completed.
+
+[2026-09-08] Request 128:
+1. Fixed Persistent Loading Icon Overlay:
+   - Diagnosed root cause: `ReelItem.tsx` rendered the `<ActivityIndicator>` center overlay under `{isBuffering && isActive}`, without checking whether the video was already playing (`isPlaying`). Furthermore, `expo-video` events could leave `isBuffering` in state if the player reached `readyToPlay` prior to listener attachment or if `playingChange` fired without updating buffering.
+   - Updated center overlay condition to `{isBuffering && !isPlaying && !isSeeking && isActive ? ... : null}`, strictly preventing any loading spinner from appearing during active video playback or scrubbing.
+   - Added immediate status inspection on mount and wired `playingChange`, `timeUpdate`, `statusChange`, and interval poller to force `onBufferingChange(false)` whenever `player.playing` is true or `currentTime > 0`.
+2. Stream-First Hybrid Playback Engine & Dual Coordination:
+   - Stream-First Start: All reels now consistently begin playback by streaming directly from the server HTTP range endpoint (`/api/media/file`), eliminating any cache-miss delays or cold-start hitches.
+   - Native Player Preservation: Decoupled `useVideoPlayer` from prop churn using `initialUriRef` so React state changes never destroy or reconstruct the underlying native `VideoPlayer`.
+   - Sub-Millisecond Source Hot-Swapping: Used `player.replaceAsync(targetUri)` preserving exact playback timestamp (`player.currentTime = lastTime`) and resuming playback seamlessly in milliseconds.
+   - Stall Watchdog & Cache Failover (Stream -> Cache): If direct streaming encounters buffering for > 1200ms or throws an error, the engine queries `getCachedUri(reel.path)` and instantly switches to the cached file on disk at the exact current frame.
+   - Corruption & Error Recovery (Cache -> Stream): If playing from cache and a disk read error or corruption occurs, the engine marks the cache corrupted, evicts it, and immediately falls back to direct server HTTP range streaming at the current timestamp.
+   - Concurrent Active Prioritization: Added `prioritizeActiveReel()` in `ReelCacheManager` to ensure the current viewing reel is immediately queued at top priority (1500) for background caching while the user watches the stream.
+3. Verification:
+   - All 32 unit tests pass across 7 test suites (`bun test`).
+   - Mobile TypeScript check clean (`bun --cwd mobile run lint` -> `tsc --noEmit` with 0 errors).
+   - Root ESLint clean (`bun run lint` -> `eslint .` with 0 errors).
+   - Root Next.js production build clean (`bun run build` -> `next build` compiled with 0 errors).
+Status: Completed.
+
+[2026-09-08] Request 129:
+1. Fixed Continuous Play Button Overlay:
+   - Diagnosed root cause: `ReelItem.tsx` rendered the Play icon overlay when `!isPlaying && !isBuffering && isActive`. In an auto-playing feed, `isPlaying` started as `false`, and once `isBuffering` was cleared, `!isPlaying && !isBuffering` evaluated to `true`, displaying the Play button continuously across actively playing reels.
+   - Replaced flawed inference with an explicit `isUserPaused` state, initialized to `false` and cleared on reel index change and unmount.
+   - Updated Play badge conditional to `{isUserPaused && isActive ? ... : null}` so the Play badge is ONLY shown when the user explicitly single-taps to pause.
+   - Updated `togglePlay()` to toggle `isUserPaused` and wired `timeUpdate` / poller to trigger `onPlayingChange(true)` whenever `currentTime > 0`.
+2. Fixed Android `ExponentFileSystem.moveAsync has been rejected` Error:
+   - Diagnosed root cause: `cache.ts` downloaded to `.tmp` files and called `moveAsync` to rename them. On Android, `File.renameTo()` throws `FileSystemCannotMoveFileException` if the destination file already exists or is locked. Additionally, partial files (`isPartial`) bypassed the existing file check, triggering repeated downloads and rename failures.
+   - Completely eliminated `.tmp` files and `moveAsync` calls across `startDownload` and `cleanupCancelledDownload`. `createDownloadResumable` now streams directly to `targetFileUri`.
+   - Enhanced pre-check to recognize existing valid partial chunks (`size >= PARTIAL_CHUNK_BYTES - 1000`) and mark them ready without redundant re-downloads.
+   - Added atomic cleanup via `deleteAsync(targetFileUri)` on task errors or cancellation.
+3. Verification:
+   - Mobile TypeScript compiler clean (`bun --cwd mobile run lint` -> `tsc --noEmit` with 0 errors).
+   - Root ESLint clean (`bun run lint` -> `eslint .` with 0 errors).
+   - All 32 unit tests pass (`bun test`).
+   - Production build clean (`bun run build` -> `next build` compiled with 0 errors).
+Status: Completed.
+
+

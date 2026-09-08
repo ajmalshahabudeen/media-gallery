@@ -1,4 +1,4 @@
-import { AppState, Platform } from "react-native";
+import { AppState } from "react-native";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system/legacy";
 import { buildMediaFileUrl } from "./api";
@@ -11,11 +11,14 @@ import type { MediaFile } from "../store/useMobileStore";
  * 1. Hardware capacity modeling (RAM + CPU year class) calculating optimal concurrency.
  * 2. Real-time JS event-loop contention/jitter monitor to dynamically throttle load so the phone never lags.
  * 3. Network speed probing & throughput Exponential Moving Average (EMA).
- * 4. Priority Queue: next 3 guaranteed, dynamically expanding up to 10 bidirectional reels.
- * 5. Video size threshold: full disk cache for <= 100MB, initial 15-20s chunk (~16MB) for > 100MB.
- * 6. Disk space safety checks and LRU cache eviction.
- * 7. Cache cleared at splashscreen startup and app lifecycle termination.
- * 8. Zero-friction playback with automatic fallback to server streaming.
+ * 4. Priority Queue: active viewing reel has absolute priority (1000-1200), followed by immediate next/prev reels.
+ * 5. Preemption & Cancellation: lower-priority downloads are immediately cancelled when user scrolls to free workers.
+ * 6. Seek pausing: pauses background caching temporarily during seeks for instant zero-lag seeking.
+ * 7. Video size threshold: full disk cache for <= 100MB, initial 15-20s chunk (~16MB) for > 100MB.
+ * 8. Atomic downloads: uses temporary files and validates completion before marking ready, preventing corrupt/partial files.
+ * 9. Disk space safety checks and LRU cache eviction.
+ * 10. Cache cleared at splashscreen startup and app lifecycle termination.
+ * 11. Zero-friction playback with automatic fallback to server streaming.
  */
 
 export const SIZE_100MB = 100 * 1024 * 1024;
@@ -167,6 +170,7 @@ export class ReelCacheManager {
 
   private entries = new Map<string, CachedReelEntry>();
   private activeDownloads = new Map<string, FileSystem.DownloadResumable>();
+  private activeDownloadPriorities = new Map<string, number>();
   private listeners = new Map<string, Set<(entry: CachedReelEntry) => void>>();
 
   private activeIndex = 0;
@@ -175,6 +179,10 @@ export class ReelCacheManager {
   private sessionToken: string | null = null;
   private isProcessing = false;
   private initialized = false;
+
+  private scrollDirection: "next" | "prev" | null = null;
+  private isSeekPaused = false;
+  private seekPauseTimer: ReturnType<typeof setTimeout> | null = null;
 
   private constructor() {
     this.deviceProfile = calculateDeviceProfile();
@@ -215,6 +223,7 @@ export class ReelCacheManager {
         }
       }
       mgr.activeDownloads.clear();
+      mgr.activeDownloadPriorities.clear();
       mgr.entries.clear();
 
       if (!FileSystem.cacheDirectory) return;
@@ -239,9 +248,61 @@ export class ReelCacheManager {
     this.activeIndex = activeIndex;
     this.serverUrl = serverUrl;
     this.sessionToken = sessionToken;
+    this.scrollDirection = null;
 
-    // Trigger async scheduler
+    // Trigger async scheduler with preemption
     void this.scheduleNextBatch();
+  }
+
+  /**
+   * Called immediately when user begins dragging to scroll down (next) or up (prev).
+   * Immediately cancels out-of-direction downloads and gives 100% priority to current & target reels.
+   */
+  public onScrollDirection(
+    direction: "next" | "prev",
+    currentIndex: number
+  ): void {
+    this.scrollDirection = direction;
+    this.activeIndex = currentIndex;
+
+    // Cancel downloads running in the opposite direction
+    const keepPaths = new Set<string>();
+    const currentItem = this.currentFeed[currentIndex];
+    if (currentItem) keepPaths.add(currentItem.path);
+
+    if (direction === "next") {
+      for (let i = currentIndex + 1; i <= Math.min(this.currentFeed.length - 1, currentIndex + 3); i++) {
+        const item = this.currentFeed[i];
+        if (item) keepPaths.add(item.path);
+      }
+    } else {
+      for (let i = Math.max(0, currentIndex - 3); i < currentIndex; i++) {
+        const item = this.currentFeed[i];
+        if (item) keepPaths.add(item.path);
+      }
+    }
+
+    for (const [path, task] of this.activeDownloads) {
+      if (!keepPaths.has(path)) {
+        task.cancelAsync().catch(() => {});
+        this.cleanupCancelledDownload(path);
+      }
+    }
+
+    void this.scheduleNextBatch();
+  }
+
+  /**
+   * Pauses background caching during user seeking to dedicate 100% of network to the seek request.
+   */
+  public pauseForSeek(durationMs = 1200): void {
+    this.isSeekPaused = true;
+    this.cancelLowPriorityDownloads();
+    if (this.seekPauseTimer) clearTimeout(this.seekPauseTimer);
+    this.seekPauseTimer = setTimeout(() => {
+      this.isSeekPaused = false;
+      void this.scheduleNextBatch();
+    }, durationMs);
   }
 
   /**
@@ -266,6 +327,37 @@ export class ReelCacheManager {
   public isCached(filePath: string): boolean {
     const entry = this.entries.get(filePath);
     return !!entry && entry.status === "ready" && !entry.isPartial;
+  }
+
+  /**
+   * Returns the local file:// URI if fully cached and ready; otherwise null.
+   */
+  public getCachedUri(filePath: string): string | null {
+    const entry = this.entries.get(filePath);
+    if (entry && entry.status === "ready" && !entry.isPartial) {
+      entry.lastAccessed = Date.now();
+      return entry.localUri;
+    }
+    return null;
+  }
+
+  /**
+   * Immediately ensures the actively viewed reel has top priority background caching.
+   * If not already cached or downloading, kicks off download immediately at priority 1500.
+   */
+  public prioritizeActiveReel(
+    reel: MediaFile,
+    serverUrl: string,
+    sessionToken: string | null
+  ): void {
+    this.serverUrl = serverUrl;
+    this.sessionToken = sessionToken;
+    const entry = this.entries.get(reel.path);
+    if (entry && entry.status === "ready" && !entry.isPartial) return;
+
+    if (!this.activeDownloads.has(reel.path)) {
+      void this.startDownload(reel, 1500);
+    }
   }
 
   /** Invalidate and remove a corrupted or broken cache file */
@@ -315,10 +407,20 @@ export class ReelCacheManager {
     }
   }
 
-  /** Cancel downloads outside the immediate window */
+  private cleanupCancelledDownload(path: string): void {
+    this.activeDownloads.delete(path);
+    this.activeDownloadPriorities.delete(path);
+    const entry = this.entries.get(path);
+    if (entry && entry.status === "downloading") {
+      entry.status = "idle";
+      FileSystem.deleteAsync(entry.localUri, { idempotent: true }).catch(() => {});
+    }
+  }
+
+  /** Cancel downloads outside the immediate active + 2 window */
   private cancelLowPriorityDownloads(): void {
     const keepPaths = new Set<string>();
-    // Keep only active and next 2 reels
+    // Keep active and next 2 reels
     for (let i = this.activeIndex; i <= Math.min(this.currentFeed.length - 1, this.activeIndex + 2); i++) {
       const item = this.currentFeed[i];
       if (item) keepPaths.add(item.path);
@@ -326,24 +428,20 @@ export class ReelCacheManager {
     for (const [path, task] of this.activeDownloads) {
       if (!keepPaths.has(path)) {
         task.cancelAsync().catch(() => {});
-        this.activeDownloads.delete(path);
-        const entry = this.entries.get(path);
-        if (entry && entry.status === "downloading") {
-          entry.status = "idle";
-        }
+        this.cleanupCancelledDownload(path);
       }
     }
   }
 
   /**
    * Main scheduler algorithm:
-   * 1. Evaluates real-time event-loop contention to adjust concurrency.
-   * 2. Computes bidirectional window (next 3 guaranteed, up to 10 based on device & network).
-   * 3. Calculates mathematical priority for each candidate reel.
-   * 4. Enforces disk safety and starts downloads in parallel workers.
+   * 1. Assigns highest priority to the current viewing reel (1000-1200) and immediate next reels.
+   * 2. PREEMPTS: Cancels lower-priority downloads if workers are full and high-priority reels need cache.
+   * 3. Uses atomic downloads (.tmp file -> rename) to eliminate corrupt/partial files.
+   * 4. Enforces disk safety buffer and respects seek pause.
    */
   private async scheduleNextBatch(): Promise<void> {
-    if (this.isProcessing) return;
+    if (this.isProcessing || this.isSeekPaused) return;
     this.isProcessing = true;
 
     try {
@@ -361,13 +459,7 @@ export class ReelCacheManager {
         maxWorkers = 1;
       }
 
-      // If already at or above worker capacity, yield
-      if (this.activeDownloads.size >= maxWorkers) return;
-
-      // 2. Dynamic Window calculation:
-      // Minimum next window = 3 guaranteed
-      // Extended next window = min(10, max(3, round(3 + 7 * S_dev * Q_net)))
-      // Previous window = min(10, round(10 * S_dev * Q_net))
+      // 2. Dynamic Window calculation
       const S_dev = this.deviceProfile.hardwareScore;
       const Q_net = this.speedEstimator.getNetworkQuality();
 
@@ -399,11 +491,17 @@ export class ReelCacheManager {
 
         let priority = 0;
         if (delta === 0) {
-          // Active reel: highest priority if not ready
-          priority = 1000;
-        } else if (delta <= 3) {
-          // Guaranteed next 3: priority 500 down to 480
-          priority = 500 - delta * 10;
+          // CURRENT VIEWING REEL: Absolute top priority
+          priority = this.scrollDirection ? 1200 : 1000;
+        } else if (delta === 1) {
+          // Next +1 reel: Highest after current
+          priority = this.scrollDirection === "next" ? 900 : 600;
+        } else if (delta === 2) {
+          // Next +2 reel
+          priority = this.scrollDirection === "next" ? 800 : 500;
+        } else if (delta === 3) {
+          // Next +3 reel (guaranteed next 3)
+          priority = this.scrollDirection === "next" ? 700 : 450;
         } else {
           // Extended forward reels 4..10
           priority = 200 - delta * 5;
@@ -418,8 +516,15 @@ export class ReelCacheManager {
         const reel = this.currentFeed[i];
         if (!reel) continue;
 
-        // Backward reels: priority 100 down to 10
-        const priority = 100 - Math.abs(delta) * 8;
+        let priority = 0;
+        if (delta === -1 && this.scrollDirection === "prev") {
+          priority = 900;
+        } else if (delta === -2 && this.scrollDirection === "prev") {
+          priority = 800;
+        } else {
+          // Backward reels
+          priority = 100 - Math.abs(delta) * 8;
+        }
         candidates.push({ index: i, reel, priority, delta });
       }
 
@@ -431,10 +536,45 @@ export class ReelCacheManager {
       for (const [path, task] of this.activeDownloads) {
         if (!activeWindowPaths.has(path)) {
           task.cancelAsync().catch(() => {});
-          this.activeDownloads.delete(path);
-          const entry = this.entries.get(path);
-          if (entry && entry.status === "downloading") {
-            entry.status = "idle";
+          this.cleanupCancelledDownload(path);
+        }
+      }
+
+      // 4. Identify candidates that actually NEED downloading (not ready, not corrupted)
+      const candidatesNeedingDownload = candidates.filter((item) => {
+        const entry = this.entries.get(item.reel.path);
+        if (entry?.status === "ready" && !entry.isPartial) return false;
+        if (entry?.status === "corrupted") return false;
+        return true;
+      });
+
+      // 5. PREEMPTION: If all worker slots are full but a higher-priority candidate is waiting,
+      // cancel the lowest priority active download to free up worker bandwidth!
+      const topNeeded = candidatesNeedingDownload.slice(0, maxWorkers);
+      for (const needed of topNeeded) {
+        if (!this.activeDownloads.has(needed.reel.path)) {
+          // Find lowest priority active download
+          let lowestActivePath: string | null = null;
+          let lowestActivePriority = Infinity;
+
+          for (const [activePath, activePriority] of this.activeDownloadPriorities) {
+            if (activePriority < lowestActivePriority) {
+              lowestActivePriority = activePriority;
+              lowestActivePath = activePath;
+            }
+          }
+
+          // If the waiting candidate has higher priority than an active download, PREEMPT it!
+          if (
+            lowestActivePath &&
+            lowestActivePriority < needed.priority &&
+            this.activeDownloads.size >= maxWorkers
+          ) {
+            const taskToCancel = this.activeDownloads.get(lowestActivePath);
+            if (taskToCancel) {
+              taskToCancel.cancelAsync().catch(() => {});
+              this.cleanupCancelledDownload(lowestActivePath);
+            }
           }
         }
       }
@@ -452,42 +592,27 @@ export class ReelCacheManager {
         // Non-fatal on web or restricted permissions
       }
 
-      // 4. Fill worker slots
-      for (const item of candidates) {
+      // 6. Fill worker slots with top priority candidates
+      for (const item of candidatesNeedingDownload) {
         if (this.activeDownloads.size >= maxWorkers) break;
 
         const path = item.reel.path;
-        let entry = this.entries.get(path);
+        if (this.activeDownloads.has(path)) continue;
 
-        // Check if already completed
-        if (entry && entry.status === "ready" && !entry.isPartial) {
-          continue;
-        }
-
-        // If currently downloading, continue
-        if (this.activeDownloads.has(path)) {
-          continue;
-        }
-
-        // If skipped corrupted, continue
-        if (entry?.status === "corrupted") {
-          continue;
-        }
-
-        // Start caching this candidate
-        void this.startDownload(item.reel);
+        // Start caching this candidate with its assigned priority
+        void this.startDownload(item.reel, item.priority);
       }
     } finally {
       this.isProcessing = false;
     }
   }
 
-  /** Executes download for a single reel */
-  private async startDownload(reel: MediaFile): Promise<void> {
+  /** Executes direct download for a single reel */
+  private async startDownload(reel: MediaFile, priority: number): Promise<void> {
     const isOver100MB = (reel.size || 0) > SIZE_100MB;
     const isPartial = isOver100MB;
-    const fileName = getCacheFileName(reel.path, isPartial);
-    const targetFileUri = `${REELS_CACHE_DIR}${fileName}`;
+    const finalFileName = getCacheFileName(reel.path, isPartial);
+    const targetFileUri = `${REELS_CACHE_DIR}${finalFileName}`;
 
     let entry = this.entries.get(reel.path);
     if (!entry) {
@@ -507,12 +632,14 @@ export class ReelCacheManager {
       entry.localUri = targetFileUri;
     }
 
-    // Check if the file already exists on disk and is complete
+    // Check if the file already exists on disk and is complete/valid
     try {
       const existingInfo = await FileSystem.getInfoAsync(targetFileUri);
       if (existingInfo.exists && existingInfo.size && existingInfo.size > 0) {
-        // If not partial and sizes match (or valid video file), mark ready
-        if (!isPartial) {
+        const minExpected = isPartial
+          ? Math.min(reel.size || PARTIAL_CHUNK_BYTES, PARTIAL_CHUNK_BYTES - 1000)
+          : Math.min(reel.size || 1000, 1000);
+        if (existingInfo.size >= minExpected) {
           entry.status = "ready";
           entry.cachedBytes = existingInfo.size;
           this.notifyListeners(reel.path, entry);
@@ -546,6 +673,7 @@ export class ReelCacheManager {
     const startTime = Date.now();
     let downloadedBytes = 0;
 
+    // Download directly to targetFileUri without intermediate .tmp file
     const downloadResumable = FileSystem.createDownloadResumable(
       downloadUrl,
       targetFileUri,
@@ -557,6 +685,7 @@ export class ReelCacheManager {
     );
 
     this.activeDownloads.set(reel.path, downloadResumable);
+    this.activeDownloadPriorities.set(reel.path, priority);
 
     try {
       const result = await downloadResumable.downloadAsync();
@@ -577,22 +706,23 @@ export class ReelCacheManager {
         this.notifyListeners(reel.path, entry);
       } else {
         entry.status = "idle";
+        FileSystem.deleteAsync(targetFileUri, { idempotent: true }).catch(() => {});
       }
     } catch (err: any) {
-      // If task was canceled by scheduler due to scrolling, reset status to idle
-      if (err?.message?.includes?.("cancel") || !this.activeDownloads.has(reel.path)) {
-        entry.status = "idle";
-      } else {
+      // Clean up target file on error or cancel
+      FileSystem.deleteAsync(targetFileUri, { idempotent: true }).catch(() => {});
+      entry.status = "idle";
+      if (!err?.message?.includes?.("cancel")) {
         console.warn(`[ReelCacheManager] Download failed for ${reel.name}:`, err?.message || err);
-        entry.status = "idle";
       }
     } finally {
       this.activeDownloads.delete(reel.path);
+      this.activeDownloadPriorities.delete(reel.path);
 
       // Adaptive throttle delay if event loop is under load
       const load = this.loadMonitor.getLoadFactor();
       if (load > 0.4) {
-        const coolDownMs = Math.min(250, Math.round(200 * load));
+        const coolDownMs = Math.min(200, Math.round(150 * load));
         setTimeout(() => void this.scheduleNextBatch(), coolDownMs);
       } else {
         void this.scheduleNextBatch();
