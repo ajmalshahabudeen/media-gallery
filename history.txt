@@ -1180,3 +1180,21 @@ Status: Completed.
    - Ran `bun run build` (Next.js production build compiled all 35 routes cleanly with 0 errors).
 Status: Completed.
 
+[2026-09-13] Request 134:
+1. Comprehensive README.md Documentation Overhaul:
+   - Added complete architecture diagram and service overview (`web` container on port 38479, `redis` on 6379, and on-demand Prisma Studio on 5555).
+   - Added key feature breakdown covering VLC/MX-style video player, HTTP 206 byte-range streaming, multi-format media drawer, Python multiprocessing indexing engine, background preview generator daemon, and auto-healing backup hub.
+   - Documented system prerequisites for Docker (Docker Desktop, WSL2 on Windows, Linux Docker Engine) and local development (Bun 1.2+, Python 3.10+, ffmpeg).
+   - Created step-by-step setup guide covering repository cloning, `.env` configuration, 1-click launch scripts (`run.bat` for Windows and `run.sh` for Linux/macOS), standard Docker Compose commands, and container health verification.
+   - Documented host drive and storage mount configuration in detail:
+     - Explained Docker volume virtualization and why host physical drives must be bind-mounted.
+     - Highlighted crucial Docker Desktop Windows constraint (mounting non-existent drive letters causes `mkdir <Letter>:\` failure; instructions to comment out unused drive letters).
+     - Documented drive configurations for Windows (`C:\`, `D:\`, `E:\`, `F:\`), Linux (`/mnt/...`, `/media/...`), and macOS (`/Users/...`, `/Volumes/...`).
+     - Documented automatic path resolution: users can enter native Windows paths directly in Settings (e.g. `C:\Users\username\Pictures`, `D:\Movies`) and the backend automatically bridges them to `/host_drives/<letter>/...`.
+   - Documented first-time user walkthrough: account registration, CLI admin promotion command (`docker exec -it media_gallery_app bun run scripts/make-admin.ts email`), and adding media library folders in Settings.
+   - Added deep-dive guides for Prisma Database Studio (port 5555), Backup & Restore Hub with auto-healing, PWA over LAN with Chrome flags, companion React Native mobile app (`mobile/`), port & volume reference tables, and troubleshooting FAQs (Windows firewall, drive mount errors, build cache clearing).
+2. Verification:
+   - Ran `bun run lint` (`eslint .` passed cleanly with 0 errors and 0 warnings).
+   - Ran `bun run build` (`next build` compiled all 35 routes cleanly with 0 errors).
+   - Ran `bun test` (all 39 tests passed across 8 test suites in 1.16s).
+Status: Completed.
