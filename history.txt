@@ -1154,3 +1154,29 @@ Status: Completed.
    - Ran `bun run build` (`next build` compiled all routes cleanly with 0 errors).
    - Ran `bun test` (all 32 unit tests pass across 7 test suites).
 Status: Completed.
+
+[2026-09-13] Request 133:
+1. Implemented zero-dependency streaming POSIX UStar Tar & Gzip compression engine (`lib/tar-gzip.ts`):
+   - Uses Node/Bun native `node:zlib` with `Z_BEST_SPEED` (level 1) for sub-50ms lightweight `.tar.gz` export (< 100 KB).
+   - Exempts physical video/photo media files, preserving external hard disk storage while packaging full database structures (`favorite_media`, `media_folder`, `user`, `account`, `system_log`).
+2. Implemented dedicated host-drive auto-healing & parallel verification queue (`lib/backup-healing.ts`):
+   - Detects all mounted host drives (`/host_drives/*`, `/run/desktop/mnt/host/*`, `/mnt/*`, `/host_media`, Windows `[A-Z]:\`).
+   - Runs a 16-worker parallel queue with 1.2s timeout guards per stat to test file existence on target drives.
+   - Automatically substitutes drive identifiers (e.g. `/host_drives/f/...` -> `/host_drives/d/...` or `F:\` -> `D:\`), generating verified drive remapping proposals.
+3. Implemented intelligent database merging & safety rollback engine (`lib/backup-restore.ts`):
+   - Automatically creates timestamped pre-restore safety snapshots (`dev.db.pre-restore.<timestamp>.bak`) with 1-click rollback recovery (`POST /api/system/restore/rollback`).
+   - Supports Smart Upsert & Merge (default), Skip Existing, and Clean Overwrite modes in batched atomic Prisma `$transaction` calls.
+4. Created backend API endpoints:
+   - `GET /api/system/backup`: Streams compressed `.tar.gz` archive directly to browser with `Content-Disposition`.
+   - `POST /api/system/restore/inspect`: Inspects uploaded archive, runs parallel healing queue, and returns audit metrics.
+   - `POST /api/system/restore/execute`: Executes restore with user-confirmed drive alterations and selected merge strategy.
+   - `POST /api/system/restore/rollback`: Reverts database to pre-restore snapshot on-demand.
+5. Created Settings UI (`components/BackupRestoreHub.tsx` & `app/dashboard/settings/page.tsx`):
+   - Added Backup & Restore Hub card with fast `.tar.gz` download and drag-and-drop uploader.
+   - Built interactive Drive Remapping & Merge Confirmation Dialog with drive remapping selectors, strategy toggles, component filters, sample preview rows, and 1-click undo.
+6. Verification:
+   - Ran `bun test` with 7 new unit tests in `lib/backup-healing.test.ts` (all 39 tests passing across 8 suites in 930ms).
+   - Ran `bun run lint` (0 errors, 0 warnings).
+   - Ran `bun run build` (Next.js production build compiled all 35 routes cleanly with 0 errors).
+Status: Completed.
+

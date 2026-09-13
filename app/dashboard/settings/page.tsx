@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
 import { MediaUploadPanel } from "@/components/MediaUploadPanel";
+import { BackupRestoreHub } from "@/components/BackupRestoreHub";
 
 interface AddFolderFormData {
   folderPath: string;
@@ -387,6 +388,9 @@ export default function SettingsPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Backup & Restore Hub */}
+      <BackupRestoreHub />
 
       {/* Prisma Database Studio Settings */}
       <Card>
