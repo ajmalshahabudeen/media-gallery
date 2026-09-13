@@ -1111,3 +1111,29 @@ Status: Completed.
    - Root ESLint clean (`bun run lint` -> `eslint .` with 0 errors).
    - Root Next.js production build clean (`bun run build` -> `next build` compiled with 0 errors).
 Status: Completed.
+
+[2026-09-13] Request 131:
+1. Docker Configuration for Prisma Studio:
+   - Updated `docker-compose.yml` to expose port `5555:5555` under the `web` container (`media_gallery_app`).
+   - Updated `Dockerfile` to `EXPOSE 38479 5555`.
+2. Process Management & Default Command Execution:
+   - Added `"studio": "prisma studio --browser none --port 5555"` to `scripts` in `package.json`.
+   - Created `lib/prisma-studio-manager.ts` singleton process manager using `globalThis` state, child process spawning with `bun prisma studio --browser none --port 5555`, active HTTP socket polling (probing `127.0.0.1:5555`), and clean process termination across Linux/Windows.
+3. System API:
+   - Created `/api/system/prisma-studio/route.ts` with session authentication:
+     - `GET`: Queries current Prisma Studio status (`running`, `port`, `pid`, `startedAt`).
+     - `POST`: Starts or stops the Prisma Studio daemon on-demand and logs events using `logger.info`.
+4. Settings Page UI (`/dashboard/settings`):
+   - Added **Prisma Database Studio** card:
+     - Live status badge: emerald pulsing badge when running, amber spinner when transitioning, muted badge when stopped.
+     - 1-click **Start Prisma Studio** / **Stop Prisma Studio** button.
+     - Dynamic IP:Port endpoint display: shows `http://<current-host>:5555` (and `http://localhost:5555`).
+     - 1-click **Open Studio** button that opens `http://<current-host>:5555` in a new browser tab.
+     - 1-click **Copy URL** button with animated confirmation feedback.
+     - Explanatory guide detailing Docker port forwarding and SQLite database access.
+5. Verification:
+   - Ran `bun run lint` (0 errors, 0 warnings).
+   - Ran `bun run build` (`next build` compiled cleanly with 0 errors).
+   - Ran `bun test` (all 32 unit tests pass across 7 test suites).
+   - Verified process lifecycle (start, HTTP 200 check, and stop) in Bun runtime.
+Status: Completed.

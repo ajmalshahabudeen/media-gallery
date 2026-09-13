@@ -72,9 +72,11 @@ Open `http://localhost:38479` or `http://YOUR_LAN_IP:38479`.
 
 ## 🛠️ Docker Architecture & Volumes
 
-`web` (Next.js + Prisma + Python workers) on host port **38479**, plus `redis`. SQLite lives on the `db_data` volume. Host media is bind-mounted at `/host_drives/*`.
+`web` (Next.js + Prisma + Python workers) on host port **38479** (and Prisma Studio on **5555**), plus `redis`. SQLite lives on the `db_data` volume. Host media is bind-mounted at `/host_drives/*`.
 
 *Database Auto-Initialization:* On container boot, `docker-entrypoint.sh` automatically initializes and synchronizes the SQLite schema (`bun run db:push`).
+
+*Prisma Studio:* In **Settings** (`/dashboard/settings`), click **Start Prisma Studio** to start browsing database records inside Docker at `http://localhost:5555` or `http://YOUR_LAN_IP:5555`. Port 5555 is exposed directly to the local host machine.
 
 ---
 

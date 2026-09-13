@@ -30,7 +30,7 @@ RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoin
 RUN bun run db:generate
 RUN bun run next build --webpack && rm -rf .next/cache
 
-EXPOSE 38479
+EXPOSE 38479 5555
 
 # Entrypoint script initializes SQLite DB at container startup & launches server
 ENTRYPOINT ["/app/docker-entrypoint.sh"]

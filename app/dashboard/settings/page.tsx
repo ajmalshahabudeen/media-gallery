@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useMediaStore } from "@/store/useMediaStore";
 import {
@@ -31,6 +31,9 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Play,
+  Square,
+  AlertCircle,
 } from "lucide-react";
 import { IndexingProgressBanner } from "@/components/IndexingProgressBanner";
 import { MediaUploadPanel } from "@/components/MediaUploadPanel";
@@ -52,12 +55,69 @@ export default function SettingsPage() {
   const [cacheMessage, setCacheMessage] = useState<string | null>(null);
   const [copiedType, setCopiedType] = useState<"flags" | "origin" | null>(null);
 
+  // Prisma Studio state
+  const [studioStatus, setStudioStatus] = useState<
+    "running" | "stopped" | "starting" | "stopping"
+  >("stopped");
+  const [studioPort, setStudioPort] = useState<number>(5555);
+  const [studioLoading, setStudioLoading] = useState<boolean>(false);
+  const [studioError, setStudioError] = useState<string | null>(null);
+  const [studioCopied, setStudioCopied] = useState<boolean>(false);
+
+  const fetchStudioStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/system/prisma-studio");
+      if (res.ok) {
+        const data = await res.json();
+        setStudioStatus(data.running ? "running" : "stopped");
+        if (data.port) setStudioPort(data.port);
+        if (data.error) setStudioError(data.error);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleToggleStudio = async () => {
+    setStudioLoading(true);
+    setStudioError(null);
+    const action = studioStatus === "running" ? "stop" : "start";
+    setStudioStatus(action === "start" ? "starting" : "stopping");
+
+    try {
+      const res = await fetch("/api/system/prisma-studio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (data.success || data.running !== undefined) {
+        setStudioStatus(data.running ? "running" : "stopped");
+        if (data.port) setStudioPort(data.port);
+        if (data.error) setStudioError(data.error);
+      } else {
+        setStudioError(data.error || "Failed to execute Prisma Studio command");
+        await fetchStudioStatus();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error";
+      setStudioError(msg);
+      await fetchStudioStatus();
+    } finally {
+      setStudioLoading(false);
+    }
+  };
+
   const [currentOrigin] = useState(() => {
     if (typeof window !== "undefined") {
       return window.location.origin;
     }
     return "http://192.168.1.101:38479";
   });
+
+  const studioHostname =
+    typeof window !== "undefined" ? window.location.hostname : "localhost";
+  const studioUrl = `http://${studioHostname}:${studioPort}`;
 
   const copyFlagsUrl = () => {
     copy("chrome://flags/#unsafely-treat-insecure-origin-as-secure");
@@ -85,6 +145,21 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchFolders();
+    let isSubscribed = true;
+    fetch("/api/system/prisma-studio")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isSubscribed && data) {
+          setStudioStatus(data.running ? "running" : "stopped");
+          if (data.port) setStudioPort(data.port);
+          if (data.error) setStudioError(data.error);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [fetchFolders]);
 
   const onAddFolder = async (data: AddFolderFormData) => {
@@ -309,6 +384,172 @@ export default function SettingsPage() {
           <Button variant="outline" size="sm" onClick={handleClearCache} className="gap-2">
             <RefreshCw className="size-4" />
             <span>Purge & Refresh Redis Cache</span>
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Prisma Database Studio Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database className="size-4 text-primary" />
+              <CardTitle className="text-base">Prisma Database Studio</CardTitle>
+            </div>
+            {studioStatus === "running" ? (
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+              >
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Running</span>
+              </Badge>
+            ) : studioStatus === "starting" ? (
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              >
+                <RefreshCw className="size-3 animate-spin" />
+                <span>Starting...</span>
+              </Badge>
+            ) : studioStatus === "stopping" ? (
+              <Badge
+                variant="outline"
+                className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              >
+                <RefreshCw className="size-3 animate-spin" />
+                <span>Stopping...</span>
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1.5 text-xs text-muted-foreground">
+                <span className="size-2 rounded-full bg-muted-foreground/40" />
+                <span>Stopped</span>
+              </Badge>
+            )}
+          </div>
+          <CardDescription>
+            Prisma visual database browser running inside Docker and exposed to host machine on port {studioPort}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="flex flex-col gap-4">
+          {studioError && (
+            <Alert className="border-destructive/50 bg-destructive/10 text-destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>{studioError}</AlertDescription>
+            </Alert>
+          )}
+
+          {studioStatus === "running" ? (
+            <div className="p-4 rounded-xl border bg-emerald-500/5 border-emerald-500/20 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    Studio URL (Exposed Port {studioPort})
+                  </span>
+                  <code className="bg-background/80 px-2.5 py-1.5 rounded border text-xs font-mono select-all text-emerald-600 dark:text-emerald-400 font-semibold break-all">
+                    {studioUrl}
+                  </code>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      copy(studioUrl);
+                      setStudioCopied(true);
+                      setTimeout(() => setStudioCopied(false), 2000);
+                    }}
+                    className="gap-1.5 h-8 text-xs"
+                  >
+                    {studioCopied ? (
+                      <Check className="size-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                    <span>{studioCopied ? "Copied" : "Copy URL"}</span>
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => window.open(studioUrl, "_blank", "noopener,noreferrer")}
+                    className="gap-1.5 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    <span>Open Studio</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-muted-foreground flex flex-col gap-0.5 border-t border-border/50 pt-2.5">
+                <span>
+                  • <strong>Docker Port Forwarding:</strong> Port{" "}
+                  <code className="font-mono text-primary font-semibold">{studioPort}</code> is mapped
+                  directly to your local machine.
+                </span>
+                <span>
+                  • <strong>Database:</strong> SQLite database at{" "}
+                  <code className="font-mono text-primary">/app/prisma_db/dev.db</code> (User,
+                  MediaFolder, SystemLog, FavoriteMedia).
+                </span>
+                {studioHostname !== "localhost" && (
+                  <span>
+                    • <strong>Localhost Alternative:</strong> Also reachable via{" "}
+                    <code className="font-mono text-primary font-semibold">
+                      http://localhost:{studioPort}
+                    </code>{" "}
+                    on the server machine.
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl border bg-muted/20 flex flex-col gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Docker Command:</span>
+              <code className="bg-background px-2.5 py-1.5 rounded border text-[11px] font-mono text-primary">
+                bun prisma studio --browser none --port {studioPort}
+              </code>
+              <p className="text-[11px] pt-1">
+                When started, Prisma Studio opens a graphical browser interface on port {studioPort}.
+                It allows you to explore, filter, and modify SQLite database records directly from your
+                local machine browser.
+              </p>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex items-center justify-between border-t pt-4">
+          <div className="text-xs text-muted-foreground">
+            {studioStatus === "running"
+              ? "Studio is active and listening on 0.0.0.0:" + studioPort
+              : "Studio is currently offline"}
+          </div>
+
+          <Button
+            variant={studioStatus === "running" ? "destructive" : "default"}
+            size="sm"
+            disabled={studioLoading}
+            onClick={handleToggleStudio}
+            className="gap-2"
+          >
+            {studioLoading ? (
+              <RefreshCw className="size-4 animate-spin" />
+            ) : studioStatus === "running" ? (
+              <Square className="size-4 fill-current" />
+            ) : (
+              <Play className="size-4 fill-current" />
+            )}
+            <span>
+              {studioLoading
+                ? studioStatus === "starting"
+                  ? "Starting..."
+                  : "Stopping..."
+                : studioStatus === "running"
+                ? "Stop Prisma Studio"
+                : "Start Prisma Studio"}
+            </span>
           </Button>
         </CardFooter>
       </Card>

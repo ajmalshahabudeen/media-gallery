@@ -26,6 +26,7 @@ services:
     restart: always
     ports:
       - "38479:38479"
+      - "5555:5555"
     environment:
       - PORT=38479
       - HOSTNAME=0.0.0.0
