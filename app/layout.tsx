@@ -1,14 +1,30 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
-const playfairDisplayHeading = Playfair_Display({ subsets: ["latin"], variable: "--font-heading" });
-const notoSans = Noto_Sans({ subsets: ["latin"], variable: "--font-sans" });
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const playfairDisplayHeading = localFont({
+  src: "./fonts/PlayfairDisplayVF.woff2",
+  variable: "--font-heading",
+  display: "swap",
+});
+const notoSans = localFont({
+  src: "./fonts/NotoSansVF.woff2",
+  variable: "--font-sans",
+  display: "swap",
+});
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff2",
+  variable: "--font-geist-sans",
+  display: "swap",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff2",
+  variable: "--font-geist-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Server Gallery",

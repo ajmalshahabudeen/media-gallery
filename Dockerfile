@@ -11,11 +11,12 @@ COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
 # Environment variables required for build & prisma generate
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
-ENV PYTHONUNBUFFERED 1
-ENV DATABASE_URL "file:/app/prisma_db/dev.db"
-ENV BETTER_AUTH_URL "http://localhost:38479"
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV PYTHONUNBUFFERED=1
+ENV DATABASE_URL="file:/app/prisma_db/dev.db"
+ENV BETTER_AUTH_URL="http://localhost:38479"
+ENV NEXT_PRIVATE_LOCAL_WORKERS=1
 
 # Install node dependencies
 RUN bun install --frozen-lockfile --backend=copyfile && rm -rf /root/.bun/install/cache
@@ -26,9 +27,9 @@ COPY . .
 # Make entrypoint script executable and convert line endings
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
-# Generate Prisma Client & Build Next.js with webpack (avoids Turbopack symlink tar issues in containerd)
+# Generate Prisma Client & Build Next.js
 RUN bun run db:generate
-RUN bun run next build --webpack && rm -rf .next/cache
+RUN bun run next build && rm -rf .next/cache
 
 EXPOSE 38479 5555
 

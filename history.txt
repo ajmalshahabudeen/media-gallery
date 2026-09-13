@@ -1137,3 +1137,20 @@ Status: Completed.
    - Ran `bun test` (all 32 unit tests pass across 7 test suites).
    - Verified process lifecycle (start, HTTP 200 check, and stop) in Bun runtime.
 Status: Completed.
+
+[2026-09-13] Request 132:
+1. Diagnosed Next.js Build Failures:
+   - Docker Google Fonts timeout (`connect ETIMEDOUT 74.125.136.95:443` & `connect ENETUNREACH 2607:f8b0:4002:c00::5f:443`): `next/font/google` in `app/layout.tsx` attempted to download fonts from Google at Docker build time, which failed in restricted/offline container networking.
+   - Windows Local Worker Crash (`Next.js build worker exited with code: 3221225477`): Node v25.8.1 on Windows threw Access Violation `0xC0000005` in Next.js worker threads during type checking when running `next build` without Bun.
+2. Local Font Self-Hosting:
+   - Downloaded variable `.woff2` font files for Geist (`GeistVF.woff2`), Geist Mono (`GeistMonoVF.woff2`), Noto Sans (`NotoSansVF.woff2`), and Playfair Display (`PlayfairDisplayVF.woff2`) directly into `app/fonts/` (~126 KB total).
+   - Refactored `app/layout.tsx` from `next/font/google` to `next/font/local` (`localFont({ src: "./fonts/..." })`). This completely eliminates build-time external network dependencies and Google Fonts timeouts.
+3. Build & Runtime Optimization:
+   - Updated `package.json` build script to `"build": "bun --bun next build"` to run natively in Bun per project rules, preventing Node v25 worker crashes.
+   - Excluded `**/*.test.ts` and `**/*.test.tsx` from Next.js `tsconfig.json` to streamline type checking.
+   - Configured `NEXT_PRIVATE_LOCAL_WORKERS=1` in `Dockerfile` and updated build command to Next.js 16's default Turbopack build (`bun run next build && rm -rf .next/cache`), avoiding Webpack OOM spikes on high-core hosts with constrained container memory.
+4. Verification:
+   - Ran `bun run lint` (0 errors, 0 warnings).
+   - Ran `bun run build` (`next build` compiled all routes cleanly with 0 errors).
+   - Ran `bun test` (all 32 unit tests pass across 7 test suites).
+Status: Completed.
