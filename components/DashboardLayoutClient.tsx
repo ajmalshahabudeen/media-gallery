@@ -15,6 +15,7 @@ import {
   Users,
   ScrollText,
   Star,
+  Bookmark,
   Clapperboard,
   Maximize2,
   Minimize2,
@@ -110,6 +111,12 @@ export function DashboardLayoutClient({
       href: "/dashboard/favorites",
       icon: Star,
       active: pathname === "/dashboard/favorites",
+    },
+    {
+      name: "Saved",
+      href: "/dashboard/saved",
+      icon: Bookmark,
+      active: pathname === "/dashboard/saved",
     },
     ...(isAdmin
       ? [

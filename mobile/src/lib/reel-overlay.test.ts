@@ -26,3 +26,16 @@ test("Reels uses native expo-video caching without mid-playback replaceAsync hot
   expect(reelSource).not.toContain("ReelCacheManager");
   expect(feedSource).not.toContain("ReelCacheManager");
 });
+
+test("ReelItem renders Save bookmark below ArrowUpRight with press and long-press handlers", async () => {
+  const reelSource = await Bun.file(
+    new URL("../components/preview/ReelItem.tsx", import.meta.url)
+  ).text();
+  const arrowIdx = reelSource.indexOf("<ArrowUpRight");
+  const bookmarkIdx = reelSource.indexOf("<Bookmark");
+
+  expect(arrowIdx).toBeGreaterThan(-1);
+  expect(bookmarkIdx).toBeGreaterThan(arrowIdx);
+  expect(reelSource).toContain("onPressSave");
+  expect(reelSource).toContain("onLongPressSave");
+});

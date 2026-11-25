@@ -1222,3 +1222,42 @@ Status: Completed.
    - Ran `bun run lint` (`eslint . --no-warn-ignored` passed with 0 errors).
    - Ran `bun run build` (`next build` compiled 35/35 static/dynamic routes with 0 errors).
 Status: Completed.
+
+[2026-11-25] Request 137:
+1. Investigated external HDD disconnects, Docker Desktop file sharing (`https://docs.docker.com/desktop/settings-and-maintenance/settings/#file-sharing`), WSL 2 mount strategies, and alternative architectures for `media-gallery`:
+   - Inspected current setup: `docker-compose.yml` mounts `C:\:/host_drives/c` and `F:\:/host_drives/f` read-write; Docker Desktop uses the WSL 2 backend (`WslEngineEnabled: true`, `FilesharingDirectories: null`, kernel `6.6.87.2-microsoft-standard-WSL2`); Disk 1 is `JMicron Generic` 1TB USB HDD (`F:`, NTFS, `Fixed`) and Disk 2 is `USB SanDisk 3.2Gen1` (`E:` NTFS / `G:` exFAT, `Removable`).
+   - Found primary Windows root causes for automatic HDD disconnects: Windows active power scheme (`Performance`) has `DISKIDLE` ("Turn off hard disk after") set to `0x3c` (60 seconds) on both AC and DC, and `USB selective suspend setting` enabled (`0x1`) on both AC and DC, compounded by 4-worker parallel `os.scandir`/`stat` (`scripts/scanner.py`) and `ffmpeg` daemon reads (`scripts/preview_generator.py`) over Docker/WSL2's 9P/DrvFs bridge.
+   - Evaluated Docker Desktop `#file-sharing` (`Virtual file shares` and `Synchronized file shares` apply to Hyper-V/Mac/Linux, not WSL 2; Synchronized file shares caches files inside VM ext4, unsuitable for 1TB media drives), WSL2 `drvfs` auto-mounting vs `usbipd-win` direct USB passthrough, Windows SMB/CIFS + Docker `local` CIFS volume, and running the Next.js + Python app natively on Windows with only Redis in Docker.
+2. Presented ranked options, side effects, and mitigation recommendations to the user (no application code modified).
+Status: Completed.
+
+[2026-11-25] Request 138:
+1. Evaluated creating a tiny Tauri v2 desktop/tray application on Windows to connect external HDDs (`F:\`, `E:\`, `G:\`) to the Dockerized `media-gallery` app:
+   - Verified local toolchain (`bun 1.3.14`, `cargo 1.96.0`, `rustc 1.96.0` are installed) and audited all filesystem touchpoints in `media-gallery` (`lib/server-utils.ts`, `lib/media-upload.ts`, `lib/backup-healing.ts`, `app/api/media/file/route.ts`, `app/api/media/folders/route.ts`, `app/api/media/subfolders/route.ts`, `app/api/media/upload/route.ts`, `app/api/media/mkdir/route.ts`, `app/api/media/scan/route.ts`, `scripts/scanner.py`, and `scripts/preview_generator.py`).
+   - Proposed the Tauri Host Drive Bridge architecture (tiny Windows tray app with Rust HTTP/Range server + drive allowlist + Bearer token auth, consumed by Docker via `http://host.docker.internal:<port>`), removing fragile Windows drive bind-mounts from `docker-compose.yml` while keeping Next.js, Prisma, SQLite, and Redis in Docker.
+2. Answered user with full architecture, trade-offs, and security/firewall considerations (no application code modified yet).
+Status: Completed.
+
+[2026-11-25] Request 137:
+1. Investigated why the external HDD (`F:` JMicron Generic USB 1TB, plus USB SanDisk `E:`/`G:`) disconnects and fails under the current Docker Desktop (WSL 2) setup, and researched Docker documentation (`settings/#file-sharing`, `features/wsl/`, `features/wsl/best-practices/`, `features/synchronized-file-sharing/`) and Microsoft WSL 2 storage docs.
+2. Identified root causes on the host and in `docker-compose.yml` / `scripts/scanner.py` / `scripts/preview_generator.py`:
+   - Windows Power Plan (`Performance`) has `DISKIDLE` ("Turn off hard disk after") set to `60 seconds` (`0x3c`) and `USB selective suspend` set to `Enabled` (`0x01`) on both AC and DC, causing Windows to power down/suspend the USB HDD during idle gaps and poison WSL 2's 9P/DrvFs mount handles (`/run/desktop/mnt/host/f`).
+   - `docker-compose.yml` bind-mounts whole drive roots read-write (`C:\:/host_drives/c`, `F:\:/host_drives/f`), while `scripts/scanner.py` (`ProcessPoolExecutor` up to 4 workers) and `scripts/preview_generator.py` (`ffmpeg` daemon) hammer the USB-SATA bridge across the Windows-to-WSL 9P boundary.
+   - Docker Desktop is running with `WslEngineEnabled: true`, so the Hyper-V `#file-sharing` UI (`FilesharingDirectories` / `Synchronized file shares`) does not apply and Synchronized File Shares would copy a 1TB media drive into the VM's `.vhdx`.
+3. Compiled ranked solutions (Hybrid native app + Docker Redis, automated WSL `drvfs` / subfolder `:ro` mounts, `usbipd-win` direct USB passthrough into WSL, Docker native SMB/CIFS volume, and Windows power/USB hardening). No code files modified; advisory report delivered.
+Status: Completed.
+
+[2026-11-25] Request 138:
+1. Implemented Instagram-style database-only "Save" & multi-folder categorization feature across Prisma, Backend APIs, Next.js Web UI, and React Native Mobile app (zero disk writes; folder names stored strictly in SQLite via Prisma):
+   - Database (`prisma/schema.prisma`): Added `SaveFolder` (`isDefault` for `"Main Save"`), `SavedMedia`, and `SavedMediaFolder` many-to-many join model linked to `User`, then ran `bun run db:generate` and `bun run db:push`.
+   - Backend (`lib/saved-media.ts`, `app/api/media/saved/route.ts`, `app/api/media/saved/folders/route.ts`, `app/api/media/saved/folders/[id]/route.ts`, `app/api/media/reels/route.ts`): Implemented `Main Save` auto-provisioning, quick-save, multi-folder toggling (`moveFromDefault` support when moving from quick-save toast to a custom folder), virtual folder CRUD (protecting `"Main Save"` from rename/delete), and `isSaved`/`savedFolderIds` enrichment on Reels API responses.
+   - Stores (`store/useMediaStore.ts`, `mobile/src/store/useMobileStore.ts`): Added `saveFolders`, `savedMedia`, `fetchSaved`, `quickSaveMedia`, `toggleMediaInSaveFolder`, `unsaveMedia`, `createSaveFolder`, `renameSaveFolder`, and `deleteSaveFolder`.
+   - Reels UI (`components/preview/ReelItem.tsx`, `components/preview/ReelsFeed.tsx`, `components/preview/SaveFolderDialog.tsx`, `mobile/src/components/preview/ReelItem.tsx`, `mobile/src/components/preview/ReelsFeed.tsx`, `mobile/src/components/preview/SaveFolderSheet.tsx`): Added `Bookmark` save icon below `ArrowUpRight` in the Reels action rail. 1-tap immediately saves to `"Main Save"` and pops an Instagram-style toast with `"Save to folder"` (opening the multi-folder picker + inline `"+ New folder"` creator); tapping an already-saved icon opens the folder sheet/dialog; long-pressing (or right-clicking on web) navigates to the Saved screen.
+   - Saved Screens (`app/dashboard/saved/page.tsx`, `components/DashboardLayoutClient.tsx`, `mobile/src/app/saved.tsx`, `mobile/src/app/_layout.tsx`): Built Instagram Collections 2x2 collage folder grids (`All Saved`, `Main Save`, and custom folders), folder create/rename/delete UI, item grids, and folder-scoped vertical swipeable Reels playback.
+   - Updated `docs.md` across `lib/`, `store/`, `app/dashboard/`, `components/preview/`, `mobile/src/app/`, `mobile/src/components/preview/`, and `mobile/src/store/`, and added Save-icon regression test in `mobile/src/lib/reel-overlay.test.ts`.
+2. Verification:
+   - `bun run --cwd mobile lint` (`tsc --noEmit`): 0 errors.
+   - `bun test`: 41 pass, 0 fail across 8 files.
+   - `bun run lint` (`eslint . --no-warn-ignored`): 0 errors, 0 warnings.
+   - `$env:NEXT_PRIVATE_LOCAL_WORKERS="1"; bun run build`: compiled 38/38 routes with 0 errors.
+Status: Completed.

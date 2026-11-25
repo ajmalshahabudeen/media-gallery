@@ -14,6 +14,8 @@ export interface ReelVideo {
   mimeType: string;
   modifiedAt: string;
   isFavorite?: boolean;
+  isSaved?: boolean;
+  savedFolderIds?: string[];
 }
 
 function shuffleArray<T>(items: T[]): T[] {
@@ -106,12 +108,24 @@ export async function GET(request: NextRequest) {
       await setCache(reelsCacheKey, videos, 1800);
     }
 
-    // Favorite paths for this user
-    const favorites = await prisma.favoriteMedia.findMany({
-      where: { userId, type: "video" },
-      select: { path: true },
-    });
+    // Favorite & Saved paths for this user
+    const [favorites, savedItems] = await Promise.all([
+      prisma.favoriteMedia.findMany({
+        where: { userId, type: "video" },
+        select: { path: true },
+      }),
+      prisma.savedMedia.findMany({
+        where: { userId },
+        select: {
+          path: true,
+          folders: { select: { saveFolderId: true } },
+        },
+      }),
+    ]);
     const favoritePaths = new Set(favorites.map((f) => f.path));
+    const savedMap = new Map<string, string[]>(
+      savedItems.map((s) => [s.path, s.folders.map((f) => f.saveFolderId)])
+    );
 
     // If favorites filter and we have no videos from scan, fall back to favorite records
     let filtered: ReelVideo[];
@@ -158,10 +172,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const withFlags = filtered.map((v) => ({
-      ...v,
-      isFavorite: favoritePaths.has(v.path),
-    }));
+    const withFlags = filtered.map((v) => {
+      const savedFolderIds = savedMap.get(v.path) || [];
+      return {
+        ...v,
+        isFavorite: favoritePaths.has(v.path),
+        isSaved: savedFolderIds.length > 0,
+        savedFolderIds,
+      };
+    });
 
     const page = withFlags.slice(offset, offset + limit);
     const hasMore = offset + limit < withFlags.length;

@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clapperboard, Loader2, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Clapperboard, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaStore, type MediaFile } from "@/store/useMediaStore";
 import { ReelItem, type ReelItemData } from "@/components/preview/ReelItem";
 import { FilePreviewDrawer } from "@/components/preview/FilePreviewDrawer";
+import { SaveFolderDialog, SaveToastBanner } from "@/components/preview/SaveFolderDialog";
 import { Button } from "@/components/ui/button";
 
 type ReelsFilter = "all" | "favorites";
@@ -17,23 +19,50 @@ interface ReelsResponse {
   filter: string;
 }
 
-export function ReelsFeed() {
-  const { toggleFavorite, fetchFavorites, favorites, setReelsChromeVisible } = useMediaStore();
+interface ReelsFeedProps {
+  initialVideos?: ReelItemData[];
+  initialIndex?: number;
+  scopedTitle?: string;
+  onCloseScoped?: () => void;
+}
+
+export function ReelsFeed({
+  initialVideos,
+  initialIndex = 0,
+  scopedTitle,
+  onCloseScoped,
+}: ReelsFeedProps = {}) {
+  const isScoped = Array.isArray(initialVideos);
+  const router = useRouter();
+  const {
+    toggleFavorite,
+    fetchFavorites,
+    favorites,
+    fetchSaved,
+    savedMedia,
+    quickSaveMedia,
+    setReelsChromeVisible,
+  } = useMediaStore();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<ReelsFilter>("all");
-  const [videos, setVideos] = useState<ReelItemData[]>([]);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [videos, setVideos] = useState<ReelItemData[]>(() => initialVideos || []);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const [isLoading, setIsLoading] = useState(!isScoped);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(() => initialVideos?.length || 0);
   const [isMuted, setIsMuted] = useState(true);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
+  const [saveDialogFile, setSaveDialogFile] = useState<MediaFile | null>(null);
+  const [saveDialogFromToast, setSaveDialogFromToast] = useState(false);
+  const [toastFile, setToastFile] = useState<MediaFile | null>(null);
   const lastScrollTop = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimer = useRef<number | null>(null);
   const favoritePaths = useRef(new Set<string>());
+  const savedFolderMap = useRef(new Map<string, string[]>());
   const loadingMoreLock = useRef(false);
   const filterRef = useRef<ReelsFilter>(filter);
 
@@ -69,6 +98,25 @@ export function ReelsFeed() {
     return () => window.clearTimeout(timer);
   }, [favorites]);
 
+  useEffect(() => {
+    savedFolderMap.current = new Map(
+      savedMedia.map((item) => [item.path, item.folderIds || []])
+    );
+    const timer = window.setTimeout(() => {
+      setVideos((prev) =>
+        prev.map((v) => {
+          const folderIds = savedFolderMap.current.get(v.path) || [];
+          return {
+            ...v,
+            isSaved: folderIds.length > 0,
+            savedFolderIds: folderIds,
+          };
+        })
+      );
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [savedMedia]);
+
   const loadReels = useCallback(
     async (opts: {
       filter: ReelsFilter;
@@ -98,11 +146,16 @@ export function ReelsFeed() {
         if (!res.ok) throw new Error("Failed to load reels");
         const data = (await res.json()) as ReelsResponse;
 
-        const mapped = (data.videos || []).map((v) => ({
-          ...v,
-          type: "video" as const,
-          isFavorite: favoritePaths.current.has(v.path) || !!v.isFavorite,
-        }));
+        const mapped = (data.videos || []).map((v) => {
+          const savedIds = savedFolderMap.current.get(v.path) ?? v.savedFolderIds ?? [];
+          return {
+            ...v,
+            type: "video" as const,
+            isFavorite: favoritePaths.current.has(v.path) || !!v.isFavorite,
+            isSaved: savedIds.length > 0 || !!v.isSaved,
+            savedFolderIds: savedIds,
+          };
+        });
 
         setVideos((prev) => (append ? [...prev, ...mapped] : mapped));
         setHasMore(!!data.hasMore);
@@ -130,10 +183,42 @@ export function ReelsFeed() {
 
   useEffect(() => {
     void fetchFavorites();
-  }, [fetchFavorites]);
+    void fetchSaved();
+    return () => {
+      if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    };
+  }, [fetchFavorites, fetchSaved]);
 
   // Initial + filter change load (deferred setState path)
   useEffect(() => {
+    if (isScoped) {
+      const timer = window.setTimeout(() => {
+        const next = (initialVideos || []).map((v) => {
+          const savedIds = savedFolderMap.current.get(v.path) ?? v.savedFolderIds ?? [];
+          return {
+            ...v,
+            type: "video" as const,
+            isFavorite: favoritePaths.current.has(v.path) || !!v.isFavorite,
+            isSaved: savedIds.length > 0 || !!v.isSaved,
+            savedFolderIds: savedIds,
+          };
+        });
+        setVideos(next);
+        setTotal(next.length);
+        setHasMore(false);
+        setIsLoading(false);
+        const targetIdx = Math.max(0, Math.min(next.length - 1, initialIndex));
+        setActiveIndex(targetIdx);
+        requestAnimationFrame(() => {
+          const scroller = scrollerRef.current;
+          if (scroller && targetIdx > 0) {
+            scroller.scrollTop = targetIdx * scroller.clientHeight;
+          }
+        });
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+
     let cancelled = false;
     const timer = window.setTimeout(() => {
       if (cancelled) return;
@@ -143,7 +228,7 @@ export function ReelsFeed() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [filter, loadReels]);
+  }, [isScoped, initialVideos, initialIndex, filter, loadReels]);
 
   // IntersectionObserver to know which reel is active
   useEffect(() => {
@@ -175,7 +260,7 @@ export function ReelsFeed() {
 
   // Prefetch next page near end — triggered from scroll observer via activeIndex
   useEffect(() => {
-    if (!hasMore || isLoadingMore || isLoading) return;
+    if (isScoped || !hasMore || isLoadingMore || isLoading) return;
     if (activeIndex < videos.length - 4) return;
     if (loadingMoreLock.current) return;
 
@@ -187,7 +272,7 @@ export function ReelsFeed() {
       });
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [activeIndex, videos.length, hasMore, isLoadingMore, isLoading, loadReels]);
+  }, [isScoped, activeIndex, videos.length, hasMore, isLoadingMore, isLoading, loadReels]);
 
   // Auto-hide header chrome on scroll direction (All/Favorites + dashboard header)
   const handleScroll = () => {
@@ -245,19 +330,57 @@ export function ReelsFeed() {
     }
   };
 
+  const toMediaFile = (reel: ReelItemData): MediaFile => ({
+    id: reel.id,
+    name: reel.name,
+    path: reel.path,
+    folder: reel.folder,
+    size: reel.size,
+    extension: reel.extension,
+    type: "video",
+    mimeType: reel.mimeType || "video/mp4",
+    modifiedAt: reel.modifiedAt,
+  });
+
   const handleOpenInGallery = (reel: ReelItemData) => {
     // Pause active reel while drawer is open
-    setPreviewFile({
-      id: reel.id,
-      name: reel.name,
-      path: reel.path,
-      folder: reel.folder,
-      size: reel.size,
-      extension: reel.extension,
-      type: "video",
-      mimeType: reel.mimeType || "video/mp4",
-      modifiedAt: reel.modifiedAt,
-    });
+    setPreviewFile(toMediaFile(reel));
+  };
+
+  const handlePressSave = async (reel: ReelItemData) => {
+    const file = toMediaFile(reel);
+    if (reel.isSaved) {
+      setSaveDialogFromToast(false);
+      setSaveDialogFile(file);
+      return;
+    }
+
+    setVideos((prev) =>
+      prev.map((v) => (v.path === reel.path ? { ...v, isSaved: true } : v))
+    );
+    const res = await quickSaveMedia(file);
+    if (!res?.saved) {
+      setVideos((prev) =>
+        prev.map((v) => (v.path === reel.path ? { ...v, isSaved: false } : v))
+      );
+      return;
+    }
+
+    setToastFile(file);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => {
+      setToastFile(null);
+    }, 3800);
+  };
+
+  const handleLongPressSave = () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToastFile(null);
+    if (isScoped && onCloseScoped) {
+      onCloseScoped();
+      return;
+    }
+    router.push("/dashboard/saved");
   };
 
   const handleFilterChange = (next: ReelsFilter) => {
@@ -283,48 +406,65 @@ export function ReelsFeed() {
       >
         <div className="pt-3 pb-2 px-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 rounded-full bg-black/35 backdrop-blur-md border border-white/10 p-1">
-              <button
+            {isScoped ? (
+              <Button
                 type="button"
-                onClick={() => handleFilterChange("all")}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
-                  filter === "all"
-                    ? "bg-white text-black"
-                    : "text-white/85 hover:text-white"
-                )}
+                size="sm"
+                variant="ghost"
+                onClick={onCloseScoped}
+                className="h-8 gap-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 text-white hover:bg-black/65 hover:text-white"
               >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterChange("favorites")}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
-                  filter === "favorites"
-                    ? "bg-white text-black"
-                    : "text-white/85 hover:text-white"
-                )}
-              >
-                Favorites
-              </button>
-            </div>
+                <ArrowLeft className="size-4" />
+                <span className="text-xs font-semibold truncate max-w-[200px]">
+                  {scopedTitle || "Saved"}
+                </span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1 rounded-full bg-black/35 backdrop-blur-md border border-white/10 p-1">
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange("all")}
+                  className={cn(
+                    "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                    filter === "all"
+                      ? "bg-white text-black"
+                      : "text-white/85 hover:text-white"
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange("favorites")}
+                  className={cn(
+                    "px-4 py-1.5 rounded-full text-sm font-semibold transition-colors",
+                    filter === "favorites"
+                      ? "bg-white text-black"
+                      : "text-white/85 hover:text-white"
+                  )}
+                >
+                  Favorites
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="hidden sm:inline text-[11px] text-white/60 font-mono tabular-nums">
                 {total > 0 ? `${Math.min(activeIndex + 1, total)}/${total}` : ""}
               </span>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={handleShuffle}
-                className="h-8 gap-1.5 rounded-full bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/50 hover:text-white"
-                title="Shuffle reels"
-              >
-                <RefreshCw className="size-3.5" />
-                <span className="text-xs">Shuffle</span>
-              </Button>
+              {!isScoped && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleShuffle}
+                  className="h-8 gap-1.5 rounded-full bg-black/35 backdrop-blur-md border border-white/10 text-white hover:bg-black/50 hover:text-white"
+                  title="Shuffle reels"
+                >
+                  <RefreshCw className="size-3.5" />
+                  <span className="text-xs">Shuffle</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -388,6 +528,8 @@ export function ReelsFeed() {
               onToggleMute={() => setIsMuted((m) => !m)}
               onToggleFavorite={handleToggleFavorite}
               onOpenInGallery={handleOpenInGallery}
+              onPressSave={handlePressSave}
+              onLongPressSave={handleLongPressSave}
             />
           </div>
         ))}
@@ -401,6 +543,28 @@ export function ReelsFeed() {
 
       {/* Gallery full preview drawer */}
       <FilePreviewDrawer file={previewFile} onClose={() => setPreviewFile(null)} />
+
+      <SaveToastBanner
+        visible={!!toastFile}
+        file={toastFile}
+        folderName="Main Save"
+        onSaveToFolder={() => {
+          if (!toastFile) return;
+          setSaveDialogFromToast(true);
+          setSaveDialogFile(toastFile);
+        }}
+        onDismiss={() => setToastFile(null)}
+      />
+
+      <SaveFolderDialog
+        open={!!saveDialogFile}
+        file={saveDialogFile}
+        openedFromToast={saveDialogFromToast}
+        onClose={() => {
+          setSaveDialogFile(null);
+          setSaveDialogFromToast(false);
+        }}
+      />
     </div>
   );
 }

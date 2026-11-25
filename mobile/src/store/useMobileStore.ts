@@ -63,6 +63,21 @@ export interface MediaFolderItem {
   createdAt: string;
 }
 
+export interface SaveFolderItem {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  itemCount: number;
+  previewPaths: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavedMediaItem extends MediaFile {
+  createdAt: string;
+  folderIds: string[];
+}
+
 export interface IndexingProgressState {
   isIndexing: boolean;
   scannedFiles: number;
@@ -82,6 +97,9 @@ interface MobileState {
   folders: MediaFolderItem[];
   files: MediaFile[];
   favorites: MediaFile[];
+  saveFolders: SaveFolderItem[];
+  savedMedia: SavedMediaItem[];
+  defaultSaveFolderId: string | null;
   activeFolder: string | null;
   selectedType: "all" | "image" | "video" | "audio";
   viewMode: "grid" | "list" | "cards";
@@ -123,6 +141,23 @@ interface MobileState {
   fetchFolders: () => Promise<void>;
   fetchFavorites: () => Promise<void>;
   toggleFavorite: (file: MediaFile) => Promise<boolean>;
+  fetchSaved: () => Promise<void>;
+  quickSaveMedia: (
+    file: MediaFile
+  ) => Promise<{ saved: boolean; alreadySaved?: boolean; folderIds: string[] } | null>;
+  toggleMediaInSaveFolder: (
+    file: MediaFile,
+    saveFolderId: string,
+    moveFromDefault?: boolean
+  ) => Promise<{ saved: boolean; folderIds: string[] } | null>;
+  unsaveMedia: (path: string) => Promise<boolean>;
+  createSaveFolder: (
+    name: string,
+    media?: MediaFile,
+    moveFromDefault?: boolean
+  ) => Promise<{ success: boolean; folder?: SaveFolderItem; error?: string }>;
+  renameSaveFolder: (id: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  deleteSaveFolder: (id: string) => Promise<{ success: boolean; error?: string }>;
   addFolder: (path: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   removeFolder: (id: string) => Promise<boolean>;
   fetchSubfolders: (parentPath: string) => Promise<{ name: string; path: string; isRoot?: boolean }[]>;
@@ -154,6 +189,9 @@ export const useMobileStore = create<MobileState>((set, get) => ({
   folders: [],
   files: [],
   favorites: [],
+  saveFolders: [],
+  savedMedia: [],
+  defaultSaveFolderId: null,
   activeFolder: null,
   selectedType: "all",
   viewMode: "grid",
@@ -297,6 +335,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
         apply({ user: data.user, sessionToken: authToken, isAuthenticated: true, authChecked: true });
         void get().fetchFolders();
         void get().fetchFavorites();
+        void get().fetchSaved();
         void get().scanMedia(false);
         return true;
       }
@@ -383,6 +422,7 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       }
       await get().fetchFolders();
       await get().fetchFavorites();
+      await get().fetchSaved();
       await get().scanMedia(false);
       return { success: true };
     } catch (err: any) {
@@ -471,6 +511,9 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       folders: [],
       files: [],
       favorites: [],
+      saveFolders: [],
+      savedMedia: [],
+      defaultSaveFolderId: null,
     });
   },
 
@@ -512,6 +555,171 @@ export const useMobileStore = create<MobileState>((set, get) => ({
       return false;
     } catch {
       return false;
+    }
+  },
+
+  fetchSaved: async () => {
+    try {
+      const res = await apiFetch("/api/media/saved");
+      if (res.ok) {
+        const data = await res.json();
+        set({
+          saveFolders: data.folders || [],
+          savedMedia: data.items || [],
+          defaultSaveFolderId: data.defaultFolderId || null,
+        });
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  quickSaveMedia: async (file: MediaFile) => {
+    try {
+      const res = await apiFetch("/api/media/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "quick-save", media: file }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return {
+        saved: !!data.saved,
+        alreadySaved: !!data.alreadySaved,
+        folderIds: Array.isArray(data.folderIds) ? data.folderIds : [],
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  toggleMediaInSaveFolder: async (
+    file: MediaFile,
+    saveFolderId: string,
+    moveFromDefault = false
+  ) => {
+    try {
+      const res = await apiFetch("/api/media/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "toggle-folder",
+          media: file,
+          saveFolderId,
+          moveFromDefault,
+        }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return {
+        saved: !!data.saved,
+        folderIds: Array.isArray(data.folderIds) ? data.folderIds : [],
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  unsaveMedia: async (path: string) => {
+    try {
+      const res = await apiFetch("/api/media/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unsave", media: { path } }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  createSaveFolder: async (name: string, media?: MediaFile, moveFromDefault = false) => {
+    try {
+      const res = await apiFetch("/api/media/saved/folders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, media, moveFromDefault }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Failed to create folder (HTTP ${res.status})`,
+        };
+      }
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return { success: true, folder: data.folder };
+    } catch {
+      return { success: false, error: "Network error creating save folder" };
+    }
+  },
+
+  renameSaveFolder: async (id: string, name: string) => {
+    try {
+      const res = await apiFetch(`/api/media/saved/folders/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Failed to rename folder (HTTP ${res.status})`,
+        };
+      }
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return { success: true };
+    } catch {
+      return { success: false, error: "Network error renaming save folder" };
+    }
+  },
+
+  deleteSaveFolder: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/media/saved/folders/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.error || `Failed to delete folder (HTTP ${res.status})`,
+        };
+      }
+      set({
+        saveFolders: data.folders || get().saveFolders,
+        savedMedia: data.items || get().savedMedia,
+        defaultSaveFolderId: data.defaultFolderId || get().defaultSaveFolderId,
+      });
+      return { success: true };
+    } catch {
+      return { success: false, error: "Network error deleting save folder" };
     }
   },
 

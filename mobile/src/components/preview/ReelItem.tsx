@@ -16,6 +16,7 @@ import {
   VolumeX,
   Play,
   ArrowUpRight,
+  Bookmark,
 } from "lucide-react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
@@ -23,6 +24,8 @@ import { buildMediaFileUrl } from "../../lib/api";
 
 export interface ReelItemData extends MediaFile {
   isFavorite?: boolean;
+  isSaved?: boolean;
+  savedFolderIds?: string[];
 }
 
 interface Props {
@@ -34,6 +37,8 @@ interface Props {
   onToggleMute: () => void;
   onToggleFavorite: (reel: ReelItemData) => void;
   onOpenInGallery: (reel: ReelItemData) => void;
+  onPressSave: (reel: ReelItemData) => void;
+  onLongPressSave: (reel: ReelItemData) => void;
 }
 
 const DOUBLE_TAP_MS = 300;
@@ -253,6 +258,8 @@ export const ReelItem: React.FC<Props> = ({
   onToggleMute,
   onToggleFavorite,
   onOpenInGallery,
+  onPressSave,
+  onLongPressSave,
 }) => {
   const { sessionToken } = useMobileStore();
 
@@ -612,6 +619,21 @@ export const ReelItem: React.FC<Props> = ({
           hitSlop={12}
         >
           <ArrowUpRight size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => onPressSave(reel)}
+          onLongPress={() => onLongPressSave(reel)}
+          delayLongPress={400}
+          activeOpacity={0.7}
+          hitSlop={12}
+        >
+          <Bookmark
+            size={24}
+            color="#fff"
+            fill={reel.isSaved ? "#fff" : "transparent"}
+          />
         </TouchableOpacity>
       </View>
 

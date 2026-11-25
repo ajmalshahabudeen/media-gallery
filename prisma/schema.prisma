@@ -21,6 +21,8 @@ model User {
   accounts      Account[]
   mediaFolders  MediaFolder[]
   favorites     FavoriteMedia[]
+  saveFolders   SaveFolder[]
+  savedMedia    SavedMedia[]
 
   role       String?
   banned     Boolean?  @default(false)
@@ -109,6 +111,55 @@ model FavoriteMedia {
   @@unique([userId, path])
   @@index([userId])
   @@map("favorite_media")
+}
+
+model SaveFolder {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  isDefault Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  items     SavedMediaFolder[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("save_folder")
+}
+
+model SavedMedia {
+  id         String             @id @default(cuid())
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path       String
+  name       String
+  folder     String
+  type       String
+  extension  String
+  size       Int                @default(0)
+  mimeType   String             @default("video/mp4")
+  modifiedAt DateTime           @default(now())
+  createdAt  DateTime           @default(now())
+  folders    SavedMediaFolder[]
+
+  @@unique([userId, path])
+  @@index([userId])
+  @@map("saved_media")
+}
+
+model SavedMediaFolder {
+  id           String     @id @default(cuid())
+  savedMediaId String
+  savedMedia   SavedMedia @relation(fields: [savedMediaId], references: [id], onDelete: Cascade)
+  saveFolderId String
+  saveFolder   SaveFolder @relation(fields: [saveFolderId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([savedMediaId, saveFolderId])
+  @@index([saveFolderId])
+  @@index([savedMediaId])
+  @@map("saved_media_folder")
 }
 
 model SystemLog {

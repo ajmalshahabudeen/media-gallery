@@ -8,12 +8,14 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SyntheticEvent,
 } from "react";
-import { Heart, Loader2, Volume2, VolumeX, Play, ArrowUpRight } from "lucide-react";
+import { Heart, Loader2, Volume2, VolumeX, Play, ArrowUpRight, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MediaFile } from "@/store/useMediaStore";
 
 export interface ReelItemData extends MediaFile {
   isFavorite?: boolean;
+  isSaved?: boolean;
+  savedFolderIds?: string[];
 }
 
 interface ReelItemProps {
@@ -23,6 +25,8 @@ interface ReelItemProps {
   onToggleMute: () => void;
   onToggleFavorite: (reel: ReelItemData) => void;
   onOpenInGallery: (reel: ReelItemData) => void;
+  onPressSave: (reel: ReelItemData) => void;
+  onLongPressSave: (reel: ReelItemData) => void;
 }
 
 export function ReelItem({
@@ -32,9 +36,13 @@ export function ReelItem({
   onToggleMute,
   onToggleFavorite,
   onOpenInGallery,
+  onPressSave,
+  onLongPressSave,
 }: ReelItemProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
+  const saveLongPressTimerRef = useRef<number | null>(null);
+  const saveLongPressTriggeredRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -317,6 +325,73 @@ export function ReelItem({
             <ArrowUpRight className="size-6 text-white" />
           </div>
           <span className="text-[11px] font-semibold text-white drop-shadow-md">Open</span>
+        </button>
+
+        <button
+          type="button"
+          aria-label={reel.isSaved ? "Saved (click to manage folders, hold for Saved screen)" : "Save (click to save, hold for Saved screen)"}
+          title="Click to save • Hold or right-click to open Saved"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            saveLongPressTriggeredRef.current = false;
+            if (saveLongPressTimerRef.current) {
+              window.clearTimeout(saveLongPressTimerRef.current);
+            }
+            saveLongPressTimerRef.current = window.setTimeout(() => {
+              saveLongPressTriggeredRef.current = true;
+              onLongPressSave(reel);
+            }, 450);
+          }}
+          onPointerUp={(e) => {
+            e.stopPropagation();
+            if (saveLongPressTimerRef.current) {
+              window.clearTimeout(saveLongPressTimerRef.current);
+              saveLongPressTimerRef.current = null;
+            }
+          }}
+          onPointerLeave={() => {
+            if (saveLongPressTimerRef.current) {
+              window.clearTimeout(saveLongPressTimerRef.current);
+              saveLongPressTimerRef.current = null;
+            }
+          }}
+          onPointerCancel={() => {
+            if (saveLongPressTimerRef.current) {
+              window.clearTimeout(saveLongPressTimerRef.current);
+              saveLongPressTimerRef.current = null;
+            }
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (saveLongPressTimerRef.current) {
+              window.clearTimeout(saveLongPressTimerRef.current);
+              saveLongPressTimerRef.current = null;
+            }
+            saveLongPressTriggeredRef.current = true;
+            onLongPressSave(reel);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (saveLongPressTriggeredRef.current) {
+              saveLongPressTriggeredRef.current = false;
+              return;
+            }
+            onPressSave(reel);
+          }}
+          className="flex flex-col items-center gap-1 group"
+        >
+          <div className="rounded-full bg-black/25 backdrop-blur-sm p-3 border border-white/10 transition-transform group-active:scale-90">
+            <Bookmark
+              className={cn(
+                "size-6 transition-colors",
+                reel.isSaved ? "fill-white text-white" : "text-white fill-transparent"
+              )}
+            />
+          </div>
+          <span className="text-[11px] font-semibold text-white drop-shadow-md">
+            {reel.isSaved ? "Saved" : "Save"}
+          </span>
         </button>
       </div>
 
