@@ -56,13 +56,14 @@ RUN mkdir -p /runtime/.next \
       const srcRoot = "/tmp/prisma_nm", dstRoot = "/runtime/node_modules"; \
       fs.mkdirSync(dstRoot, { recursive: true }); \
       function merge(srcDir, dstDir) { \
+        fs.mkdirSync(dstDir, { recursive: true }); \
         for (const entry of fs.readdirSync(srcDir)) { \
           const s = path.join(srcDir, entry), d = path.join(dstDir, entry); \
-          if (fs.lstatSync(s).isDirectory() && (entry.startsWith("@") || entry === ".bin")) { \
-            fs.mkdirSync(d, { recursive: true }); \
+          const st = fs.lstatSync(s); \
+          if (st.isDirectory()) { \
             merge(s, d); \
-          } else if (!fs.existsSync(d)) { \
-            fs.cpSync(s, d, { recursive: true, verbatimSymlinks: true }); \
+          } else if (!fs.lstatSync(d, { throwIfNoEntry: false })) { \
+            fs.cpSync(s, d, { verbatimSymlinks: true }); \
           } \
         } \
       } \
@@ -82,7 +83,8 @@ RUN mkdir -p /runtime/.next \
     ' \
     && rm -rf /tmp/prisma_nm \
     && sed -i 's/\r$//' /runtime/docker-entrypoint.sh \
-    && chmod +x /runtime/docker-entrypoint.sh
+    && chmod +x /runtime/docker-entrypoint.sh \
+    && (cd /runtime && DATABASE_URL="file:/tmp/smoke.db" bun run db:push && rm -f /tmp/smoke.db)
 
 # ==========================================
 # Stage 4: Ultra-lean production runtime
