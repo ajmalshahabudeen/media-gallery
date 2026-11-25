@@ -1275,3 +1275,35 @@ Status: Completed.
    - Created root [docs.md](file:///c:/programming/docker/media-gallery/docs.md) documenting the Docker and launch files.
 3. Verification note: Host `pwsh` shell commands hung before emitting output in this session, so `bun run lint`, `bun run next build --webpack`, and `docker compose up -d --build` were not executed here and need to be run locally.
 Status: Completed (pending local run verification).
+
+[2026-11-25] Request 140:
+1. Diagnosed Docker build crash (`SIGSEGV` / exit code `139` during `Collecting build traces ...`, `BetterAuthError` spam, and `booting buildkit` `moby/buildkit:buildx-stable-1` API 500 error):
+   - Next.js 16 spawned `31` build/trace workers on `oven/bun:1.3.14-alpine` (musl libc), exhausting musl stack/memory while `@vercel/nft` traced `process.cwd()` references across `node_modules`.
+   - `Dockerfile` lacked `BETTER_AUTH_SECRET` in `builder`, causing 25 `BetterAuthError` logs during `Collecting page data`, and `builder` redundantly copied `node_modules` from `deps` (`66.9s`).
+   - `docker compose up -d --build` triggered Compose Bake, attempting to pull `moby/buildkit:buildx-stable-1` (`500 Internal Server Error` after 286s).
+2. Fixed configuration, Dockerfile, and launch scripts:
+   - [next.config.ts](file:///c:/programming/docker/media-gallery/next.config.ts): Bounded build workers (`experimental.cpus: 2`, `memoryBasedWorkersCount: true`, `webpackMemoryOptimizations: true`) and added `outputFileTracingExcludes` for `./mobile/**`, `./prisma_db/**`, `./scripts/**`, `./public/**`, `./.git/**`, `./.next/cache/**`.
+   - [Dockerfile](file:///c:/programming/docker/media-gallery/Dockerfile): Switched from Alpine musl to Debian Bookworm (`node:22-bookworm-slim` + Bun `1.3.14` from `oven/bun:1.3.14-slim`), inherited `builder` directly from `deps` (eliminating duplicate `node_modules` copy), added `BETTER_AUTH_SECRET` for build-time page data collection, and symlinked `/usr/bin/python -> /usr/bin/python3` for `scripts/scanner.py`.
+   - [run.bat](file:///c:/programming/docker/media-gallery/run.bat) & [run.sh](file:///c:/programming/docker/media-gallery/run.sh): Added `COMPOSE_BAKE=false` alongside `BUILDX_NO_DEFAULT_ATTESTATIONS=1`, ran `compose build` before `compose up -d`, and updated base-image cache cleanup for `node:22-bookworm-slim` and `oven/bun:1.3.14-slim`.
+   - Updated [docs.md](file:///c:/programming/docker/media-gallery/docs.md).
+Status: Updated (awaiting user verification via `./run.bat`).
+
+[2026-11-25] Request 141:
+1. Diagnosed `Next.js build worker exited with code: null and signal: SIGSEGV` during `bun run next build --webpack` inside Docker `builder` stage:
+   - Webpack's build worker crashed with `SIGSEGV` even on Debian Bookworm (`node:22-bookworm-slim`), whereas `package.json`'s `"build": "bun --bun next build"` previously compiled cleanly in ~16s.
+2. Fixed build command and config:
+   - [Dockerfile](file:///c:/programming/docker/media-gallery/Dockerfile): Switched `builder` from `bun run next build --webpack` to `bun run build` (`bun --bun next build`), keeping `rm -rf .next/cache` and adding `find .next -xtype l -delete` to strip any dangling symlinks before layer export.
+   - [next.config.ts](file:///c:/programming/docker/media-gallery/next.config.ts): Removed `webpackMemoryOptimizations: true` while keeping `experimental.cpus: 2`, `memoryBasedWorkersCount: true`, and `outputFileTracingExcludes`.
+   - Updated [docs.md](file:///c:/programming/docker/media-gallery/docs.md).
+Status: Updated (awaiting user run of `./run.bat`).
+
+[2026-11-25] Request 142:
+1. Diagnosed `exporting to image` failures (`rpc error: code = Unavailable desc = error reading from server: EOF` and `unpigz: skipping: <stdin>: corrupted -- invalid deflate data (invalid block type)`):
+   - Exporting a ~1.1GB `runner` image (Debian `ffmpeg` ~350MB + full 500MB+ `node_modules` including `react-icons`, `lucide-react`, `recharts`, `eslint`, `typescript`, etc.) across 18 `runner` layers stressed BuildKit/containerd layer compression (`pigz`/`unpigz`) inside Docker Desktop's WSL2 VM.
+2. Rewrote build flow around Next.js `output: "standalone"` and a lean Alpine runtime:
+   - [next.config.ts](file:///c:/programming/docker/media-gallery/next.config.ts): Enabled `output: "standalone"` alongside `experimental.cpus: 2`, `memoryBasedWorkersCount: true`, and `outputFileTracingExcludes`.
+   - [Dockerfile](file:///c:/programming/docker/media-gallery/Dockerfile): Switched to a 4-stage `oven/bun:1.3.14-alpine` pipeline (`deps`, `prisma_cli`, `builder`, `runner`), assembling a minimal `/runtime` directory from `.next/standalone`, `.next/static`, `public`, runtime scripts/Prisma files, and merged `prisma@7.9.0` + `dotenv@17.4.2` CLI, cleaning broken symlinks with Node, and exporting a single `/app` layer in `runner`.
+   - [docker-entrypoint.sh](file:///c:/programming/docker/media-gallery/docker-entrypoint.sh): Updated to `exec node /app/server.js` for standalone mode (with `next start` fallback).
+   - [run.bat](file:///c:/programming/docker/media-gallery/run.bat) & [run.sh](file:///c:/programming/docker/media-gallery/run.sh): Updated cache recovery base-image target to `oven/bun:1.3.14-alpine`.
+   - Updated [docs.md](file:///c:/programming/docker/media-gallery/docs.md).
+Status: Updated (awaiting user run of `./run.bat`).

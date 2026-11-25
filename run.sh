@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -u
 
-# Disable BuildKit provenance attestations to avoid containerd/unpigz layer export errors
+# Disable Compose Bake & BuildKit attestations so Docker uses the local engine cleanly
+export COMPOSE_BAKE=false
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 
 echo "=========================================="
@@ -47,7 +48,7 @@ fi
 # 5. Build and launch containers
 echo "[3/4] Building images & launching containers..."
 "${COMPOSE_CMD[@]}" down --remove-orphans &> /dev/null || true
-if ! "${COMPOSE_CMD[@]}" up -d --build; then
+if ! ("${COMPOSE_CMD[@]}" build && "${COMPOSE_CMD[@]}" up -d); then
     echo "Warning: Normal build/startup failed. Resetting build cache & base image layers..."
     "${COMPOSE_CMD[@]}" down --remove-orphans &> /dev/null || true
     docker rmi -f media-gallery-web:latest &> /dev/null || true

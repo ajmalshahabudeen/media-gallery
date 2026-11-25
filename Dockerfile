@@ -1,7 +1,5 @@
-# syntax=docker/dockerfile:1
-
 # ==========================================
-# Stage 1: Install dependencies
+# Stage 1: Install app dependencies
 # ==========================================
 FROM oven/bun:1.3.14-alpine AS deps
 WORKDIR /app
@@ -12,40 +10,89 @@ COPY prisma.config.ts ./
 
 ENV DATABASE_URL="file:/app/prisma_db/dev.db"
 
-# Use copyfile backend to prevent hardlink/tar layer issues across overlayfs
 RUN bun install --frozen-lockfile --backend=copyfile && rm -rf /root/.bun/install/cache
 
 # ==========================================
-# Stage 2: Generate Prisma client & build Next.js
+# Stage 2: Minimal Prisma CLI for runtime db:push / studio
 # ==========================================
-FROM oven/bun:1.3.14-alpine AS builder
+FROM oven/bun:1.3.14-alpine AS prisma_cli
+WORKDIR /opt/prisma
+
+RUN printf '{"name":"prisma-cli","private":true,"dependencies":{"prisma":"7.9.0","dotenv":"17.4.2"}}\n' > package.json \
+    && bun install --backend=copyfile \
+    && rm -rf /root/.bun/install/cache
+
+# ==========================================
+# Stage 3: Build Next.js standalone bundle
+# ==========================================
+FROM deps AS builder
 WORKDIR /app
 
-# Node.js is required by Next.js build workers & webpack plugins
 RUN apk add --no-cache nodejs
 
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV DATABASE_URL="file:/app/prisma_db/dev.db"
 ENV BETTER_AUTH_URL="http://localhost:38479"
+ENV BETTER_AUTH_SECRET="build-time-placeholder-secret-only"
 ENV NEXT_PRIVATE_LOCAL_WORKERS=1
-ENV NODE_OPTIONS="--max-old-space-size=2048"
 
-RUN bun run db:generate
-# Build with --webpack to avoid Next.js 16 Turbopack symlink/0-byte tar layer corruption
-RUN bun run next build --webpack && rm -rf .next/cache
+RUN bun run db:generate \
+    && bun run build \
+    && rm -rf .next/cache
+
+COPY --from=prisma_cli /opt/prisma/node_modules /tmp/prisma_nm
+
+# Assemble minimal /runtime directory from Next.js standalone output + runtime scripts
+RUN mkdir -p /runtime/.next \
+    && cp -a .next/standalone/. /runtime/ \
+    && cp -a .next/static /runtime/.next/static \
+    && cp -a public /runtime/public \
+    && cp -a package.json prisma prisma.config.ts generated scripts lib tsconfig.json docker-entrypoint.sh /runtime/ \
+    && node -e ' \
+      const fs = require("fs"), path = require("path"); \
+      const srcRoot = "/tmp/prisma_nm", dstRoot = "/runtime/node_modules"; \
+      fs.mkdirSync(dstRoot, { recursive: true }); \
+      function merge(srcDir, dstDir) { \
+        for (const entry of fs.readdirSync(srcDir)) { \
+          const s = path.join(srcDir, entry), d = path.join(dstDir, entry); \
+          if (fs.lstatSync(s).isDirectory() && (entry.startsWith("@") || entry === ".bin")) { \
+            fs.mkdirSync(d, { recursive: true }); \
+            merge(s, d); \
+          } else if (!fs.existsSync(d)) { \
+            fs.cpSync(s, d, { recursive: true, verbatimSymlinks: true }); \
+          } \
+        } \
+      } \
+      function cleanBrokenSymlinks(dir) { \
+        for (const entry of fs.readdirSync(dir)) { \
+          const p = path.join(dir, entry); \
+          const st = fs.lstatSync(p); \
+          if (st.isSymbolicLink()) { \
+            if (!fs.existsSync(p)) fs.unlinkSync(p); \
+          } else if (st.isDirectory()) { \
+            cleanBrokenSymlinks(p); \
+          } \
+        } \
+      } \
+      merge(srcRoot, dstRoot); \
+      cleanBrokenSymlinks("/runtime"); \
+    ' \
+    && rm -rf /tmp/prisma_nm \
+    && sed -i 's/\r$//' /runtime/docker-entrypoint.sh \
+    && chmod +x /runtime/docker-entrypoint.sh
 
 # ==========================================
-# Stage 3: Lean production runtime
+# Stage 4: Ultra-lean production runtime
 # ==========================================
 FROM oven/bun:1.3.14-alpine AS runner
 WORKDIR /app
 
-# Runtime tools: Python 3 + Pillow + ffmpeg (media scanning/previews), Node.js (Next.js PID 1), OpenSSL (Prisma)
-RUN apk add --no-cache python3 py3-pillow ffmpeg nodejs openssl
+RUN apk add --no-cache python3 py3-pillow ffmpeg nodejs openssl \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && mkdir -p /app/prisma_db
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
@@ -55,22 +102,7 @@ ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL="file:/app/prisma_db/dev.db"
 ENV BETTER_AUTH_URL="http://localhost:38479"
 
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/generated ./generated
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/lib ./lib
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
-
-RUN sed -i 's/\r$//' /app/docker-entrypoint.sh \
-    && chmod +x /app/docker-entrypoint.sh \
-    && mkdir -p /app/prisma_db
+COPY --from=builder /runtime /app
 
 EXPOSE 38479 5555
 

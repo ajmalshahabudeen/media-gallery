@@ -1,7 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Disable BuildKit provenance attestations to avoid containerd/unpigz layer export errors
+:: Disable Compose Bake & BuildKit attestations so Docker uses the local engine cleanly
+set "COMPOSE_BAKE=false"
 set "BUILDX_NO_DEFAULT_ATTESTATIONS=1"
 
 echo ==========================================
@@ -50,7 +51,10 @@ if !ERRORLEVEL! EQU 0 (
 :: 4. Build and start containers
 echo [4/4] Building ^& launching containers...
 docker compose down --remove-orphans >nul 2>&1
-docker compose up -d --build
+docker compose build
+if !ERRORLEVEL! EQU 0 (
+    docker compose up -d
+)
 if !ERRORLEVEL! NEQ 0 (
     echo.
     echo [WARNING] Normal build/startup failed. Resetting build cache ^& base image layers...
