@@ -1261,3 +1261,17 @@ Status: Completed.
    - `bun run lint` (`eslint . --no-warn-ignored`): 0 errors, 0 warnings.
    - `$env:NEXT_PRIVATE_LOCAL_WORKERS="1"; bun run build`: compiled 38/38 routes with 0 errors.
 Status: Completed.
+
+[2026-11-25] Request 139:
+1. Diagnosed Docker image export & layer unpack failure (`failed to extract layer ... unpigz: skipping: <stdin>: corrupted -- invalid deflate data (invalid block type)`) and `run.bat` fallback bug:
+   - Single-stage `Dockerfile` exported bloated layers (`58.4s`) and built Next.js 16 with default Turbopack (which produces symlink/0-byte artifacts in `.next` that corrupt BuildKit tar/gzip exports on Docker Desktop containerd).
+   - `run.bat` did not check `!ERRORLEVEL!` after `docker compose build --no-cache`, so it proceeded to `docker compose up -d` on a broken image, and neither `run.bat` nor `run.sh` purged/re-pulled potentially corrupted base image layers (`--pull`) or disabled BuildKit default provenance attestations (`BUILDX_NO_DEFAULT_ATTESTATIONS=1`).
+2. Rewrote Docker configuration & launch scripts cleanly:
+   - [Dockerfile](file:///c:/programming/docker/media-gallery/Dockerfile): Converted to a 3-stage Alpine build (`deps` -> `builder` -> `runner`) using `--backend=copyfile`, `bun run next build --webpack`, and minimal runtime-only copies (removing unused `py3-pip`, `npm`, `bash`, and build-time source/caches from the final image).
+   - [docker-entrypoint.sh](file:///c:/programming/docker/media-gallery/docker-entrypoint.sh): Cleaned up with `set -eu`, direct `bun run db:push --accept-data-loss`, guarded background `preview_generator.py --daemon`, and `exec node ... next start` as PID 1.
+   - [docker-compose.yml](file:///c:/programming/docker/media-gallery/docker-compose.yml): Added explicit `image: media-gallery-web:latest`, `restart: unless-stopped`, env defaults for `BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`, and configurable `${HOST_DRIVE_C:-C:\}` / `${HOST_DRIVE_F:-F:\}` mounts.
+   - [run.bat](file:///c:/programming/docker/media-gallery/run.bat) & [run.sh](file:///c:/programming/docker/media-gallery/run.sh): Set `BUILDX_NO_DEFAULT_ATTESTATIONS=1`, added `--pull` + base-image reset on cache recovery, added proper build failure abort before `up`, and added container health polling.
+   - [.dockerignore](file:///c:/programming/docker/media-gallery/.dockerignore): Excluded `.env` and `.env.*` (except `!.env.example`) from the build context.
+   - Created root [docs.md](file:///c:/programming/docker/media-gallery/docs.md) documenting the Docker and launch files.
+3. Verification note: Host `pwsh` shell commands hung before emitting output in this session, so `bun run lint`, `bun run next build --webpack`, and `docker compose up -d --build` were not executed here and need to be run locally.
+Status: Completed (pending local run verification).

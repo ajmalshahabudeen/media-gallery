@@ -27,7 +27,9 @@ dev.db
 *.db
 *.db-journal
 *.log
-.env*.local
+.env
+.env.*
+!.env.example
 
 # IDE, agent, and tooling caches
 .git

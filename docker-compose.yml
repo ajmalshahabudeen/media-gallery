@@ -3,7 +3,7 @@ services:
     image: redis:7-alpine
     container_name: media_gallery_redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    restart: always
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -22,8 +22,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: media-gallery-web:latest
     container_name: media_gallery_app
-    restart: always
+    restart: unless-stopped
     ports:
       - "38479:38479"
       - "5555:5555"
@@ -35,8 +36,8 @@ services:
       - DATABASE_URL=file:/app/prisma_db/dev.db
       - REDIS_URL=redis://redis:6379
       - REDIS_HOST=redis
-      - BETTER_AUTH_SECRET=CwYFhm1l4L4Vb30mm4SgTSf558hAd8ZV
-      - BETTER_AUTH_URL=http://localhost:38479
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-CwYFhm1l4L4Vb30mm4SgTSf558hAd8ZV}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:38479}
     deploy:
       resources:
         limits:
@@ -56,8 +57,8 @@ services:
     volumes:
       - db_data:/app/prisma_db
       - ${HOST_MEDIA_PATH:-./}:/host_media
-      - C:\:/host_drives/c
-      - F:\:/host_drives/f
+      - ${HOST_DRIVE_C:-C:\}:/host_drives/c
+      - ${HOST_DRIVE_F:-F:\}:/host_drives/f
     depends_on:
       redis:
         condition: service_healthy
