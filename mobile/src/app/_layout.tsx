@@ -5,6 +5,7 @@ import { View, Image, StyleSheet, Platform, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets, SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
+import { clearVideoCacheAsync } from "expo-video";
 import * as FileSystem from "expo-file-system/legacy";
 import { useMobileStore } from "../store/useMobileStore";
 import { AppLockGate } from "../components/AppLockGate";
@@ -81,7 +82,8 @@ function RootLayoutInner() {
           }
         }
 
-        // Remove any leftover legacy JS reel disk cache directory on startup
+        // Clear any stale/corrupted native expo-video cache and leftover JS cache dir before mounting players
+        await clearVideoCacheAsync().catch(() => {});
         if (FileSystem.cacheDirectory) {
           await FileSystem.deleteAsync(`${FileSystem.cacheDirectory}reels/`, {
             idempotent: true,

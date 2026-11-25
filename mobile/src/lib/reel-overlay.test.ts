@@ -20,8 +20,11 @@ test("Reels uses native expo-video caching without mid-playback replaceAsync hot
   ).text();
 
   expect(reelSource).toContain("useCaching");
+  expect(reelSource).toContain("&full=1");
   expect(reelSource).toContain("toleranceBefore");
   expect(reelSource).toContain("toleranceAfter");
+  expect(reelSource).toContain("}, [player]);");
+  expect(reelSource).not.toContain("[player, onProgress");
   expect(reelSource).not.toContain("replaceAsync");
   expect(reelSource).not.toContain("ReelCacheManager");
   expect(feedSource).not.toContain("ReelCacheManager");

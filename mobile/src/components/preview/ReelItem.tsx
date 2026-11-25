@@ -158,6 +158,15 @@ function ActiveExpoVideo({
     p.play();
   });
 
+  const onProgressRef = useRef(onProgress);
+  const onPlayingChangeRef = useRef(onPlayingChange);
+  const onBufferingChangeRef = useRef(onBufferingChange);
+  const onErrorRef = useRef(onError);
+  onProgressRef.current = onProgress;
+  onPlayingChangeRef.current = onPlayingChange;
+  onBufferingChangeRef.current = onBufferingChange;
+  onErrorRef.current = onError;
+
   useEffect(() => {
     playerRef.current = player;
     return () => {
@@ -175,12 +184,12 @@ function ActiveExpoVideo({
 
   useEffect(() => {
     if (player.status === "readyToPlay" || player.playing) {
-      onBufferingChange(false);
+      onBufferingChangeRef.current(false);
     } else if (player.status === "loading") {
-      onBufferingChange(true);
+      onBufferingChangeRef.current(true);
     }
     if (player.playing) {
-      onPlayingChange(true);
+      onPlayingChangeRef.current(true);
     }
 
     try {
@@ -192,36 +201,35 @@ function ActiveExpoVideo({
     const timeSub = player.addListener?.("timeUpdate", (event: any) => {
       const cur = event.currentTime ?? player.currentTime ?? 0;
       const d = event.duration ?? player.duration ?? 0;
-      onProgress(cur, d);
+      onProgressRef.current(cur, d);
       if (player.playing) {
-        onPlayingChange(true);
-        onBufferingChange(false);
+        onBufferingChangeRef.current(false);
       }
     });
 
     const playingSub = player.addListener?.("playingChange", (payload: any) => {
       const playing = typeof payload === "boolean" ? payload : !!payload?.isPlaying;
-      onPlayingChange(playing);
+      onPlayingChangeRef.current(playing);
       if (playing) {
-        onBufferingChange(false);
+        onBufferingChangeRef.current(false);
       }
     });
 
     const statusSub = player.addListener?.("statusChange", (status: any) => {
       const s = typeof status === "string" ? status : status?.status;
       if (s === "readyToPlay") {
-        onBufferingChange(false);
+        onBufferingChangeRef.current(false);
         const d = player.duration ?? 0;
         if (d > 0) {
-          onProgress(player.currentTime ?? 0, d);
+          onProgressRef.current(player.currentTime ?? 0, d);
         }
       } else if (s === "loading") {
         if (!player.playing) {
-          onBufferingChange(true);
+          onBufferingChangeRef.current(true);
         }
       } else if (s === "error") {
-        onBufferingChange(false);
-        onError?.(status?.error || new Error("Video playback error"));
+        onBufferingChangeRef.current(false);
+        onErrorRef.current?.(status?.error || new Error("Video playback error"));
       }
     });
 
@@ -235,7 +243,7 @@ function ActiveExpoVideo({
         // ignore
       }
     };
-  }, [player, onProgress, onPlayingChange, onBufferingChange, onError]);
+  }, [player]);
 
   return (
     <VideoView
@@ -265,6 +273,9 @@ export const ReelItem: React.FC<Props> = ({
 
   const serverStreamUrl = buildMediaFileUrl(serverUrl, reel.path, sessionToken);
   const [useCaching, setUseCaching] = useState(true);
+  // Media3 CacheDataSource requires true Content-Length on initial non-Range GET;
+  // &full=1 bypasses the 8 MiB forcePartialForFull cap so SimpleCache doesn't truncate >8 MiB reels.
+  const playbackUri = useCaching ? `${serverStreamUrl}&full=1` : serverStreamUrl;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -275,6 +286,8 @@ export const ReelItem: React.FC<Props> = ({
   const [isSeeking, setIsSeeking] = useState(false);
 
   const isPlayingRef = useRef(false);
+  const isBufferingRef = useRef(false);
+  const isUserPausedRef = useRef(false);
   const isSeekingRef = useRef(false);
   const durationRef = useRef(0);
 
@@ -287,6 +300,7 @@ export const ReelItem: React.FC<Props> = ({
 
   useEffect(() => {
     setUseCaching(true);
+    isUserPausedRef.current = false;
     setIsUserPaused(false);
   }, [reel.path]);
 
@@ -294,6 +308,19 @@ export const ReelItem: React.FC<Props> = ({
   const handlePlayerError = useCallback((err: any) => {
     console.warn("[ReelItem] Player error:", err?.message || err);
     setUseCaching((prev) => (prev ? false : prev));
+  }, []);
+
+  const handlePlayingChange = useCallback((playing: boolean) => {
+    isPlayingRef.current = playing;
+    setIsPlaying(playing);
+    if (playing && !isUserPausedRef.current) {
+      setIsUserPaused(false);
+    }
+  }, []);
+
+  const handleBufferingChange = useCallback((buffering: boolean) => {
+    isBufferingRef.current = buffering;
+    setIsBuffering(buffering);
   }, []);
 
   const onProgress = useCallback((current: number, dur: number) => {
@@ -315,6 +342,8 @@ export const ReelItem: React.FC<Props> = ({
       setIsSeeking(false);
       setIsUserPaused(false);
       isPlayingRef.current = false;
+      isBufferingRef.current = false;
+      isUserPausedRef.current = false;
       isSeekingRef.current = false;
       lastTapRef.current = null;
       if (singleTapTimer.current) {
@@ -396,6 +425,8 @@ export const ReelItem: React.FC<Props> = ({
     const p = expoPlayerRef.current;
     if (p) {
       try {
+        isUserPausedRef.current = false;
+        setIsUserPaused(false);
         p.currentTime = next;
         p.play();
       } catch {
@@ -433,17 +464,21 @@ export const ReelItem: React.FC<Props> = ({
     const p = expoPlayerRef.current;
     if (p) {
       try {
-        const currentlyPlaying = p.playing || isPlayingRef.current;
+        const currentlyPlaying =
+          !isUserPausedRef.current &&
+          (p.playing || isPlayingRef.current || isBufferingRef.current);
         if (currentlyPlaying) {
-          p.pause();
+          isUserPausedRef.current = true;
           setIsUserPaused(true);
           setIsPlaying(false);
           isPlayingRef.current = false;
+          p.pause();
         } else {
-          p.play();
+          isUserPausedRef.current = false;
           setIsUserPaused(false);
           setIsPlaying(true);
           isPlayingRef.current = true;
+          p.play();
         }
         return;
       } catch {
@@ -527,18 +562,12 @@ export const ReelItem: React.FC<Props> = ({
       {/* Video layer (non-interactive) */}
       {isActive ? (
         <ActiveExpoVideo
-          uri={serverStreamUrl}
+          uri={playbackUri}
           useCaching={useCaching}
           isMuted={isMuted}
           onProgress={onProgress}
-          onPlayingChange={(playing) => {
-            isPlayingRef.current = playing;
-            setIsPlaying(playing);
-            if (playing) {
-              setIsUserPaused(false);
-            }
-          }}
-          onBufferingChange={setIsBuffering}
+          onPlayingChange={handlePlayingChange}
+          onBufferingChange={handleBufferingChange}
           onError={handlePlayerError}
           playerRef={expoPlayerRef}
         />

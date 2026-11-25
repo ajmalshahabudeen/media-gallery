@@ -1316,3 +1316,18 @@ Status: Updated (awaiting user run of `./run.bat`).
    - Added a build-time smoke check (`cd /runtime && DATABASE_URL="file:/tmp/smoke.db" bun run db:push && rm -f /tmp/smoke.db`) so Prisma config/CLI loading is verified before exporting `runner`.
    - Updated [docs.md](file:///c:/programming/docker/media-gallery/docs.md).
 Status: Updated (awaiting user run of `./run.bat`).
+
+[2026-11-25] Request 144:
+1. Diagnosed persistent reel sound cut-off, broken pause gesture, and `WARN [ReelItem] Player error: A playback exception has occurred: Source error`:
+   - `ActiveExpoVideo` in `mobile/src/components/preview/ReelItem.tsx` passed an inline `onPlayingChange` arrow function while its listener `useEffect` depended on `[player, onProgress, onPlayingChange, onBufferingChange, onError]` and ran `player.pause()` in cleanup + `player.play()` on setup. Every 250ms `timeUpdate` re-render tore down and restarted playback (chopping audio 4x/sec), and tapping pause triggered a re-render that immediately called `player.play()` again.
+   - `useCaching: true` triggered Media3 `CacheDataSource` `Source error` (`EOFException`) because `OkHttpDataSource` opens `(0, C.LENGTH_UNSET)` without a `Range` header and `/api/media/file` (`forcePartialForFull`) capped non-Range responses to 8 MiB (`206`), causing `SimpleCache` to record `exo_len = 8388608` and fail past 8 MiB.
+2. Implemented fixes:
+   - Updated `mobile/src/components/preview/ReelItem.tsx`: stored callbacks in refs inside `ActiveExpoVideo` so the setup/listener `useEffect` depends strictly on `[player]`, stopped `timeUpdate` from overriding playing state, memoized `handlePlayingChange` / `handleBufferingChange`, added `isUserPausedRef` to preserve pause state reliably, and appended `&full=1` when `useCaching` is enabled so Media3 `SimpleCache` receives true `Content-Length` (keeping uncached fallback on error).
+   - Updated `mobile/src/app/_layout.tsx`: added `clearVideoCacheAsync().catch(() => {})` on startup bootstrap to purge any previously poisoned `SimpleCache` entries before players mount.
+   - Updated `mobile/src/lib/reel-overlay.test.ts` and `docs.md` in `mobile/src/components/preview/`, `mobile/src/lib/`, and `mobile/src/app/`.
+2. Verification:
+   - `bun run --cwd mobile lint` (`tsc --noEmit`): 0 errors.
+   - `bun test`: 41 pass, 0 fail across 8 files.
+   - `bun run lint` (`eslint . --no-warn-ignored`): 0 errors.
+   - `bun run build` (`next build`): compiled 38/38 routes with 0 errors.
+Status: Completed.
