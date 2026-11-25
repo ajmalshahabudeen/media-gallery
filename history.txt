@@ -1198,3 +1198,27 @@ Status: Completed.
    - Ran `bun run build` (`next build` compiled all 35 routes cleanly with 0 errors).
    - Ran `bun test` (all 39 tests passed across 8 test suites in 1.16s).
 Status: Completed.
+
+[2026-11-25] Request 135:
+1. Investigated reel audio cut-off and choppy streaming bug introduced after reel video caching (`mobile/src/components/preview/ReelItem.tsx`, `mobile/src/components/preview/ReelsFeed.tsx`, `mobile/src/lib/cache.ts`, `app/api/media/file/route.ts`, `lib/byte-range.ts`, and `expo-video` native Android module).
+2. Identified root causes:
+   - Stream-first + mid-playback `replaceAsync()` hot-swap (`switchToCache`) tears down ExoPlayer's `MediaSource`/audio pipeline and resolves before `STATE_READY`, seeking/playing mid-prepare and cutting off sound; `seekTolerance` also used invalid `{ before, after }` keys instead of `{ toleranceBefore, toleranceAfter }`.
+   - `ReelCacheManager.scheduleNextBatch()` has an infinite async loop for `>100MB` (`isPartial: true`) entries and bypasses `maxWorkers` concurrency limits because `activeDownloads.set()` occurs after `await FileSystem.getInfoAsync()`, spawning up to ~21 concurrent downloads plus `prioritizeActiveReel()` (`&full=1`) against ExoPlayer's active HTTP stream.
+   - Cache validation treats any `>= 1000` byte non-partial file as `"ready"` and lacks size verification after direct-to-target downloads, risking truncated local playback.
+3. Reported detailed findings and multiple fix options to the user (no app code modified; diagnostic request only).
+Status: Completed.
+
+[2026-11-25] Request 136:
+1. Implemented Option 1 (native `expo-video` caching) to fix reel audio cut-offs and choppy streaming:
+   - Updated `mobile/src/components/preview/ReelItem.tsx`: switched `ActiveExpoVideo` to `useVideoPlayer({ uri, useCaching }, ...)`, removed mid-playback `replaceAsync` hot-swaps, `ReelCacheManager` stall/subscription hooks, and the redundant 300ms poller; fixed `seekTolerance` keys to `{ toleranceBefore: 0.5, toleranceAfter: 0.5 }`; added clean fallback to `useCaching: false` on player error; guarded `timeUpdate` with `player.playing` so paused reels don't clear `isUserPaused`.
+   - Updated `mobile/src/components/preview/ReelsFeed.tsx`: removed `ReelCacheManager.updateFeedContext`, `onScrollDirection`, and scroll-direction drag tracking.
+   - Updated `mobile/src/app/_layout.tsx`: replaced `ReelCacheManager.clearAllCache()` with cleanup of any leftover legacy `FileSystem.cacheDirectory + "reels/"` directory on startup.
+   - Removed obsolete `mobile/src/lib/cache.ts`.
+   - Updated `mobile/src/lib/reel-overlay.test.ts` to assert native `useCaching`, `toleranceBefore`/`toleranceAfter`, and removal of `replaceAsync`/`ReelCacheManager`.
+   - Created `docs.md` in `mobile/src/components/preview/`, `mobile/src/lib/`, and `mobile/src/app/`.
+2. Verification:
+   - Ran `bun run --cwd mobile lint` (`tsc --noEmit` passed with 0 errors).
+   - Ran `bun test` (40 pass, 0 fail across 8 test files).
+   - Ran `bun run lint` (`eslint . --no-warn-ignored` passed with 0 errors).
+   - Ran `bun run build` (`next build` compiled 35/35 static/dynamic routes with 0 errors).
+Status: Completed.

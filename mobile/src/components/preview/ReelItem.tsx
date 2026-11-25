@@ -20,7 +20,6 @@ import {
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useMobileStore, type MediaFile } from "../../store/useMobileStore";
 import { buildMediaFileUrl } from "../../lib/api";
-import { ReelCacheManager } from "../../lib/cache";
 
 export interface ReelItemData extends MediaFile {
   isFavorite?: boolean;
@@ -123,8 +122,8 @@ function ReelSeekBar({
 
 /** Active-only expo-video host (hooks run only when mounted). */
 function ActiveExpoVideo({
-  initialUri,
-  activeUri,
+  uri,
+  useCaching,
   isMuted,
   onProgress,
   onPlayingChange,
@@ -132,8 +131,8 @@ function ActiveExpoVideo({
   onError,
   playerRef,
 }: {
-  initialUri: string;
-  activeUri: string;
+  uri: string;
+  useCaching: boolean;
   isMuted: boolean;
   onProgress: (current: number, duration: number) => void;
   onPlayingChange: (playing: boolean) => void;
@@ -141,23 +140,18 @@ function ActiveExpoVideo({
   onError?: (error: any) => void;
   playerRef: React.MutableRefObject<any>;
 }) {
-  // Use stable initialUri so useVideoPlayer NEVER destroys/recreates the native player instance on re-renders
-  const initialUriRef = useRef(initialUri);
-  const player = useVideoPlayer(initialUriRef.current, (p: any) => {
+  const player = useVideoPlayer({ uri, useCaching }, (p: any) => {
     p.loop = true;
     // Expo disables timeUpdate events until a positive interval is set (seconds).
     p.timeUpdateEventInterval = 0.25;
     p.muted = isMuted;
     try {
-      p.seekTolerance = { before: 0.5, after: 0.5 };
+      p.seekTolerance = { toleranceBefore: 0.5, toleranceAfter: 0.5 };
     } catch {
       // ignore
     }
     p.play();
   });
-
-  const currentUriRef = useRef(initialUri);
-  const lastTimeRef = useRef(0);
 
   useEffect(() => {
     playerRef.current = player;
@@ -174,43 +168,7 @@ function ActiveExpoVideo({
     }
   }, [player, isMuted]);
 
-  // Seamless source swap (Stream <-> Cache) without rebuilding native player
   useEffect(() => {
-    if (player && activeUri && activeUri !== currentUriRef.current) {
-      const lastTime = player.currentTime || lastTimeRef.current || 0;
-      currentUriRef.current = activeUri;
-      try {
-        if (typeof player.replaceAsync === "function") {
-          player
-            .replaceAsync(activeUri)
-            .then(() => {
-              if (lastTime > 0.2) {
-                try {
-                  player.currentTime = lastTime;
-                } catch {}
-              }
-              player.play();
-            })
-            .catch((err: any) => {
-              console.warn("[ActiveExpoVideo] replaceAsync error:", err);
-            });
-        } else if (typeof player.replace === "function") {
-          player.replace(activeUri);
-          if (lastTime > 0.2) {
-            try {
-              player.currentTime = lastTime;
-            } catch {}
-          }
-          player.play();
-        }
-      } catch (err) {
-        console.warn("[ActiveExpoVideo] Source replacement error:", err);
-      }
-    }
-  }, [player, activeUri]);
-
-  useEffect(() => {
-    // Check immediate status on mount/ready
     if (player.status === "readyToPlay" || player.playing) {
       onBufferingChange(false);
     } else if (player.status === "loading") {
@@ -229,10 +187,8 @@ function ActiveExpoVideo({
     const timeSub = player.addListener?.("timeUpdate", (event: any) => {
       const cur = event.currentTime ?? player.currentTime ?? 0;
       const d = event.duration ?? player.duration ?? 0;
-      lastTimeRef.current = cur;
       onProgress(cur, d);
-      // If time is advancing or player is playing, definitely playing and not buffering
-      if (player.playing || cur > 0) {
+      if (player.playing) {
         onPlayingChange(true);
         onBufferingChange(false);
       }
@@ -241,7 +197,6 @@ function ActiveExpoVideo({
     const playingSub = player.addListener?.("playingChange", (payload: any) => {
       const playing = typeof payload === "boolean" ? payload : !!payload?.isPlaying;
       onPlayingChange(playing);
-      // When playing is true, buffering MUST be false
       if (playing) {
         onBufferingChange(false);
       }
@@ -251,8 +206,11 @@ function ActiveExpoVideo({
       const s = typeof status === "string" ? status : status?.status;
       if (s === "readyToPlay") {
         onBufferingChange(false);
+        const d = player.duration ?? 0;
+        if (d > 0) {
+          onProgress(player.currentTime ?? 0, d);
+        }
       } else if (s === "loading") {
-        // Only report buffering if NOT actively playing
         if (!player.playing) {
           onBufferingChange(true);
         }
@@ -262,31 +220,10 @@ function ActiveExpoVideo({
       }
     });
 
-    const poll = setInterval(() => {
-      try {
-        if (player.playing) {
-          onPlayingChange(true);
-          onBufferingChange(false);
-        }
-        if (player.duration > 0) {
-          const cur = player.currentTime || 0;
-          lastTimeRef.current = cur;
-          onProgress(cur, player.duration);
-          if (cur > 0) {
-            onPlayingChange(true);
-            onBufferingChange(false);
-          }
-        }
-      } catch {
-        // disposed
-      }
-    }, 300);
-
     return () => {
       timeSub?.remove?.();
       playingSub?.remove?.();
       statusSub?.remove?.();
-      clearInterval(poll);
       try {
         player.pause();
       } catch {
@@ -319,12 +256,8 @@ export const ReelItem: React.FC<Props> = ({
 }) => {
   const { sessionToken } = useMobileStore();
 
-  // Always start with streaming directly from the server
   const serverStreamUrl = buildMediaFileUrl(serverUrl, reel.path, sessionToken);
-  const [activeVideoUri, setActiveVideoUri] = useState<string>(serverStreamUrl);
-  const activeModeRef = useRef<"streaming" | "cached">("streaming");
-  const cachedUriRef = useRef<string | null>(null);
-  const lastPathRef = useRef(reel.path);
+  const [useCaching, setUseCaching] = useState(true);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -335,11 +268,8 @@ export const ReelItem: React.FC<Props> = ({
   const [isSeeking, setIsSeeking] = useState(false);
 
   const isPlayingRef = useRef(false);
-  const isBufferingRef = useRef(false);
   const isSeekingRef = useRef(false);
   const durationRef = useRef(0);
-  const lastPlaybackPositionRef = useRef(0);
-  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const expoPlayerRef = useRef<any>(null);
   const avRef = useRef<any>(null);
@@ -348,125 +278,16 @@ export const ReelItem: React.FC<Props> = ({
   const lastTapRef = useRef<{ time: number; x: number } | null>(null);
   const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep ref in sync
   useEffect(() => {
-    isBufferingRef.current = isBuffering;
-  }, [isBuffering]);
+    setUseCaching(true);
+    setIsUserPaused(false);
+  }, [reel.path]);
 
-  // When switching reels, reset to direct server stream
-  useEffect(() => {
-    if (reel.path !== lastPathRef.current) {
-      lastPathRef.current = reel.path;
-      activeModeRef.current = "streaming";
-      cachedUriRef.current = null;
-      lastPlaybackPositionRef.current = 0;
-      setIsUserPaused(false);
-      setActiveVideoUri(serverStreamUrl);
-    }
-  }, [reel.path, serverStreamUrl]);
-
-  // Seamless failover: Switch from server stream to local disk cache in millisecond time
-  const switchToCache = useCallback(() => {
-    const cachedUri = cachedUriRef.current || ReelCacheManager.getInstance().getCachedUri(reel.path);
-    if (!cachedUri) return false;
-    if (activeModeRef.current === "cached" && activeVideoUri === cachedUri) return false;
-
-    activeModeRef.current = "cached";
-    cachedUriRef.current = cachedUri;
-    setActiveVideoUri(cachedUri);
-    setIsBuffering(false);
-    return true;
-  }, [reel.path, activeVideoUri]);
-
-  // Seamless fallback: Switch from local disk cache to server stream in millisecond time
-  const switchToStream = useCallback(() => {
-    if (activeModeRef.current === "streaming" && activeVideoUri === serverStreamUrl) return;
-
-    activeModeRef.current = "streaming";
-    setActiveVideoUri(serverStreamUrl);
-    setIsBuffering(false);
-  }, [activeVideoUri, serverStreamUrl]);
-
-  // Ensure active reel is prioritized for background caching
-  useEffect(() => {
-    if (isActive && serverUrl) {
-      ReelCacheManager.getInstance().prioritizeActiveReel(reel, serverUrl, sessionToken);
-    }
-  }, [isActive, reel, serverUrl, sessionToken]);
-
-  // Subscribe to cache updates
-  useEffect(() => {
-    const readyUri = ReelCacheManager.getInstance().getCachedUri(reel.path);
-    if (readyUri) {
-      cachedUriRef.current = readyUri;
-    }
-
-    const unsub = ReelCacheManager.getInstance().subscribe(reel.path, (entry) => {
-      if (entry.status === "ready" && !entry.isPartial) {
-        cachedUriRef.current = entry.localUri;
-        // If stream is currently stalled or buffering, immediately hot-swap to cache!
-        if (activeModeRef.current === "streaming" && isBufferingRef.current && !isPlayingRef.current) {
-          switchToCache();
-        }
-      }
-    });
-    return unsub;
-  }, [reel.path, switchToCache]);
-
-  // Stall detector & watchdog:
-  // If streaming and buffering persists for > 1200ms, seamlessly hot-swap to cache if ready!
-  useEffect(() => {
-    if (!isActive) {
-      if (stallTimerRef.current) {
-        clearTimeout(stallTimerRef.current);
-        stallTimerRef.current = null;
-      }
-      return;
-    }
-
-    if (isBuffering && activeModeRef.current === "streaming") {
-      stallTimerRef.current = setTimeout(() => {
-        if (isBufferingRef.current && !isPlayingRef.current) {
-          switchToCache();
-        }
-      }, 1200);
-    } else {
-      if (stallTimerRef.current) {
-        clearTimeout(stallTimerRef.current);
-        stallTimerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (stallTimerRef.current) {
-        clearTimeout(stallTimerRef.current);
-        stallTimerRef.current = null;
-      }
-    };
-  }, [isBuffering, isActive, switchToCache]);
-
-  // Zero-friction error recovery:
-  // If stream fails -> failover to cache.
-  // If cache fails -> mark corrupted & fallback to server stream.
-  const handlePlayerError = useCallback(
-    (err: any) => {
-      console.warn(`[ReelItem] Player error (${activeModeRef.current}):`, err?.message || err);
-      if (activeModeRef.current === "streaming") {
-        const switched = switchToCache();
-        if (!switched) {
-          // If cache not yet available, retry stream with timestamp
-          setTimeout(() => {
-            setActiveVideoUri(`${serverStreamUrl}&_retry=${Date.now()}`);
-          }, 600);
-        }
-      } else {
-        ReelCacheManager.getInstance().markCorrupted(reel.path);
-        cachedUriRef.current = null;
-        switchToStream();
-      }
-    },
-    [switchToCache, switchToStream, reel.path, serverStreamUrl]
-  );
+  // If native cached playback errors once, fall back cleanly to uncached streaming
+  const handlePlayerError = useCallback((err: any) => {
+    console.warn("[ReelItem] Player error:", err?.message || err);
+    setUseCaching((prev) => (prev ? false : prev));
+  }, []);
 
   const onProgress = useCallback((current: number, dur: number) => {
     if (dur > 0) {
@@ -474,7 +295,6 @@ export const ReelItem: React.FC<Props> = ({
       setDuration(dur);
     }
     if (!isSeekingRef.current) {
-      lastPlaybackPositionRef.current = current;
       setCurrentTime(current);
     }
   }, []);
@@ -488,16 +308,11 @@ export const ReelItem: React.FC<Props> = ({
       setIsSeeking(false);
       setIsUserPaused(false);
       isPlayingRef.current = false;
-      isBufferingRef.current = false;
       isSeekingRef.current = false;
       lastTapRef.current = null;
       if (singleTapTimer.current) {
         clearTimeout(singleTapTimer.current);
         singleTapTimer.current = null;
-      }
-      if (stallTimerRef.current) {
-        clearTimeout(stallTimerRef.current);
-        stallTimerRef.current = null;
       }
     }
   }, [isActive]);
@@ -574,7 +389,6 @@ export const ReelItem: React.FC<Props> = ({
     const p = expoPlayerRef.current;
     if (p) {
       try {
-        ReelCacheManager.getInstance().pauseForSeek(1200);
         p.currentTime = next;
         p.play();
       } catch {
@@ -706,8 +520,8 @@ export const ReelItem: React.FC<Props> = ({
       {/* Video layer (non-interactive) */}
       {isActive ? (
         <ActiveExpoVideo
-          initialUri={serverStreamUrl}
-          activeUri={activeVideoUri}
+          uri={serverStreamUrl}
+          useCaching={useCaching}
           isMuted={isMuted}
           onProgress={onProgress}
           onPlayingChange={(playing) => {
